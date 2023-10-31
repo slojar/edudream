@@ -136,3 +136,5 @@ media/
 *.DS_Store
 
 logs/
+.push.py
+
