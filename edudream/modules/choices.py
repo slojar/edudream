@@ -11,6 +11,6 @@ TRANSACTION_STATUS_CHOICES = (
 )
 
 ACCOUNT_TYPE_CHOICES = (
-    ("tutor", "Tutor"), ("parent", "Parent"), ("student", "Student")
+    ("tutor", "Tutor"), ("parent", "Parent")
 )
 

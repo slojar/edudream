@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from edudream.modules.choices import TRANSACTION_TYPE_CHOICES, TRANSACTION_STATUS_CHOICES
+from edudream.modules.choices import TRANSACTION_TYPE_CHOICES, TRANSACTION_STATUS_CHOICES, ACCOUNT_TYPE_CHOICES
 from location.models import City, State, Country
 
 
@@ -9,9 +9,11 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     mobile_number = models.CharField(max_length=20)
     dob = models.DateTimeField(blank=True, null=True)
+    address = models.CharField(max_length=300, blank=True, null=True)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
     state = models.ForeignKey(State, on_delete=models.SET_NULL, null=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True)
+    account_type = models.CharField(max_length=100, choices=ACCOUNT_TYPE_CHOICES, default="tutor")
     email_verified = models.BooleanField(default=False)
     email_verified_code = models.CharField(max_length=200, blank=True, null=True)
     code_expiry = models.DateTimeField(blank=True, null=True)

@@ -2,9 +2,10 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from home.models import Subject
+from student.models import Student
 
 
-class Tutor(models.Model):
+class TutorDetail(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField()
     subjects = models.ManyToManyField(Subject)
@@ -20,7 +21,7 @@ class Classroom(models.Model):
     description = models.CharField(max_length=300)
     tutor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     # parent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="parent")
-    student = models.ForeignKey(User, related_name="class_student", on_delete=models.SET_NULL, blank=True, null=True)
+    student = models.ForeignKey(Student, related_name="class_student", on_delete=models.SET_NULL, blank=True, null=True)
     start_date = models.DateTimeField(blank=True, null=True)
     end_date = models.DateTimeField(blank=True, null=True)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
@@ -43,21 +44,17 @@ class ClassDocument(models.Model):
     def __str__(self):
         return f"{self.tutor.username}: {self.class_room.name}"
 
-# Questions:
-# 1. Can Tutor create a class for more than one student at a time?
-# 2. Can more than one subject be taught in a single class
-
 
 class StudentRating(models.Model):
     tutor = models.ForeignKey(User, on_delete=models.CASCADE)
-    student = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="student")
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, blank=True, null=True, related_name="student")
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
     rating = models.IntegerField(default=0)
     review = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return "{} {}".format(self.tutor.username, self.student.username)
+        return "{} {}".format(self.tutor.username, self.student.user.username)
 
 
 
