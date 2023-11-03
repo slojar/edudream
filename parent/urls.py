@@ -4,7 +4,9 @@ from . import views
 app_name = "parent"
 
 urlpatterns = [
-    # path('create-user/', views.CreateUserAPIView.as_view(), name="create-user"),
-    # path('login/', views.LoginAPIView.as_view(), name="login"),
+    path('student/', views.ListStudentAPIView.as_view(), name="student"),
+    path('student/<int:id>/', views.RetrieveDeleteStudent.as_view(), name="retrieve-student"),
+    path('create-student/', views.CreateEditStudentAPIView.as_view(), name="create-student"),
+    path('update-student/', views.CreateEditStudentAPIView.as_view(), name="update-student"),
 ]
 

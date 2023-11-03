@@ -271,5 +271,5 @@ class ChangePasswordSerializerIn(serializers.Serializer):
 class TransactionSerializerOut(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        exclude =[]
+        exclude = []
 
