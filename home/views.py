@@ -1,5 +1,7 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +18,7 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
 class SignUpAPIView(APIView):
     permission_classes = []
 
+    @extend_schema(request=SignUpSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = SignUpSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
@@ -26,6 +29,7 @@ class SignUpAPIView(APIView):
 class LoginAPIView(APIView):
     permission_classes = []
 
+    @extend_schema(request=LoginSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = LoginSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
@@ -42,6 +46,7 @@ class ProfileAPIView(APIView):
     def get(self, request):
         return Response({"detail": "Success", "data": UserSerializerOut(request.user, context={"request": request}).data})
 
+    @extend_schema(request=ProfileSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request):
         instance = get_object_or_404(Profile, user=request.user)
         serializer = ProfileSerializerIn(instance=instance, data=request.data, context={'request': request})
@@ -53,6 +58,7 @@ class ProfileAPIView(APIView):
 class ChangePasswordAPIView(APIView):
     permission_classes = []
 
+    @extend_schema(request=ChangePasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = ChangePasswordSerializerIn(data=request.data)
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
@@ -60,8 +66,11 @@ class ChangePasswordAPIView(APIView):
         return Response({"detail": response})
 
 
+@extend_schema_view(get=extend_schema(parameters=[
+    OpenApiParameter(name='type', type=str), OpenApiParameter(name='amount_from', type=str),
+    OpenApiParameter(name='amount_to', type=str), OpenApiParameter(name='date_from', type=str),
+    OpenApiParameter(name='status', type=str)]))
 class PaymentHistoryAPIView(APIView, CustomPagination):
-
     permission_classes = [IsAuthenticated & (IsTutor | IsParent)]
 
     def get(self, request, pk=None):
@@ -70,7 +79,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         amount_to = request.GET.get("amount_to")
         date_from = request.GET.get("date_from")
         date_to = request.GET.get("date_to")
-        status = request.GET.get("status")
+        trans_status = request.GET.get("status")
 
         query = Q(user=request.user)
 
@@ -85,8 +94,8 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         if date_to and date_from:
             query &= Q(created_on__range=[date_from, date_to])
 
-        if status:
-            query &= Q(status=status)
+        if trans_status:
+            query &= Q(status=trans_status)
 
         if trans_type:
             query &= Q(trasaction_type=trans_type)

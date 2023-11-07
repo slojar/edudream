@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     'location.apps.LocationConfig',
 
     # Dependencies
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -128,8 +130,7 @@ logging.basicConfig(
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
