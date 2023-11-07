@@ -11,7 +11,7 @@ from student.models import Student
 from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn
 
 
-class CreateEditStudentAPIView(APIView):
+class CreateStudentAPIView(APIView):
     permission_classes = [IsParent]
 
     @extend_schema(request=StudentSerializerIn, responses={status.HTTP_201_CREATED})
@@ -21,9 +21,13 @@ class CreateEditStudentAPIView(APIView):
         response = serializer.save()
         return Response({"detail": "Student account created", "data": response})
 
+
+class EditStudentAPIView(APIView):
+    permission_classes = [IsParent]
+
     @extend_schema(request=StudentSerializerIn, responses={status.HTTP_200_OK})
-    def put(self, request):
-        instance = get_object_or_404(Student, parent__user=request.user, id=int(request.data.get("id")))
+    def put(self, request, pk):
+        instance = get_object_or_404(Student, parent__user=request.user, id=int(pk))
         serializer = StudentSerializerIn(instance=instance, data=request.data, context={'request': request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
