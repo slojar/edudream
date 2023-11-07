@@ -13,6 +13,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:80",
     "http://localhost:3000",
     "http://localhost",
+    "https://edudream.tm-dev.xyz",
     "http://127.0.0.1"
 ]
 
