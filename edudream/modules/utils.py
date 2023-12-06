@@ -122,9 +122,9 @@ def get_next_month_date(date, delta):
 
 
 def send_email(content, email, subject):
-    payload = json.dumps({"Message": content, "address": email, "Subject": subject})
+    payload = json.dumps({"key": "", "message": {
+        "text": content, "subject": subject, "from_email": "", "from_name": "", "to": [{"email": email, "name": ""}]}})
     response = requests.request("POST", settings.EMAIL_URL, headers={'Content-Type': 'application/json'}, data=payload)
-    # log_request(f"Email sent to: {email}")
     log_request(f"Sending email to: {email}, Response: {response.text}")
     return response.text
 

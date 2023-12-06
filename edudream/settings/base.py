@@ -118,7 +118,7 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 logging.basicConfig(
-    filename=os.path.join(LOG_DIR, 'bi-backend.log'),
+    filename=os.path.join(LOG_DIR, 'edudream.log'),
     filemode='a',
     level=logging.DEBUG,
     format='[{asctime}] {levelname} {module} {thread:d} - {message}',

@@ -51,8 +51,9 @@ class UserSerializerOut(serializers.ModelSerializer):
                 "city_name": parent.city.name,
                 "state_name": parent.state.name,
                 "country_name": parent.country.name,
-                "parent_name": str("{} {}").format(parent.user.first_name, parent.user.last_name).capitalize(),
-                "parent_email": parent.user.email,
+                "full_address": parent.get_full_address(),
+                "parent_name": parent.get_full_name(),
+                "parent_email": parent.email(),
                 "parent_mobile": parent.mobile_number
             }
         return False
@@ -80,6 +81,17 @@ class SignUpSerializerIn(serializers.Serializer):
     city = serializers.IntegerField()
     state = serializers.IntegerField()
     country = serializers.IntegerField()
+    bio = serializers.CharField(required=False)
+    hobbies = serializers.CharField(required=False)
+    funfact = serializers.CharField(required=False)
+    linkedin = serializers.CharField(required=False)
+    education_status = serializers.CharField(required=False)
+    university_name = serializers.CharField(required=False)
+    discipline = serializers.CharField(required=False)
+    diploma_type = serializers.CharField(required=False)
+    diploma_file = serializers.FileField(required=False)
+    proficiency_test_type = serializers.CharField(required=False)
+    proficiency_test_file = serializers.FileField(required=False)
 
     def create(self, validated_data):
         f_name = validated_data.get("first_name")
@@ -93,7 +105,23 @@ class SignUpSerializerIn(serializers.Serializer):
         city_id = validated_data.get("city")
         state_id = validated_data.get("state")
         country_id = validated_data.get("country")
-
+        bio = validated_data.get("bio")
+        hobbies = validated_data.get("hobbies")
+        funfact = validated_data.get("funfact")
+        linkedin = validated_data.get("linkedin")
+        education_status = validated_data.get("education_status")
+        university_name = validated_data.get("university_name")
+        discipline = validated_data.get("discipline")
+        diploma_type = validated_data.get("diploma_type")
+        diploma_file = validated_data.get("diploma_file")
+        proficiency_test_type = validated_data.get("proficiency_test_type")
+        proficiency_test_file = validated_data.get("proficiency_test_file")
+        required_for_tutor = [
+            bio, hobbies, funfact, linkedin, education_status, university_name, discipline, diploma_type, diploma_file,
+            proficiency_test_type, proficiency_test_file
+        ]
+        if acct_type == "tutor" and not all(required_for_tutor):
+            raise InvalidRequestException({"detail": "Please submit all required details"})
         country = get_object_or_404(Country, id=country_id)
         state = get_object_or_404(State, id=state_id, country_id=country_id)
         city = get_object_or_404(City, id=city_id, state_id=state_id)
@@ -139,7 +167,20 @@ class SignUpSerializerIn(serializers.Serializer):
         Wallet.objects.get_or_create(user=user)
 
         # Create TutorDetail if account type is "tutor"
-        TutorDetail.objects.get_or_create(user=user)
+        if acct_type == "tutor":
+            tutor_detail = TutorDetail.objects.get_or_create(user=user)
+            tutor_detail.bio = bio
+            tutor_detail.hobbies = hobbies
+            tutor_detail.funfact = funfact
+            tutor_detail.linkedin = linkedin
+            tutor_detail.education_status = education_status
+            tutor_detail.university_name = university_name
+            tutor_detail.discipline = discipline
+            tutor_detail.diploma_type = diploma_type
+            tutor_detail.diploma_file = diploma_file
+            tutor_detail.proficiency_test_type = proficiency_test_type
+            tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.save()
 
         # Send Verification token to email
 

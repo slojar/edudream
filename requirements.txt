@@ -17,6 +17,7 @@ idna==3.4
 inflection==0.5.1
 jsonschema==4.19.2
 jsonschema-specifications==2023.7.1
+mailchimp-transactional==1.0.50
 mysqlclient==2.2.0
 packaging==23.2
 Pillow==10.1.0

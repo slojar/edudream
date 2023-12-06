@@ -25,6 +25,7 @@ class StudentSerializerIn(serializers.Serializer):
     password = serializers.CharField()
     dob = serializers.DateTimeField()
     grade = serializers.CharField()
+    help_subjects = serializers.ListSerializer(child=serializers.IntegerField(), required=False)
 
     def create(self, validated_data):
         user = validated_data.get("user")
@@ -34,6 +35,7 @@ class StudentSerializerIn(serializers.Serializer):
         email = validated_data.get("email_address")
         d_o_b = validated_data.get("dob")
         grade = validated_data.get("grade")
+        help_subjects = validated_data.get("help_subjects")
 
         # Check if user with email exists
         if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
@@ -46,6 +48,10 @@ class StudentSerializerIn(serializers.Serializer):
 
         # Create student instance
         student = Student.objects.create(user=student_user, parent__user=user, dob=d_o_b, grade=grade)
+        if help_subjects:
+            student.help_subject.clear()
+            for subject in help_subjects:
+                student.help_subject.add(subject)
 
         return ParentStudentSerializerOut(student, context={"request": self.context.get("request")}).data
 

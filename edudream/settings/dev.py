@@ -35,8 +35,10 @@ DATABASES = {
 }
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Email
+# FRONTEND URL
 FRONTEND_URL = env('FRONTEND_URL', None)
+
+# EMAIL SETTINGS
 
 # Simple JWT
 SIMPLE_JWT = {

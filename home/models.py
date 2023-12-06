@@ -20,6 +20,30 @@ class Profile(models.Model):
     active = models.BooleanField(default=False)
     updated_on = models.DateTimeField(auto_now=True)
 
+    def get_full_name(self):
+        return f'{self.user.first_name} {self.user.last_name}'
+
+    def first_name(self):
+        return self.user.first_name
+
+    def last_name(self):
+        return self.user.last_name
+
+    def email(self):
+        return self.user.email
+
+    def get_full_address(self):
+        addr = ""
+        if self.address:
+            addr += f"{self.address}, "
+        if self.city:
+            addr += f"{self.city.name}, "
+        if self.state:
+            addr += f"{self.state.name}, "
+        if self.country:
+            addr += f"{self.country.name}, "
+        return addr.strip()
+
     def __str__(self):
         return f"{self.user.username}"
 
