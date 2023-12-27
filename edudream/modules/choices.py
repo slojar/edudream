@@ -14,3 +14,7 @@ ACCOUNT_TYPE_CHOICES = (
     ("tutor", "Tutor"), ("parent", "Parent")
 )
 
+ACCEPT_DECLINE_STATUS = (
+    ("accept", "Accept"), ("decline", "Decline")
+)
+

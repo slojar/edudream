@@ -100,7 +100,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         if trans_type:
             query &= Q(trasaction_type=trans_type)
 
-        queryset = self.paginate_queryset(Transaction.objects.filter(), request)
+        queryset = self.paginate_queryset(Transaction.objects.filter(query), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})

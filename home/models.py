@@ -83,6 +83,8 @@ class Notification(models.Model):
 
 class Subject(models.Model):
     name = models.CharField(max_length=200)
+    grade = models.CharField(max_length=50, blank=True, null=True)
+    amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     active = models.BooleanField(default=True)
     created_on = models.DateTimeField(auto_now_add=True)
 

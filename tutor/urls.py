@@ -4,7 +4,8 @@ from . import views
 app_name = "tutor"
 
 urlpatterns = [
-    # path('create-user/', views.CreateUserAPIView.as_view(), name="create-user"),
+    path('classroom', views.TutorClassRoomAPIView.as_view(), name="classroom"),
+    path('classroom/<int:pk>', views.TutorClassRoomAPIView.as_view(), name="classroom-detail"),
     # path('login/', views.LoginAPIView.as_view(), name="login"),
 ]
 

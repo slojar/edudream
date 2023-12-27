@@ -1,7 +1,6 @@
 import base64
 import calendar
 import datetime
-import json
 import logging
 import re
 import secrets
@@ -13,6 +12,10 @@ from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
 
 from location.models import City, State, Country
+
+email_from = settings.EMAIL_FROM
+email_url = settings.EMAIL_URL
+email_api_key = settings.EMAIL_API_KEY
 
 
 def log_request(*args):
@@ -122,9 +125,12 @@ def get_next_month_date(date, delta):
 
 
 def send_email(content, email, subject):
-    payload = json.dumps({"key": "", "message": {
-        "text": content, "subject": subject, "from_email": "", "from_name": "", "to": [{"email": email, "name": ""}]}})
-    response = requests.request("POST", settings.EMAIL_URL, headers={'Content-Type': 'application/json'}, data=payload)
+    payload = {
+        "key": email_api_key,
+        "message": {"text": content, "subject": subject, "from_email": email_from, "from_name": "",
+                    "to": [{"email": email, "name": ""}]}
+    }
+    response = requests.request("POST", email_url, headers={'Content-Type': 'application/json'}, data=payload)
     log_request(f"Sending email to: {email}, Response: {response.text}")
     return response.text
 

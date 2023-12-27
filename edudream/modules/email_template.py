@@ -1,89 +1,96 @@
 from django.shortcuts import render
-from django.conf import settings
-from edudream.modules.utils import decrypt_text, send_email
+from edudream.modules.utils import send_email
 
 
-def account_opening_email(profile, password):
-    first_name = profile.user.first_name
-    email = profile.user.email
-    if not profile.user.first_name:
-        first_name = "Exchange Admin"
+def parent_class_creation_email(classroom):
+    email = classroom.student.parent.user.email
+    first_name = classroom.student.parent.first_name()
+    student_name = str(classroom.student.get_full_name()).upper()
+    tutor_name = classroom.tutor.first_name
+    subject = str(classroom.subjects.name).upper()
+    amount = classroom.amount
+    if not first_name:
+        first_name = "EduDream Parent"
 
-    message = f"Dear {first_name}, <br><br>Welcome to <a href='{settings.FRONTEND_URL}' target='_blank'>" \
-              f"PayArena Exchange Monitoring Dashboard.</a><br>Please see below, your username " \
-              f"and password. You will be required to change your password on your first login <br><br>" \
-              f"username: <strong>{email}</strong><br>password: <strong>{password}</strong>"
-    subject = "Exchange Registration"
+    message = f"Dear {first_name}, <br><br>Your child/ward: <strong>{student_name}</strong> just created a classroom " \
+              f"with a tutor <br>Tutor Name: <strong>{tutor_name}</strong><br>Subject: <strong>{subject}</strong>" \
+              f"<br>Amount: <strong>{amount}</strong>"
+    subject = "New Class Room Request"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
 
 
-def send_token_to_email(user_profile):
-    first_name = user_profile.user.first_name
-    if not user_profile.user.first_name:
-        first_name = "Exchange Admin"
-    email = user_profile.user.email
-    decrypted_token = decrypt_text(user_profile.otp)
+def tutor_class_creation_email(classroom):
+    email = classroom.tutor.email
+    student_name = str(classroom.student.get_full_name()).upper()
+    tutor_name = classroom.tutor.first_name
+    if not tutor_name:
+        tutor_name = "EduDream Tutor"
 
-    message = f"Dear {first_name}, <br><br>Kindly use the below One Time Token, to complete your action<br><br>" \
-              f"OTP: <strong>{decrypted_token}</strong>"
-    subject = "Exchange Registration"
+    message = f"Dear {tutor_name}, <br><br>You have a new classroom request from <strong>{student_name}</strong>" \
+              f"<br>Kindly login to your dashboard to accept or decline the request."
+    subject = "New Class Room Request"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
 
 
-def send_forgot_password_token_to_email(user):
-    first_name = user.first_name
-    email = user.email
-    url = f"{settings.FRONTEND_URL}/forgot-password?otp={user.profile.otp}"
-    message = f"Dear {first_name}, <br><br>Kindly use the link below to Change your password<br><br>" \
-              f"URL: <a href='{url}'>link</a>"
-    subject = "Exchange Forgot Password"
+def tutor_class_approved_email(classroom):
+    email = classroom.tutor.email
+    class_name = classroom.name
+    link = classroom.meeting_link
+    amount = classroom.amount
+    student_name = str(classroom.student.get_full_name()).upper()
+    tutor_name = classroom.tutor.first_name
+    if not tutor_name:
+        tutor_name = "EduDream Tutor"
+
+    message = f"Dear {tutor_name}, <br><br>You have accepted to take the following class with " \
+              f"<strong>{student_name}</strong><br>Class Name: <strong>{class_name}</strong><br>Class Link: " \
+              f"<strong>{link}</strong><br>Class Fee: <strong>{amount}</strong>"
+    subject = "Classroom Request Approved"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
 
 
-def site_performance_alert(email, performance, value, inst_name, second):
-    name = f"{inst_name} System Administrator"
-    metric = "response time"
-    if performance == "approvalRate":
-        metric = "approval rate"
+def student_class_approved_email(classroom):
+    email = classroom.student.user.email
+    class_name = classroom.name
+    link = classroom.meeting_link
+    student_name = str(classroom.student.first_name())
+    tutor_name = classroom.tutor.get_full_name()
+    if not student_name:
+        student_name = "EduDream Student"
 
-    message = f"Dear {name}, <br><br>The {metric} of your inbound transfer service was " \
-              f"<strong>{value}%</strong> within the last {second} seconds.<br>" \
-              f"Kindly review the service for optimal performance<br><br>"
-    subject = "PayArena Exchange Transfer Service Performance Monitor"
+    message = f"Dear {student_name}, <br><br>Your request to start the following class was approved by your tutor" \
+              f"<br>Class Name: <strong>{class_name}</strong><br>Class Link: " \
+              f"<strong>{link}</strong><br>Tutor Name: <strong>{tutor_name}</strong>"
+    subject = "Classroom Request Approved"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
 
 
-def route_trigger_alert(email, route):
-    message = f"Dear Administrator, <br><br>Today's transaction amount for <strong>{route}</strong> " \
-              f"route has exceeded the configured value"
-    subject = "PayArena Exchange Route Trigger"
+def student_class_declined_email(classroom):
+    email = classroom.student.user.email
+    class_name = classroom.name
+    reason = classroom.decline_reason
+    student_name = str(classroom.student.first_name())
+    if not student_name:
+        student_name = "EduDream Student"
+
+    message = f"Dear {student_name}, <br><br>Your request to start the following class was declined by the tutor" \
+              f"<br>Class Name: <strong>{class_name}</strong>" \
+              f"<br>Status: <strong>DECLINED</strong>" \
+              f"<br>Decline Reason: <strong>{reason}</strong>"
+    subject = "Classroom Request Declined!"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
 
 
-def send_download_link_for_report(user, link):
-    first_name = user.first_name
-    email = user.email
-    if not user.first_name:
-        first_name = "Exchange Admin"
 
-    message = f"Dear {first_name}, <br><br>Kindly click on the below link to download your requested report. <br>" \
-              f"<p/>Click the button below to download the file <p/>" \
-              f"<div style='text-align:left'><a href='{link}' target='_blank' " \
-              f"style='background-color: #67C1F0; color: white; padding: 15px 25px; text-align: center; " \
-              f"text-decoration: none; display: inline-block;'>Download</a></div><br>"
-    subject = "Report Download"
-    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
-    send_email(contents, email, subject)
-    return True
 
 
