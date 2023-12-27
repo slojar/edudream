@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -19,7 +20,11 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
             item = get_object_or_404(Classroom, id=pk, tutor=request.user)
             response = ClassRoomSerializerOut(item, context={"request": request}).data
         else:
-            queryset = self.paginate_queryset(Classroom.objects.filter(tutor=request.user), request)
+            completed = request.GET.get("completed")
+            query = Q(tutor=request.user)
+            if completed == "true":
+                query &= Q(completed=True)
+            queryset = self.paginate_queryset(Classroom.objects.filter(query), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
