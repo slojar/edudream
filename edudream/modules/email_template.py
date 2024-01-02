@@ -91,6 +91,33 @@ def student_class_declined_email(classroom):
     return True
 
 
+def tutor_register_email(user):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Tutor"
+
+    message = f"Dear {name}, <br><br>You have successfully registered on Edudream as a Tutor" \
+              f"<br>Please login to your dashboard to complete your profile"
+    subject = "Signup Successful"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+def parent_register_email(user):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Parent"
+
+    message = f"Dear {name}, <br><br>You have successfully registered on Edudream as a Parent" \
+              f"<br>Please login to your dashboard to add your child/ward"
+    subject = "Signup Successful"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
 
 
 

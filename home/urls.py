@@ -16,5 +16,6 @@ urlpatterns = [
     path('profile', views.ProfileAPIView.as_view(), name="profile"),
     path('change-password', views.ChangePasswordAPIView.as_view(), name="change-password"),
     path('payment-history', views.PaymentHistoryAPIView.as_view(), name="payment"),
+    path('chat', views.ChatMessageAPIView.as_view(), name="chat"),
 ]
 

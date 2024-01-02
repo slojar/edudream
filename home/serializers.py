@@ -1,3 +1,5 @@
+from threading import Thread
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
@@ -6,9 +8,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
 from edudream.modules.choices import ACCOUNT_TYPE_CHOICES
+from edudream.modules.email_template import tutor_register_email, parent_register_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
-from home.models import Profile, Wallet, Transaction
+from home.models import Profile, Wallet, Transaction, ChatMessage
 from location.models import Country, State, City
 from student.models import Student
 from tutor.models import TutorDetail
@@ -181,7 +184,11 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.proficiency_test_file = proficiency_test_file
             tutor_detail.save()
-
+            # Send Register Email to Tutor
+            Thread(target=tutor_register_email, args=[user]).start()
+        else:
+            # Send Register Email to Parent
+            Thread(target=parent_register_email, args=[user]).start()
         # Send Verification token to email
 
         return UserSerializerOut(user, context=self.context).data
@@ -313,4 +320,35 @@ class TransactionSerializerOut(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         exclude = []
+
+
+class ChatMessageSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
+        exclude = []
+
+
+class ChatMessageSerializerIn(serializers.Serializer):
+    sender = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    receiver_id = serializers.IntegerField()
+    message = serializers.CharField(max_length=2000, required=False)
+    upload = serializers.FileField(required=False)
+
+    def create(self, validated_data):
+        sender = validated_data.get("sender")
+        receiver = validated_data.get("receiver_id")
+        message = validated_data.get("message")
+        upload = validated_data.get("upload")
+
+        if not any([message, upload]):
+            raise InvalidRequestException({"detail": "Text or attachment is required"})
+
+        # Send message
+        chat = ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
+        return ChatMessageSerializerOut(chat, context={"request": self.context.get("request")}).data
+
+
+
+
+
 

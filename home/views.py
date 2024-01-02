@@ -10,9 +10,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent
-from home.models import Profile, Transaction
+from home.models import Profile, Transaction, ChatMessage
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
-    ChangePasswordSerializerIn, TransactionSerializerOut
+    ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -104,4 +104,37 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
+
+
+# @extend_schema_view(get=extend_schema(parameters=[
+#     OpenApiParameter(name='receiver_id', type=str), OpenApiParameter(name='search', type=str)]))
+class ChatMessageAPIView(APIView, CustomPagination):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=ChatMessageSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = ChatMessageSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+    @extend_schema(
+        parameters=[OpenApiParameter(name="receiver_id", type=str), OpenApiParameter(name="search", type=str)]
+    )
+    def get(self, request):
+        receiver_id = request.GET.get("receiver_id")
+        search = request.GET.get("search")
+        sender = request.user
+        # Fetch messages
+        query = Q(sender_id__in=[sender.id, receiver_id], receiver_id__in=[receiver_id, sender.id])
+        if search:
+            query &= Q(message__icontains=search)
+        messages = ChatMessage.objects.filter(query).distinct().order_by("-created_on")
+        messages.update(read=True)
+        queryset = self.paginate_queryset(messages, request)
+        serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
+        response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Chat retrieved", "data": response})
+
+
 
