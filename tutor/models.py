@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES
 from home.models import Subject
 from student.models import Student
 
@@ -69,5 +70,17 @@ class StudentRating(models.Model):
     def __str__(self):
         return "{} {}".format(self.tutor.username, self.student.user.username)
 
+
+class Dispute(models.Model):
+    submitted_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    dispute_type = models.CharField(max_length=100, choices=DISPUTE_TYPE_CHOICES, default="payment")
+    content = models.TextField()
+    status = models.CharField(max_length=100, choices=DISPUTE_STATUS_CHOICES, default="open")
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.submitted_by.username}: {self.title}"
 
 
