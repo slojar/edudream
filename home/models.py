@@ -1,3 +1,4 @@
+from django.contrib.sites.models import Site
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -120,3 +121,16 @@ class ChatMessage(models.Model):
 
     class Meta:
         ordering = ['created_on']
+
+
+class SiteSetting(models.Model):
+    site = models.OneToOneField(Site, on_delete=models.CASCADE)
+    site_name = models.CharField(max_length=200, null=True, default="EduDream")
+    escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+
+    def __str__(self):
+        return self.site.name
+
+
+
+

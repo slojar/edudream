@@ -1,5 +1,6 @@
 TRANSACTION_TYPE_CHOICES = (
-    ("fund_wallet", "Fund Wallet"), ("course_payment", "Course Payment"), ("withdrawal", "Withdrawal")
+    ("fund_wallet", "Fund Wallet"), ("course_payment", "Course Payment"), ("withdrawal", "Withdrawal"),
+    ("refund", "Refund")
 )
 
 PAYMENT_METHOD_CHOICES = (
@@ -15,7 +16,7 @@ ACCOUNT_TYPE_CHOICES = (
 )
 
 ACCEPT_DECLINE_STATUS = (
-    ("accept", "Accept"), ("decline", "Decline")
+    ("accept", "Accept"), ("decline", "Decline"), ("cancel", "Cancel")
 )
 
 DISPUTE_TYPE_CHOICES = (
@@ -24,5 +25,10 @@ DISPUTE_TYPE_CHOICES = (
 
 DISPUTE_STATUS_CHOICES = (
     ("open", "Open"), ("resolved", "Resolved")
+)
+
+CLASS_STATUS_CHOICES = (
+    ("new", "New"), ("accepted", "Accepted"), ("declined", "Declined"), ("completed", "Completed"),
+    ("cancelled", "Cancelled")
 )
 

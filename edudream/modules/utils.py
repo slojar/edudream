@@ -4,6 +4,8 @@ import datetime
 import logging
 import re
 import secrets
+
+from django.contrib.sites.models import Site
 from django.utils import timezone
 import requests
 from cryptography.fernet import Fernet
@@ -11,6 +13,7 @@ from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
 
+from home.models import SiteSetting
 from location.models import City, State, Country
 
 email_from = settings.EMAIL_FROM
@@ -309,6 +312,14 @@ def create_country_state_city():
 
     return True
 
+
+def get_site_details():
+    try:
+        site, created = SiteSetting.objects.get_or_create(site=Site.objects.get_current())
+    except Exception as ex:
+        logging.exception(str(ex))
+        site = SiteSetting.objects.filter(site=Site.objects.get_current()).first()
+    return site
 
 
 

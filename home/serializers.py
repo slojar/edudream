@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -14,7 +15,7 @@ from edudream.modules.utils import generate_random_otp, log_request, encrypt_tex
 from home.models import Profile, Wallet, Transaction, ChatMessage
 from location.models import Country, State, City
 from student.models import Student
-from tutor.models import TutorDetail
+from tutor.models import TutorDetail, Classroom
 from tutor.serializers import TutorDetailSerializerOut
 
 
@@ -343,12 +344,12 @@ class ChatMessageSerializerIn(serializers.Serializer):
         if not any([message, upload]):
             raise InvalidRequestException({"detail": "Text or attachment is required"})
 
+        # Check if student and tutor had previously scheduled classes
+        query = Q(tutor_id__in=[sender.id, receiver], student__user_id__in=[sender.id, receiver]) | Q(
+            tutor_id__in=[sender.id, receiver], student__parent__user_id__in=[sender.id, receiver])
+        if not Classroom.objects.filter(query).exists():
+            raise InvalidRequestException({"detail": "Classroom not found for both users"})
+
         # Send message
         chat = ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
         return ChatMessageSerializerOut(chat, context={"request": self.context.get("request")}).data
-
-
-
-
-
-

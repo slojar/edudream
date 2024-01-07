@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES
+from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES
 from home.models import Subject
 from student.models import Student
 
@@ -37,8 +37,7 @@ class Classroom(models.Model):
     start_date = models.DateTimeField(blank=True, null=True)
     end_date = models.DateTimeField(blank=True, null=True)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
-    accepted = models.BooleanField(default=False)
-    completed = models.BooleanField(default=False)
+    status = models.CharField(max_length=50, choices=CLASS_STATUS_CHOICES, default="new")
     meeting_link = models.CharField(max_length=300, blank=True, null=True)
     decline_reason = models.CharField(max_length=300, blank=True, null=True)
     subjects = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
