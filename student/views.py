@@ -24,6 +24,10 @@ class StudentClassRoomAPIView(APIView, CustomPagination):
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
 
+
+class CreateClassRoomAPIView(APIView):
+    permission_classes = [IsStudent]
+
     @extend_schema(request=CreateClassSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = CreateClassSerializerIn(data=request.data, context={"request": request})

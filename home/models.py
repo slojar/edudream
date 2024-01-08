@@ -140,7 +140,7 @@ class SiteSetting(models.Model):
     google_calendar_id = models.CharField(max_length=300, blank=True, null=True)
     google_redirect_url = models.CharField(max_length=300, blank=True, null=True)
     coin_threshold = models.DecimalField(default=3, decimal_places=2, max_digits=20)
-    class_grace_period = models.IntegerField(max_length=20, blank=True, null=True)
+    class_grace_period = models.IntegerField(blank=True, null=True, default=0)
     enquiry_email = models.CharField(max_length=200, blank=True, null=True)
     escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)
 

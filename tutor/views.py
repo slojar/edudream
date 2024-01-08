@@ -31,6 +31,10 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
 
+
+class UpdateClassroomStatusAPIView(APIView):
+    permission_classes = [IsTutor]
+
     @extend_schema(request=ApproveDeclineClassroomSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
         instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
@@ -69,13 +73,6 @@ class DisputeAPIView(APIView, CustomPagination):
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Dispute(s) Retrieved", "data": response})
 
-    @extend_schema(request=DisputeSerializerIn, responses={status.HTTP_201_CREATED})
-    def post(self, request):
-        serializer = DisputeSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
-        response = serializer.save()
-        return Response({"detail": "Dispute created successfully", "data": response})
-
     @extend_schema(request=DisputeSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
         instance = get_object_or_404(Dispute, id=pk, submitted_by=request.user)
@@ -83,5 +80,17 @@ class DisputeAPIView(APIView, CustomPagination):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": "Dispute updated", "data": response})
+
+
+class CreateDisputeAPIView(APIView):
+    permission_classes = [IsTutor]
+
+    @extend_schema(request=DisputeSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = DisputeSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Dispute created successfully", "data": response})
+
 
 
