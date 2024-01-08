@@ -2,21 +2,19 @@ import uuid
 from threading import Thread
 
 from django.shortcuts import get_object_or_404
-from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 
 from edudream.modules.GoogleAPI import generate_meeting_link
 from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES
 from edudream.modules.email_template import tutor_class_creation_email, parent_class_creation_email, \
-    tutor_class_approved_email, student_class_approved_email, student_class_declined_email
+    tutor_class_approved_email, student_class_approved_email, student_class_declined_email, parent_class_cancel_email, \
+    student_class_cancel_email, parent_low_threshold_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
 from home.models import Subject, Transaction
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute
-
-class_grace_period = settings.CLASSROOM_GRACE_PERIOD
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
@@ -53,6 +51,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         subject = get_object_or_404(Subject, id=subject_id)
         student = get_object_or_404(Student, user=user)
         tutor_user = tutor.user
+        d_site = get_site_details()
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
@@ -64,7 +63,7 @@ class CreateClassSerializerIn(serializers.Serializer):
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Add grace period
-        new_end_time = end_date + timezone.timedelta(minutes=int(class_grace_period))
+        new_end_time = end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
@@ -87,20 +86,34 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
         decline_reason = validated_data.get("decline_reason")
         amount = instance.amount
         parent = instance.student.parent.user
+        student = instance.student.user
+        parent_wallet = parent.wallet
+
         d_site = get_site_details()
 
         if action == "accept":
             # Generate meeting link
             meeting_id = str(uuid.uuid4())
             tutor_email = instance.tutor.email
-            student_email = instance.student.user.email
+            student_email = student.email
             link = generate_meeting_link(
                 meeting_name=f"{instance.name}", attending=[tutor_email, student_email], request_id=meeting_id,
                 narration=instance.description, start_date=instance.start_date, end_date=instance.end_date
             )
             instance.status = "accepted"
             instance.meeting_link = link
+            # Debit parent wallet
+            parent_wallet.refresh_from_db()
+            parent_wallet.balance -= amount
+            parent_wallet.save()
+            # Check parent new wallet balance and compare coin threshold
+            parent_wallet.refresh_from_db()
+            if parent_wallet.balance < d_site.coin_threshold:
+                # Send low coin threshold email to parent
+                Thread(target=parent_low_threshold_email, args=[parent, parent_wallet.balance]).start()
+
             # Add amount to Escrow Balance
+            d_site.refresh_from_db()
             d_site.escrow_balance += amount
             d_site.save()
             # Create transaction
@@ -119,10 +132,11 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Cancel class
             instance.status = "cancelled"
             # Subtract amount from Escrow Balance
+            d_site.refresh_from_db()
             d_site.escrow_balance -= amount
             d_site.save()
             # Refund parent coin
-            parent_wallet = parent.wallet
+            parent_wallet.refresh_from_db()
             parent_wallet.balance += amount
             parent_wallet.save()
             # Create refund transaction
@@ -130,7 +144,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
                 user=parent, trasaction_type="refund", amount=amount, narration=f"Refund, {instance.description}"
             )
             # Notify parent and student
-            ...
+            Thread(target=parent_class_cancel_email, args=[parent, amount]).start()
+            Thread(target=student_class_cancel_email, args=[student]).start()
         else:
             if not decline_reason:
                 raise InvalidRequestException({"detail": "Kindly specify reason why you are declining this request"})

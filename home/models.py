@@ -123,9 +123,25 @@ class ChatMessage(models.Model):
         ordering = ['created_on']
 
 
+class PaymentPlan(models.Model):
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.name)
+
+
 class SiteSetting(models.Model):
     site = models.OneToOneField(Site, on_delete=models.CASCADE)
     site_name = models.CharField(max_length=200, null=True, default="EduDream")
+    google_calendar_id = models.CharField(max_length=300, blank=True, null=True)
+    google_redirect_url = models.CharField(max_length=300, blank=True, null=True)
+    coin_threshold = models.DecimalField(default=3, decimal_places=2, max_digits=20)
+    class_grace_period = models.IntegerField(max_length=20, blank=True, null=True)
+    enquiry_email = models.CharField(max_length=200, blank=True, null=True)
     escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)
 
     def __str__(self):

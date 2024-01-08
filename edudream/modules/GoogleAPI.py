@@ -1,16 +1,15 @@
-import json
 import os
 
-from django.conf import settings
 from google.auth.transport import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from edudream.modules.utils import log_request
+from edudream.modules.utils import log_request, get_site_details
 
 
 def generate_meeting_link(meeting_name, attending, request_id, **kwargs):
+    d_site = get_site_details()
     scope = ["https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/calendar.events"]
 
     auth_file = 'edudream.json'
@@ -26,7 +25,7 @@ def generate_meeting_link(meeting_name, attending, request_id, **kwargs):
             credential.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(auth_file, scope)
-            credential = flow.run_local_server(host=settings.GOOGLE_REDIRECT_URL)
+            credential = flow.run_local_server(host=str(d_site.google_redirect_url))
         # Save the credentials for the next run
         with open('calender_auth.json', 'w') as token:
             token.write(credential.to_json())
@@ -36,8 +35,8 @@ def generate_meeting_link(meeting_name, attending, request_id, **kwargs):
     guests = [{"email": email, "responseStatus": "needsAction"} for email in attending]
 
     event["creator"] = dict()
-    event["creator"]["displayName"] = settings.APP_NAME
-    event["creator"]["email"] = settings.COMPANY_ENQUIRY_EMAIL
+    event["creator"]["displayName"] = str(d_site.site_name)
+    event["creator"]["email"] = str(d_site.enquiry_email)
 
     event["attendees"] = guests
     event["description"] = kwargs.get("narration")
@@ -85,7 +84,7 @@ def generate_meeting_link(meeting_name, attending, request_id, **kwargs):
 
         # CREATE EVENT
         created_event = service.events().insert(
-            calendarId=settings.CALENDAR_ID, body=event, conferenceDataVersion=1,
+            calendarId=str(d_site.google_calendar_id), body=event, conferenceDataVersion=1,
             maxAttendees=2, sendNotifications=True).execute()
         log_request(f"Creating Google Event\n{created_event}")
 

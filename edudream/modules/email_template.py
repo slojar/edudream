@@ -119,5 +119,48 @@ def parent_register_email(user):
     return True
 
 
+def parent_class_cancel_email(user, amount):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Parent"
+
+    message = f"Dear {name}, <br><br>A classroom was cancelled and {amount} coins have been refunded to your wallet" \
+              f"<br>Please login to your dashboard to confirm"
+    subject = "Cancelled Class"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+def student_class_cancel_email(user, classroom):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Student"
+
+    message = f"Dear {name}, <br><br>A classroom was cancelled by your tutor" \
+              f"<br>Class Name: <strong>{classroom.name}</strong>" \
+              f"<br>Tutor Name: <strong>{classroom.tutor.get_full_name()}</strong>"
+    subject = "Cancelled Class"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+def parent_low_threshold_email(user, amount):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Parent"
+
+    message = f"Dear {name}, <br><br>This is to notify you that your wallet balance is low on coin" \
+              f"<br>New wallet balance: <strong>{amount} coins</strong>"\
+              f"<br>Please login to your dashboard and fund your wallet"
+    subject = "Low Balance"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
 
 

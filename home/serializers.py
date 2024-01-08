@@ -12,7 +12,7 @@ from edudream.modules.choices import ACCOUNT_TYPE_CHOICES
 from edudream.modules.email_template import tutor_register_email, parent_register_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
-from home.models import Profile, Wallet, Transaction, ChatMessage
+from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan
 from location.models import Country, State, City
 from student.models import Student
 from tutor.models import TutorDetail, Classroom
@@ -165,6 +165,7 @@ class SignUpSerializerIn(serializers.Serializer):
         profile.account_type = acct_type
         profile.email_verified_code = encrypt_text(email_token)
         profile.code_expiry = get_next_minute(timezone.now(), 15)
+        profile.active = True
         profile.save()
 
         # Create Wallet
@@ -172,6 +173,7 @@ class SignUpSerializerIn(serializers.Serializer):
 
         # Create TutorDetail if account type is "tutor"
         if acct_type == "tutor":
+            Profile.objects.filter(user=user).update(active=False)
             tutor_detail = TutorDetail.objects.get_or_create(user=user)
             tutor_detail.bio = bio
             tutor_detail.hobbies = hobbies
@@ -210,24 +212,29 @@ class LoginSerializerIn(serializers.Serializer):
         if Student.objects.filter(user=user).exists():
             student = Student.objects.get(user=user)
             if student.parent.email_verified is False:
-                raise InvalidRequestException({
-                    "detail": "Parent email is not verified. Please ask parent/guadian to verify their account"
-                })
+                raise InvalidRequestException(
+                    {"detail": "Parent email is not verified. Please ask parent/guadian to verify their account"}
+                )
             return user
 
         user_profile = Profile.objects.get(user=user)
-        if not user_profile.email_verified:
+        if user_profile.account_type == "tutor" and user_profile.active is False:
+            raise InvalidRequestException(
+                {"detail": "Your tutor account is yet to be approved by the admin, please check back later"}
+            )
+
+        # if not user_profile.email_verified:
             # OTP Timeout
-            random_otp = generate_random_otp()
-            user_profile.email_verified_code = encrypt_text(random_otp)
-            user_profile.code_expiry = get_next_minute(timezone.now(), 15)
-            user_profile.save()
+            # random_otp = generate_random_otp()
+            # user_profile.email_verified_code = encrypt_text(random_otp)
+            # user_profile.code_expiry = get_next_minute(timezone.now(), 15)
+            # user_profile.save()
 
             # Send OTP to user
             # Thread(target=send_token_to_email, args=[user_profile]).start()
-            raise InvalidRequestException({
-                "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
-            })
+            # raise InvalidRequestException({
+            #     "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
+            # })
 
         return user
 
@@ -353,3 +360,12 @@ class ChatMessageSerializerIn(serializers.Serializer):
         # Send message
         chat = ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
         return ChatMessageSerializerOut(chat, context={"request": self.context.get("request")}).data
+
+
+class PaymentPlanSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentPlan
+        exclude = []
+
+
+

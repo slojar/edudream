@@ -4,15 +4,17 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent
-from home.models import Profile, Transaction, ChatMessage
+from home.models import Profile, Transaction, ChatMessage, PaymentPlan
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
-    ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut
+    ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
+    PaymentPlanSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -137,4 +139,8 @@ class ChatMessageAPIView(APIView, CustomPagination):
         return Response({"detail": "Chat retrieved", "data": response})
 
 
+class PaymentPlanListAPIView(ListAPIView):
+    permission_classes = []
+    queryset = PaymentPlan.objects.all().order_by("-created_on")
+    serializer_class = PaymentPlanSerializerOut
 
