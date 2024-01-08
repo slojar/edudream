@@ -118,7 +118,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             d_site.save()
             # Create transaction
             Transaction.objects.create(
-                user=parent, trasaction_type="course_payment", amount=amount, narration=instance.description
+                user=parent, trasaction_type="course_payment", amount=amount, narration=instance.description,
+                status="completed"
             )
             # Send meeting link to student
             Thread(target=student_class_approved_email, args=[instance]).start()
@@ -141,7 +142,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.save()
             # Create refund transaction
             Transaction.objects.create(
-                user=parent, trasaction_type="refund", amount=amount, narration=f"Refund, {instance.description}"
+                user=parent, trasaction_type="refund", amount=amount, narration=f"Refund, {instance.description}",
+                status="completed"
             )
             # Notify parent and student
             Thread(target=parent_class_cancel_email, args=[parent, amount]).start()
