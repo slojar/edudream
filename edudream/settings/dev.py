@@ -35,9 +35,6 @@ DATABASES = {
 }
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# FRONTEND URL
-FRONTEND_URL = env('FRONTEND_URL', None)
-
 # EMAIL SETTINGS
 EMAIL_URL = env('EMAIL_URL', None)
 EMAIL_API_KEY = env('EMAIL_API_KEY', None)

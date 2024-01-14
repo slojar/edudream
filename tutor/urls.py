@@ -10,5 +10,7 @@ urlpatterns = [
     path('dispute', views.DisputeAPIView.as_view(), name="dispute"),
     path('dispute/<int:pk>', views.DisputeAPIView.as_view(), name="dispute-detail"),
     path('create-dispute', views.CreateDisputeAPIView.as_view(), name="create-dispute"),
+    path('calendar', views.TutorCalendarListAPIView.as_view(), name="list-calendar"),
+    path('add-calendar', views.TutorCalendarAPIView.as_view(), name="add-to-calendar"),
 ]
 

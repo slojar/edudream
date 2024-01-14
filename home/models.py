@@ -1,9 +1,12 @@
+import uuid
+
 from django.contrib.sites.models import Site
 from django.db import models
 from django.contrib.auth.models import User
 
 from edudream.modules.choices import TRANSACTION_TYPE_CHOICES, TRANSACTION_STATUS_CHOICES, ACCOUNT_TYPE_CHOICES
 from location.models import City, State, Country
+from tutor.models import Classroom
 
 
 class Profile(models.Model):
@@ -19,6 +22,9 @@ class Profile(models.Model):
     email_verified_code = models.CharField(max_length=200, blank=True, null=True)
     code_expiry = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
+    stripe_customer_id = models.TextField(blank=True, null=True)
+    referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="referred_by")
+    referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
     updated_on = models.DateTimeField(auto_now=True)
 
     def get_full_name(self):
@@ -93,12 +99,25 @@ class Subject(models.Model):
         return self.name
 
 
+class PaymentPlan(models.Model):
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.name)
+
+
 class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
-    trasaction_type = models.CharField(max_length=60, choices=TRANSACTION_TYPE_CHOICES, default="fund_wallet")
+    plan = models.ForeignKey(PaymentPlan, on_delete=models.SET_NULL, blank=True, null=True)
+    transaction_type = models.CharField(max_length=60, choices=TRANSACTION_TYPE_CHOICES, default="fund_wallet")
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     status = models.CharField(max_length=50, choices=TRANSACTION_STATUS_CHOICES, default="pending")
     narration = models.CharField(max_length=200, blank=True, null=True)
+    reference = models.CharField(max_length=300, blank=True, null=True)
     failed_reason = models.TextField()
     # payment_method = models.CharField()
     created_on = models.DateTimeField(auto_now_add=True)
@@ -123,17 +142,6 @@ class ChatMessage(models.Model):
         ordering = ['created_on']
 
 
-class PaymentPlan(models.Model):
-    name = models.CharField(max_length=100)
-    amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
-    coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
-    created_on = models.DateTimeField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return str(self.name)
-
-
 class SiteSetting(models.Model):
     site = models.OneToOneField(Site, on_delete=models.CASCADE)
     site_name = models.CharField(max_length=200, null=True, default="EduDream")
@@ -142,11 +150,23 @@ class SiteSetting(models.Model):
     coin_threshold = models.DecimalField(default=3, decimal_places=2, max_digits=20)
     class_grace_period = models.IntegerField(blank=True, null=True, default=0)
     enquiry_email = models.CharField(max_length=200, blank=True, null=True)
+    frontend_url = models.CharField(max_length=200, blank=True, null=True)
     escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)
 
     def __str__(self):
         return self.site.name
 
+
+class ClassReview(models.Model):
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    content = models.TextField()
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title}"
 
 
 

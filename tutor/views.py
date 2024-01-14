@@ -2,15 +2,16 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor
-from tutor.models import Classroom, Dispute
+from tutor.models import Classroom, Dispute, TutorCalendar
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
-    DisputeSerializerOut
+    DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
@@ -91,6 +92,27 @@ class CreateDisputeAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": "Dispute created successfully", "data": response})
+
+
+class TutorCalendarAPIView(APIView):
+    permission_classes = [IsTutor]
+
+    @extend_schema(request=TutorCalendarSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = TutorCalendarSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Calendar updated", "data": response})
+
+
+@extend_schema(parameters=[OpenApiParameter(name="tutor_id", type=str)])
+class TutorCalendarListAPIView(ListAPIView):
+    permission_classes = []
+    serializer_class = TutorCalendarSerializerOut
+
+    def get_queryset(self):
+        tutor_id = self.kwargs.get("tutor_id")
+        return TutorCalendar.objects.filter(user_id=tutor_id)
 
 
 

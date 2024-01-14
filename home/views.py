@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
@@ -10,11 +11,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
-from edudream.modules.permissions import IsTutor, IsParent
+from edudream.modules.permissions import IsTutor, IsParent, IsStudent
+from edudream.modules.utils import complete_payment, get_site_details
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
-    PaymentPlanSerializerOut
+    PaymentPlanSerializerOut, ClassReviewSerializerIn
 
 
 class SignUpAPIView(APIView):
@@ -100,7 +102,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
             query &= Q(status=trans_status)
 
         if trans_type:
-            query &= Q(trasaction_type=trans_type)
+            query &= Q(transaction_type=trans_type)
 
         queryset = self.paginate_queryset(Transaction.objects.filter(query), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
@@ -143,4 +145,33 @@ class PaymentPlanListAPIView(ListAPIView):
     permission_classes = []
     queryset = PaymentPlan.objects.all().order_by("-created_on")
     serializer_class = PaymentPlanSerializerOut
+
+
+class SubmitReviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=ClassReviewSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = ClassReviewSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+class VerifyPaymentAPIView(APIView):
+    permission_classes = []
+
+    @extend_schema(parameters=[OpenApiParameter(name="reference", type=str)])
+    def get(self, request):
+        site_setting = get_site_details()
+        frontend_base_url = site_setting.frontend_url
+        reference = request.GET.get("reference")
+        success, response = complete_payment(reference)
+        # if success is False:
+        #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
+        return HttpResponseRedirect(redirect_to=f"{frontend_base_url}/verify-checkout?status={str(success).lower()}")
+
+
+
+
 

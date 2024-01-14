@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES
-from home.models import Subject
+from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
+    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES
+# from home.models import Subject
 from student.models import Student
 
 
@@ -20,7 +21,8 @@ class TutorDetail(models.Model):
     proficiency_test_type = models.CharField(max_length=100, default="")
     proficiency_test_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
-    subjects = models.ManyToManyField(Subject)
+    rest_period = models.IntegerField(default=10)
+    subjects = models.ManyToManyField("home.Subject")
     max_student_required = models.IntegerField(default=10)
     updated_on = models.DateTimeField(auto_now=True)
 
@@ -40,7 +42,7 @@ class Classroom(models.Model):
     status = models.CharField(max_length=50, choices=CLASS_STATUS_CHOICES, default="new")
     meeting_link = models.CharField(max_length=300, blank=True, null=True)
     decline_reason = models.CharField(max_length=300, blank=True, null=True)
-    subjects = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
+    subjects = models.ForeignKey("home.Subject", on_delete=models.SET_NULL, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
@@ -61,7 +63,7 @@ class ClassDocument(models.Model):
 class StudentRating(models.Model):
     tutor = models.ForeignKey(User, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.SET_NULL, blank=True, null=True, related_name="student")
-    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, blank=True, null=True)
+    subject = models.ForeignKey("home.Subject", on_delete=models.SET_NULL, blank=True, null=True)
     rating = models.IntegerField(default=0)
     review = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
@@ -81,5 +83,18 @@ class Dispute(models.Model):
 
     def __str__(self):
         return f"{self.submitted_by.username}: {self.title}"
+
+
+class TutorCalendar(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    day_of_the_week = models.CharField(max_length=200, choices=DAY_OF_THE_WEEK_CHOICES, default="mon")
+    time_from = models.TimeField(blank=True, null=True)
+    time_to = models.TimeField(blank=True, null=True)
+    status = models.CharField(max_length=100, choices=AVAILABILITY_STATUS_CHOICES, default="available")
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}"
 
 

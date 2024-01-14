@@ -1,10 +1,15 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
 from edudream.modules.exceptions import InvalidRequestException
 from django.contrib.auth.hashers import make_password
 
+from edudream.modules.utils import decrypt_text, encrypt_text
+from home.models import PaymentPlan, Transaction
 from student.models import Student
+
+from edudream.modules.stripe_api import StripeAPI
 
 
 class ParentStudentSerializerOut(serializers.ModelSerializer):
@@ -65,3 +70,74 @@ class StudentSerializerIn(serializers.Serializer):
         instance.save()
 
         return ParentStudentSerializerOut(instance, context={"request": self.context.get("request")}).data
+
+
+class FundWalletSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    plan_id = serializers.IntegerField()
+    redirect_url = serializers.URLField()
+    # card_id = serializers.IntegerField(required=False)
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        plan_id = validated_data.get("plan_id")
+        callback_url = validated_data.get("redirect_url")
+        # card_id = validated_data.get("card_id", None)
+
+        plan = get_object_or_404(PaymentPlan, id=plan_id)
+        amount = float(plan.amount)
+        stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
+        description = f'Wallet funding: {user.get_full_name()}'
+        payment_reference = payment_link = None
+
+        while True:
+            success, response = StripeAPI.create_payment_session(
+                name=user.get_full_name(),
+                amount=amount,
+                currency_code="usd",
+                description=description,
+                return_url=callback_url,
+                customer_id=stripe_customer_id,
+            )
+            if 'no such customer' in str(response).lower():
+                customer = StripeAPI.create_customer(
+                    name=user.get_full_name(),
+                    email=user.email,
+                    phone=user.profile.mobile_number
+                )
+                new_stripe_customer_id = customer.get('id')
+                user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
+                user.profile.save()
+                continue
+
+            if 'total amount must convert to at least' in str(response).lower():
+                text = str(response).lower()
+                start_index = text.index("converts to approximately")
+                approx = text[start_index:]
+                response = f"Amount must convert to at least 50 cents. {amount}USD  {approx}"
+
+            if not success:
+                raise InvalidRequestException({'detail': response})
+            if not response.get('url'):
+                raise InvalidRequestException({'detail': 'Payment could not be completed at the moment'})
+
+            payment_reference = response.get('payment_intent')
+            if not payment_reference:
+                payment_reference = response.get('id')
+            payment_link = response.get('url')
+            break
+
+        # Create Transaction
+        Transaction.objects.create(
+            user=user, transaction_type="fund_wallet", amount=plan.amount, narration=description,
+            reference=payment_reference, plan_id=plan_id
+        )
+
+        return payment_link
+
+
+
+
+
+
+

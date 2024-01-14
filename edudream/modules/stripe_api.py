@@ -1,5 +1,4 @@
 import stripe
-from edudream.modules.utils import log_request
 
 
 class StripeAPI:
@@ -25,6 +24,7 @@ class StripeAPI:
     
     @classmethod
     def retrieve_customer(cls, customer_id):
+        from edudream.modules.utils import log_request
         customer = stripe.Customer.retrieve(customer_id)
         log_request(f'Stripe customer: {customer}')
         return customer
@@ -106,6 +106,7 @@ class StripeAPI:
 
     @classmethod
     def create_payment_session(cls, name, amount, currency_code, **kwargs):
+        from edudream.modules.utils import log_request
         """
         Initiate a stripe transaction
         """
@@ -113,10 +114,7 @@ class StripeAPI:
             description = kwargs.get('description', )
             return_url = kwargs.get('return_url', )
             customer_id = kwargs.get('customer_id', )
-            # metadata = kwargs.get('metadata', {})
-            # if type(metadata) is not dict:
-            #     return False, create_error_message('metadata', "metadata must be a dictionary")
-    
+
             stripe_payment = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[
@@ -149,30 +147,35 @@ class StripeAPI:
 
     @classmethod
     def attach_payment_method(cls, payment_method_id, customer_id):
+        from edudream.modules.utils import log_request
         result = stripe.PaymentMethod.attach(payment_method_id, customer=customer_id)
         log_request(f'Stripe payment method attached: {result}')
         return result
 
     @classmethod
     def retrieve_checkout_session(cls, session_id):
+        from edudream.modules.utils import log_request
         result = stripe.checkout.Session.retrieve(session_id)
         log_request(f'Stripe retrieve checkout session: {result}')
         return result
     
     @classmethod
     def retrieve_setup_intent(cls, setup_intent):
+        from edudream.modules.utils import log_request
         result = stripe.SetupIntent.retrieve(setup_intent)
         log_request(f'Stripe setup response: {result}')
         return result
     
     @classmethod
     def retrieve_payment_method(cls, payment_method_id):
+        from edudream.modules.utils import log_request
         result = stripe.PaymentMethod.retrieve(payment_method_id)
         log_request(f'Stripe setup response: {result}')
         return result
 
     @classmethod
     def auto_charge_with_payment_method(cls, amount, currency_code, payment_method_id, **kwargs):
+        from edudream.modules.utils import log_request
         description = kwargs.get('description', )
         customer_id = kwargs.get('customer_id', )
         # metadata = kwargs.get('metadata', {})

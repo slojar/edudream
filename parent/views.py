@@ -7,8 +7,9 @@ from rest_framework import generics, status
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsParent
+from home.models import Transaction
 from student.models import Student
-from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn
+from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn, FundWalletSerializerIn
 
 
 class CreateStudentAPIView(APIView):
@@ -52,6 +53,16 @@ class ListStudentAPIView(generics.ListAPIView):
     def get_queryset(self):
         return Student.objects.filter(parent__user=self.request.user)
 
+
+class FundWalletAPIView(APIView):
+    permission_classes = [IsParent]
+
+    @extend_schema(request=FundWalletSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = FundWalletSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Payment link generated", "data": response})
 
 
 

@@ -32,3 +32,12 @@ CLASS_STATUS_CHOICES = (
     ("cancelled", "Cancelled")
 )
 
+AVAILABILITY_STATUS_CHOICES = (
+    ("available", "Available"), ("not_available", "Not Available")
+)
+
+DAY_OF_THE_WEEK_CHOICES = (
+    ("0", "Sunday"), ("1", "Monday"), ("2", "Tuesday"), ("3", "Wednesday"), ("4", "Thursday"), ("5", "Friday"),
+    ("6", "Saturday")
+)
+

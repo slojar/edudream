@@ -12,7 +12,7 @@ from edudream.modules.choices import ACCOUNT_TYPE_CHOICES
 from edudream.modules.email_template import tutor_register_email, parent_register_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
-from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan
+from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview
 from location.models import Country, State, City
 from student.models import Student
 from tutor.models import TutorDetail, Classroom
@@ -96,6 +96,8 @@ class SignUpSerializerIn(serializers.Serializer):
     diploma_file = serializers.FileField(required=False)
     proficiency_test_type = serializers.CharField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
+    rest_period = serializers.IntegerField(required=False)
+    referral_code = serializers.CharField(required=False)
 
     def create(self, validated_data):
         f_name = validated_data.get("first_name")
@@ -120,6 +122,8 @@ class SignUpSerializerIn(serializers.Serializer):
         diploma_file = validated_data.get("diploma_file")
         proficiency_test_type = validated_data.get("proficiency_test_type")
         proficiency_test_file = validated_data.get("proficiency_test_file")
+        rest_period = validated_data.get("rest_period", 10)
+        referral_code = validated_data.get("referral_code")
         required_for_tutor = [
             bio, hobbies, funfact, linkedin, education_status, university_name, discipline, diploma_type, diploma_file,
             proficiency_test_type, proficiency_test_file
@@ -147,6 +151,14 @@ class SignUpSerializerIn(serializers.Serializer):
         email_token = generate_random_otp()
         log_request(f"Email Token for email - {email}: {email_token}")
 
+        referrer = None
+        if referral_code:
+            try:
+                referrer_profile = Profile.objects.get(referral_code=referral_code)
+                referrer = referrer_profile.user
+            except Profile.DoesNotExist:
+                pass
+
         user, _ = User.objects.get_or_create(username=email)
         user.email = email
         user.first_name = f_name
@@ -165,6 +177,7 @@ class SignUpSerializerIn(serializers.Serializer):
         profile.account_type = acct_type
         profile.email_verified_code = encrypt_text(email_token)
         profile.code_expiry = get_next_minute(timezone.now(), 15)
+        profile.referred_by = referrer
         profile.active = True
         profile.save()
 
@@ -186,6 +199,7 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_file = diploma_file
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.rest_period = rest_period
             tutor_detail.save()
             # Send Register Email to Tutor
             Thread(target=tutor_register_email, args=[user]).start()
@@ -368,4 +382,35 @@ class PaymentPlanSerializerOut(serializers.ModelSerializer):
         exclude = []
 
 
+class ClassReviewSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = ClassReview
+        exclude = []
+
+
+class ClassReviewSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    classroom_id = serializers.IntegerField()
+    title = serializers.CharField(max_length=100)
+    content = serializers.CharField()
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        class_id = validated_data.get("classroom_id")
+        title = validated_data.get("title")
+        content = validated_data.get("content")
+
+        # Get class
+        classroom = get_object_or_404(Classroom, id=class_id)
+        if not Classroom.objects.filter(tutor_id__in=[user.id], student__user_id__in=[user.id], id=class_id,
+                                        student__parent__user_id__in=[user.id]):
+            raise InvalidRequestException({"detail": "Classroom not found/valid"})
+
+        # Create ClassReview
+        review, _ = ClassReview.objects.get_or_create(classroom=classroom, submitted_by=user)
+        review.title = title
+        review.content = content
+        review.save()
+
+        return ClassReviewSerializerOut(review).data
 

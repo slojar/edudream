@@ -13,8 +13,10 @@ from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
 
-from home.models import SiteSetting
+from home.models import SiteSetting, Transaction
 from location.models import City, State, Country
+
+from edudream.modules.stripe_api import StripeAPI
 
 email_from = settings.EMAIL_FROM
 email_url = settings.EMAIL_URL
@@ -320,6 +322,44 @@ def get_site_details():
         logging.exception(str(ex))
         site = SiteSetting.objects.filter(site=Site.objects.get_current()).first()
     return site
+
+
+def complete_payment(ref_number):
+    try:
+        trans = Transaction.objects.get(reference=ref_number, status="pending")
+    except Transaction.DoesNotExist:
+        return False, f'Reference Number ({ref_number}) not found'
+
+    reference = str(ref_number)
+
+    if str(ref_number).lower().startswith('cs_'):
+        try:
+            result = StripeAPI.retrieve_checkout_session(session_id=reference)
+            reference = result.get('payment_intent')
+        except Exception as ex:
+            logging.error(ex)
+            pass
+
+    result = dict()
+    if str(reference).lower().startswith('pi_'):
+        result = StripeAPI.retrieve_payment_intent(payment_intent=reference)
+    if str(reference).lower().startswith('cs_'):
+        result = StripeAPI.retrieve_checkout_session(session_id=reference)
+
+    if result.get('status') and str(result.get('status')).lower() in ['succeeded', 'success', 'successful']:
+        trans.status = "completed"
+        trans.save()
+
+        if trans.transaction_type == "fund_wallet":
+            # Add coin equivalent of Payment Plan to Wallet balance
+            customer_wallet = trans.user.wallet
+            customer_wallet.refresh_from_db()
+            customer_wallet.balance += trans.plan.coin
+            customer_wallet.save()
+            # Send Notification to user
+
+        return True, "Payment updated"
+    ...
 
 
 

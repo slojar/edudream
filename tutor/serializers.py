@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from threading import Thread
 
@@ -6,7 +7,8 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from edudream.modules.GoogleAPI import generate_meeting_link
-from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES
+from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES, DAY_OF_THE_WEEK_CHOICES, \
+    AVAILABILITY_STATUS_CHOICES
 from edudream.modules.email_template import tutor_class_creation_email, parent_class_creation_email, \
     tutor_class_approved_email, student_class_approved_email, student_class_declined_email, parent_class_cancel_email, \
     student_class_cancel_email, parent_low_threshold_email
@@ -14,7 +16,7 @@ from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
 from home.models import Subject, Transaction
 from student.models import Student
-from tutor.models import TutorDetail, Classroom, Dispute
+from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
@@ -53,6 +55,11 @@ class CreateClassSerializerIn(serializers.Serializer):
         tutor_user = tutor.user
         d_site = get_site_details()
 
+        # Check Tutor Calendar
+        date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+        if not TutorCalendar.objects.filter(user=tutor_user, day_of_the_week=date_convert.isoweekday(), time_from__hour=date_convert.hour, status="available"):
+            raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
+
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
@@ -61,6 +68,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         balance = user.parent.wallet.balance
         if subject.amount > balance:
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
+
+        # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
         # Add grace period
         new_end_time = end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
@@ -118,7 +127,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             d_site.save()
             # Create transaction
             Transaction.objects.create(
-                user=parent, trasaction_type="course_payment", amount=amount, narration=instance.description,
+                user=parent, transaction_type="course_payment", amount=amount, narration=instance.description,
                 status="completed"
             )
             # Send meeting link to student
@@ -142,7 +151,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.save()
             # Create refund transaction
             Transaction.objects.create(
-                user=parent, trasaction_type="refund", amount=amount, narration=f"Refund, {instance.description}",
+                user=parent, transaction_type="refund", amount=amount, narration=f"Refund, {instance.description}",
                 status="completed"
             )
             # Notify parent and student
@@ -196,6 +205,34 @@ class DisputeSerializerIn(serializers.Serializer):
         instance.content = content
         instance.save()
         return DisputeSerializerOut(instance, context=self.context.get("request")).data
+
+
+class TutorCalendarSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = TutorCalendar
+        exclude = []
+
+
+class TutorCalendarSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    week_day = serializers.ChoiceField(choices=DAY_OF_THE_WEEK_CHOICES)
+    start_time = serializers.TimeField()
+    end_time = serializers.TimeField()
+    status = serializers.ChoiceField(choices=AVAILABILITY_STATUS_CHOICES)
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        week_day = validated_data.get("week_day")
+        start_period = validated_data.get("start_time")
+        end_period = validated_data.get("end_time")
+        avail_status = validated_data.get("status")
+
+        avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
+        avail.time_to = end_period
+        avail.status = avail_status
+        avail.save()
+
+        return TutorCalendarSerializerOut(avail).data
 
 
 

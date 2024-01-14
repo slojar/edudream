@@ -30,8 +30,6 @@ DATABASES = {
 }
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-FRONTEND_URL = env('FRONTEND_URL', None)
-
 # Simple JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
