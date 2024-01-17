@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.filters import SearchFilter
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
@@ -16,7 +17,7 @@ from edudream.modules.utils import complete_payment, get_site_details
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
-    PaymentPlanSerializerOut, ClassReviewSerializerIn
+    PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -171,6 +172,14 @@ class VerifyPaymentAPIView(APIView):
         #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
         return HttpResponseRedirect(redirect_to=f"{frontend_base_url}/verify-checkout?status={str(success).lower()}")
 
+
+class TutorListAPIView(ListAPIView):
+    permission_classes = []
+    queryset = Profile.objects.filter(account_type="tutor", active=True).order_by("?")
+    serializer_class = TutorListSerializerOut
+    pagination_class = CustomPagination
+    filter_backends = [SearchFilter]
+    search_fields = ["user__first_name", "user__last_name"]
 
 
 

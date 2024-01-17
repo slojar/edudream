@@ -356,6 +356,21 @@ def complete_payment(ref_number):
             customer_wallet.refresh_from_db()
             customer_wallet.balance += trans.plan.coin
             customer_wallet.save()
+            # Confirm if this is customer's first deposit, and credit referrer
+            first_fund_wallet = Transaction.objects.filter(transaction_type="fund_wallet", status="completed").first()
+            referrer = trans.user.profile.referred_by
+            if first_fund_wallet == trans and referrer is not None:
+                referral_point = get_site_details().referral_coin
+                referrer_wallet = referrer.wallet
+                referrer_wallet.refresh_from_db()
+                referrer_wallet.balance += referral_point
+                referrer_wallet.save()
+                # Create Referral TRansaction
+                Transaction.objects.create(
+                    user=referrer, transaction_type="bonus", amount=referral_point, status="completed",
+                    narration=f"Referal bonus from {trans.user.get_full_name()}"
+                )
+                # Send notification to referrer
             # Send Notification to user
 
         return True, "Payment updated"

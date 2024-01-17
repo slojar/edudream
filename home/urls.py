@@ -19,5 +19,7 @@ urlpatterns = [
     path('chat', views.ChatMessageAPIView.as_view(), name="chat"),
     path('payment-plans', views.PaymentPlanListAPIView.as_view(), name="payment-plan"),
     path('submit-review', views.SubmitReviewAPIView.as_view(), name="submit-review"),
+    path('payment-verify', views.VerifyPaymentAPIView.as_view(), name="payment-verify"),
+    path('tutor-list', views.TutorListAPIView.as_view(), name="tutors"),
 ]
 

@@ -20,6 +20,19 @@ from tutor.models import TutorDetail, Classroom, TutorLanguage
 from tutor.serializers import TutorDetailSerializerOut
 
 
+class TutorListSerializerOut(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="user.first_name")
+    last_name = serializers.CharField(source="user.last_name")
+    detail = serializers.SerializerMethodField()
+
+    def get_detail(self, obj):
+        return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj)).data
+
+    class Meta:
+        model = Profile
+        exclude = ["user", "dob", "address", "city", "state", "stripe_customer_id", "referred_by", "referral_code"]
+
+
 class ProfileSerializerOut(serializers.ModelSerializer):
     wallet_balance = serializers.SerializerMethodField()
 

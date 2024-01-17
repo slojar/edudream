@@ -1,6 +1,6 @@
 TRANSACTION_TYPE_CHOICES = (
     ("fund_wallet", "Fund Wallet"), ("course_payment", "Course Payment"), ("withdrawal", "Withdrawal"),
-    ("refund", "Refund")
+    ("refund", "Refund"), ("bonus", "Bonus")
 )
 
 PAYMENT_METHOD_CHOICES = (
