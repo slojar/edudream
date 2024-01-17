@@ -42,6 +42,7 @@ DAY_OF_THE_WEEK_CHOICES = (
 )
 
 PROFICIENCY_TYPE_CHOICES = (
-    ("professional", " Professional"), ("conversational", "Conversational"), ("learning", "Learning")
+    ("professional", " Professional"), ("conversational", "Conversational"), ("learning", "Learning"),
+    ("native", "Native")
 )
 

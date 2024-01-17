@@ -5,8 +5,8 @@ from django.contrib.auth.models import User
 from edudream.modules.exceptions import InvalidRequestException
 from django.contrib.auth.hashers import make_password
 
-from edudream.modules.utils import decrypt_text, encrypt_text
-from home.models import PaymentPlan, Transaction
+from edudream.modules.utils import decrypt_text, encrypt_text, log_request
+from home.models import PaymentPlan, Transaction, UserLanguage
 from student.models import Student
 
 from edudream.modules.stripe_api import StripeAPI
@@ -28,7 +28,9 @@ class StudentSerializerIn(serializers.Serializer):
     last_name = serializers.CharField()
     email_address = serializers.EmailField()
     password = serializers.CharField()
-    dob = serializers.DateTimeField()
+    note = serializers.CharField(required=False)
+    languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
+    # dob = serializers.DateTimeField()
     grade = serializers.CharField()
     help_subjects = serializers.ListSerializer(child=serializers.IntegerField(), required=False)
 
@@ -38,7 +40,9 @@ class StudentSerializerIn(serializers.Serializer):
         f_name = validated_data.get("first_name")
         l_name = validated_data.get("last_name")
         email = validated_data.get("email_address")
-        d_o_b = validated_data.get("dob")
+        student_note = validated_data.get("note")
+        languages = validated_data.get("languages")
+        # d_o_b = validated_data.get("dob")
         grade = validated_data.get("grade")
         help_subjects = validated_data.get("help_subjects")
 
@@ -51,8 +55,21 @@ class StudentSerializerIn(serializers.Serializer):
             first_name=f_name, last_name=l_name, email=email, username=email, password=make_password(password=password)
         )
 
+        if languages:
+            for language in languages:
+                language_id = language["language_id"]
+                language_proficiency = language["proficiency"]
+
+                try:
+                    lang, _ = UserLanguage.objects.get_or_create(user=student_user, language_id=language_id)
+                    lang.proficiency = language_proficiency
+                    lang.save()
+                except Exception as err:
+                    log_request(f"Error on User Language Creation: {err}")
+                    pass
+
         # Create student instance
-        student = Student.objects.create(user=student_user, parent__user=user, dob=d_o_b, grade=grade)
+        student = Student.objects.create(user=student_user, parent__user=user, grade=grade, note_to_tutor=student_note)
         if help_subjects:
             student.help_subject.clear()
             for subject in help_subjects:
@@ -64,7 +81,7 @@ class StudentSerializerIn(serializers.Serializer):
         instance.user.first_name = validated_data.get("first_name", instance.user.first_name)
         instance.user.last_name = validated_data.get("last_name", instance.user.last_name)
         instance.user.email = validated_data.get("email_address", instance.user.email)
-        instance.dob = validated_data.get("dob", instance.dob)
+        # instance.dob = validated_data.get("dob", instance.dob)
         instance.grade = validated_data.get("grade", instance.grade)
         instance.user.save()
         instance.save()

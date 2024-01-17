@@ -10,6 +10,7 @@ class Student(models.Model):
     dob = models.DateTimeField(blank=True, null=True)
     grade = models.CharField(max_length=50, blank=True, null=True)
     help_subject = models.ManyToManyField("home.Subject")
+    note_to_tutor = models.TextField(blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 

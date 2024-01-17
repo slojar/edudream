@@ -3,15 +3,7 @@ from django.contrib.auth.models import User
 
 from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
     AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES
-# from home.models import Subject
 from student.models import Student
-
-
-class TutorLanguage(models.Model):
-    name = models.CharField(max_length=200)
-
-    def __str__(self):
-        return str(self.name)
 
 
 class TutorDetail(models.Model):
@@ -26,8 +18,6 @@ class TutorDetail(models.Model):
     diploma_type = models.CharField(max_length=100, default="")
     diploma_grade = models.CharField(max_length=100, default="")
     diploma_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
-    language = models.ForeignKey(TutorLanguage, on_delete=models.SET_NULL, blank=True, null=True)
-    proficiency_test_type = models.CharField(max_length=100, default="")
     proficiency_test_grade = models.CharField(max_length=100, default="")
     proficiency_test_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)

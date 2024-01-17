@@ -7,7 +7,6 @@ from rest_framework import generics, status
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsParent
-from home.models import Transaction
 from student.models import Student
 from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn, FundWalletSerializerIn
 
