@@ -16,10 +16,12 @@ from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
 from home.models import Subject, Transaction
 from student.models import Student
-from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar
+from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorLanguage
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
+    language = serializers.CharField(source="language.name")
+
     class Meta:
         model = TutorDetail
         exclude = ["user"]
@@ -235,5 +237,8 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         return TutorCalendarSerializerOut(avail).data
 
 
-
+class TutorLanguageSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = TutorLanguage
+        exclude = []
 

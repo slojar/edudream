@@ -9,9 +9,9 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor
-from tutor.models import Classroom, Dispute, TutorCalendar
+from tutor.models import Classroom, Dispute, TutorCalendar, TutorLanguage
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
-    DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut
+    DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut, TutorLanguageSerializerOut
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
@@ -114,5 +114,10 @@ class TutorCalendarListAPIView(ListAPIView):
         tutor_id = self.kwargs.get("tutor_id")
         return TutorCalendar.objects.filter(user_id=tutor_id)
 
+
+class TutorLanguageListAPIView(ListAPIView):
+    permission_classes = []
+    queryset = TutorLanguage.objects.all().order_by("name")
+    serializer_class = TutorLanguageSerializerOut
 
 

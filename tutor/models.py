@@ -7,6 +7,13 @@ from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICE
 from student.models import Student
 
 
+class TutorLanguage(models.Model):
+    name = models.CharField(max_length=200)
+
+    def __str__(self):
+        return str(self.name)
+
+
 class TutorDetail(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField()
@@ -17,8 +24,11 @@ class TutorDetail(models.Model):
     university_name = models.CharField(max_length=150, default="")
     discipline = models.CharField(max_length=150, default="")
     diploma_type = models.CharField(max_length=100, default="")
+    diploma_grade = models.CharField(max_length=100, default="")
     diploma_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
+    language = models.ForeignKey(TutorLanguage, on_delete=models.SET_NULL, blank=True, null=True)
     proficiency_test_type = models.CharField(max_length=100, default="")
+    proficiency_test_grade = models.CharField(max_length=100, default="")
     proficiency_test_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
     rest_period = models.IntegerField(default=10)

@@ -41,3 +41,7 @@ DAY_OF_THE_WEEK_CHOICES = (
     ("6", "Saturday")
 )
 
+PROFICIENCY_TYPE_CHOICES = (
+    ("professional", " Professional"), ("conversational", "Conversational"), ("learning", "Learning")
+)
+

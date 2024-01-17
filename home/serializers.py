@@ -1,3 +1,4 @@
+import uuid
 from threading import Thread
 
 from django.contrib.auth import authenticate
@@ -8,14 +9,14 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
-from edudream.modules.choices import ACCOUNT_TYPE_CHOICES
+from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOICES
 from edudream.modules.email_template import tutor_register_email, parent_register_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview
 from location.models import Country, State, City
 from student.models import Student
-from tutor.models import TutorDetail, Classroom
+from tutor.models import TutorDetail, Classroom, TutorLanguage
 from tutor.serializers import TutorDetailSerializerOut
 
 
@@ -27,7 +28,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        exclude = []
+        exclude = ["dob", "address", "city", "state", "stripe_customer_id"]
 
 
 class UserSerializerOut(serializers.ModelSerializer):
@@ -46,16 +47,16 @@ class UserSerializerOut(serializers.ModelSerializer):
             student = Student.objects.get(user=obj)
             parent = student.parent
             return {
-                "dob": student.dob,
+                # "dob": student.dob,
                 "grade": student.grade,
-                "address": parent.address,
-                "city_id": parent.city_id,
-                "state_id": parent.state_id,
+                # "address": parent.address,
+                # "city_id": parent.city_id,
+                # "state_id": parent.state_id,
                 "country_id": parent.country_id,
-                "city_name": parent.city.name,
-                "state_name": parent.state.name,
+                # "city_name": parent.city.name,
+                # "state_name": parent.state.name,
                 "country_name": parent.country.name,
-                "full_address": parent.get_full_address(),
+                # "full_address": parent.get_full_address(),
                 "parent_name": parent.get_full_name(),
                 "parent_email": parent.email(),
                 "parent_mobile": parent.mobile_number
@@ -78,13 +79,14 @@ class SignUpSerializerIn(serializers.Serializer):
     last_name = serializers.CharField()
     email_address = serializers.EmailField()
     password = serializers.CharField()
-    address = serializers.CharField(max_length=300)
+    # address = serializers.CharField(max_length=300)
     account_type = serializers.ChoiceField(choices=ACCOUNT_TYPE_CHOICES)
     mobile_number = serializers.CharField(max_length=20)
-    dob = serializers.DateTimeField(required=False)
-    city = serializers.IntegerField()
-    state = serializers.IntegerField()
+    # dob = serializers.DateTimeField(required=False)
+    # city = serializers.IntegerField()
+    # state = serializers.IntegerField()
     country = serializers.IntegerField()
+    language = serializers.IntegerField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
     funfact = serializers.CharField(required=False)
@@ -93,9 +95,11 @@ class SignUpSerializerIn(serializers.Serializer):
     university_name = serializers.CharField(required=False)
     discipline = serializers.CharField(required=False)
     diploma_type = serializers.CharField(required=False)
+    diploma_grade = serializers.CharField(required=False)
     diploma_file = serializers.FileField(required=False)
-    proficiency_test_type = serializers.CharField(required=False)
+    proficiency_test_type = serializers.ChoiceField(required=False, choices=PROFICIENCY_TYPE_CHOICES)
     proficiency_test_file = serializers.FileField(required=False)
+    proficiency_test_grade = serializers.CharField(required=False)
     rest_period = serializers.IntegerField(required=False)
     referral_code = serializers.CharField(required=False)
 
@@ -105,12 +109,13 @@ class SignUpSerializerIn(serializers.Serializer):
         email = validated_data.get("email_address")
         password = validated_data.get("password")
         acct_type = validated_data.get("account_type")
-        address = validated_data.get("address")
+        # address = validated_data.get("address")
         phone_number = validated_data.get("mobile_number")
-        d_o_b = validated_data.get("dob")
-        city_id = validated_data.get("city")
-        state_id = validated_data.get("state")
+        # d_o_b = validated_data.get("dob")
+        # city_id = validated_data.get("city")
+        # state_id = validated_data.get("state")
         country_id = validated_data.get("country")
+        language_id = validated_data.get("language")
         bio = validated_data.get("bio")
         hobbies = validated_data.get("hobbies")
         funfact = validated_data.get("funfact")
@@ -120,19 +125,22 @@ class SignUpSerializerIn(serializers.Serializer):
         discipline = validated_data.get("discipline")
         diploma_type = validated_data.get("diploma_type")
         diploma_file = validated_data.get("diploma_file")
+        diploma_grade = validated_data.get("diploma_grade")
         proficiency_test_type = validated_data.get("proficiency_test_type")
         proficiency_test_file = validated_data.get("proficiency_test_file")
+        proficiency_test_grade = validated_data.get("proficiency_test_grade")
         rest_period = validated_data.get("rest_period", 10)
         referral_code = validated_data.get("referral_code")
         required_for_tutor = [
             bio, hobbies, funfact, linkedin, education_status, university_name, discipline, diploma_type, diploma_file,
-            proficiency_test_type, proficiency_test_file
+            proficiency_test_type, proficiency_test_file, diploma_grade, language_id, proficiency_test_grade
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": "Please submit all required details"})
         country = get_object_or_404(Country, id=country_id)
-        state = get_object_or_404(State, id=state_id, country_id=country_id)
-        city = get_object_or_404(City, id=city_id, state_id=state_id)
+        language = get_object_or_404(TutorLanguage, id=language_id)
+        # state = get_object_or_404(State, id=state_id, country_id=country_id)
+        # city = get_object_or_404(City, id=city_id, state_id=state_id)
 
         if User.objects.filter(username__iexact=email).exists():
             raise InvalidRequestException({"detail": "Email is taken"})
@@ -167,16 +175,17 @@ class SignUpSerializerIn(serializers.Serializer):
         user.save()
 
         profile, _ = Profile.objects.get_or_create(user=user)
-        if d_o_b:
-            profile.dob = d_o_b
+        # if d_o_b:
+        #     profile.dob = d_o_b
         profile.country = country
-        profile.state = state
-        profile.city = city
+        # profile.state = state
+        # profile.city = city
         profile.mobile_number = phone_number
-        profile.address = address
+        # profile.address = address
         profile.account_type = acct_type
         profile.email_verified_code = encrypt_text(email_token)
         profile.code_expiry = get_next_minute(timezone.now(), 15)
+        profile.referral_code = str(uuid.uuid4()).replace("-", "")[:8]
         profile.referred_by = referrer
         profile.active = True
         profile.save()
@@ -197,6 +206,9 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.discipline = discipline
             tutor_detail.diploma_type = diploma_type
             tutor_detail.diploma_file = diploma_file
+            tutor_detail.diploma_grade = diploma_grade
+            tutor_detail.language = language
+            tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.proficiency_test_file = proficiency_test_file
             tutor_detail.rest_period = rest_period

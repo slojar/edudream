@@ -1,5 +1,3 @@
-import uuid
-
 from django.contrib.sites.models import Site
 from django.db import models
 from django.contrib.auth.models import User
@@ -24,7 +22,8 @@ class Profile(models.Model):
     active = models.BooleanField(default=False)
     stripe_customer_id = models.TextField(blank=True, null=True)
     referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="referred_by")
-    referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
+    # referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
+    referral_code = models.CharField(default="", unique=True, max_length=50, blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True)
 
     def get_full_name(self):
@@ -39,17 +38,17 @@ class Profile(models.Model):
     def email(self):
         return self.user.email
 
-    def get_full_address(self):
-        addr = ""
-        if self.address:
-            addr += f"{self.address}, "
-        if self.city:
-            addr += f"{self.city.name}, "
-        if self.state:
-            addr += f"{self.state.name}, "
-        if self.country:
-            addr += f"{self.country.name}, "
-        return addr.strip()
+    # def get_full_address(self):
+    #     addr = ""
+    #     if self.address:
+    #         addr += f"{self.address}, "
+    #     if self.city:
+    #         addr += f"{self.city.name}, "
+    #     if self.state:
+    #         addr += f"{self.state.name}, "
+    #     if self.country:
+    #         addr += f"{self.country.name}, "
+    #     return addr.strip()
 
     def __str__(self):
         return f"{self.user.username}"
