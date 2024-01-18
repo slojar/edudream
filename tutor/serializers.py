@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import uuid
 from threading import Thread
 
@@ -11,16 +12,20 @@ from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES
     AVAILABILITY_STATUS_CHOICES
 from edudream.modules.email_template import tutor_class_creation_email, parent_class_creation_email, \
     tutor_class_approved_email, student_class_approved_email, student_class_declined_email, parent_class_cancel_email, \
-    student_class_cancel_email, parent_low_threshold_email
+    student_class_cancel_email, parent_low_threshold_email, payout_request_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
 from home.models import Subject, Transaction
 from student.models import Student
-from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar
+from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
     language = serializers.CharField(source="language.name")
+    bank_accounts = serializers.SerializerMethodField()
+
+    def get_bank_accounts(self, obj):
+        return TutorBankAccountSerializerOut(TutorBankAccount.objects.filter(user=obj.user), many=True).data
 
     class Meta:
         model = TutorDetail
@@ -235,5 +240,71 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         avail.save()
 
         return TutorCalendarSerializerOut(avail).data
+
+
+class TutorBankAccountSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = TutorBankAccount
+        exclude = []
+
+
+class TutorBankAccountSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    bank_name = serializers.CharField()
+    account_name = serializers.CharField()
+    account_number = serializers.CharField()
+    account_type = serializers.CharField(required=False)
+    routing_number = serializers.CharField(required=False)
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        bank = validated_data.get("bank_name")
+        acct_name = validated_data.get("account_name")
+        acct_no = validated_data.get("account_number")
+        acct_type = validated_data.get("account_type")
+        routing_no = validated_data.get("routing_number")
+
+        acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name__iexact=bank, account_number=acct_no)
+        acct.account_name = acct_name
+        acct.account_type = acct_type
+        acct.routing_number = routing_no
+        acct.save()
+
+        return TutorBankAccountSerializerOut(acct).data
+
+
+class PayoutSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = PayoutRequest
+        exclude = []
+
+
+class RequestPayoutSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    amount = serializers.FloatField()
+    bank_account_id = serializers.IntegerField()
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        coin = validated_data.get("amount")
+        bank_acct_id = validated_data.get("bank_account_id")
+        user_wallet = user.wallet
+
+        bank_acct = get_object_or_404(TutorBankAccount, user=user, id=bank_acct_id)
+        # Check if user balance is enough for withdrawal request
+        user_wallet.refresh_from_db()
+        if coin > user_wallet.balance:
+            raise InvalidRequestException({"detail": "Insufficient balance"})
+        payout_ratio = get_site_details().payout_coin_to_amount
+        amount = decimal.Decimal(coin) * payout_ratio
+        # Create Payout Request
+        payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
+        # Send Email to user
+        Thread(target=payout_request_email, args=[user]).start()
+        return PayoutSerializerOut(payout).data
+
+
+
+
 
 

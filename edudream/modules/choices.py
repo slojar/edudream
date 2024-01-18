@@ -46,3 +46,8 @@ PROFICIENCY_TYPE_CHOICES = (
     ("native", "Native")
 )
 
+PAYOUT_STATUS_CHOICES = (
+    ("pending", "Pending"), ("approved", "Approved"), ("declined", "Decline")
+)
+
+

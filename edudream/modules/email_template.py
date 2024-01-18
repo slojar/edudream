@@ -163,4 +163,19 @@ def parent_low_threshold_email(user, amount):
     return True
 
 
+def payout_request_email(user):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Tutor"
+
+    message = f"Dear {name}, <br><br>You payout request has been created and forwarded to admin for approval" \
+              f"<br>You will get a notification once the request is treated."
+    subject = "Payout Request"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+
 

@@ -9,9 +9,10 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor
-from tutor.models import Classroom, Dispute, TutorCalendar
+from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
-    DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut
+    DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut, TutorBankAccountSerializerIn, \
+    RequestPayoutSerializerIn, PayoutSerializerOut
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
@@ -113,6 +114,44 @@ class TutorCalendarListAPIView(ListAPIView):
     def get_queryset(self):
         tutor_id = self.kwargs.get("tutor_id")
         return TutorCalendar.objects.filter(user_id=tutor_id)
+
+
+class CreateBankAccountAPIView(APIView):
+    permission_classes = [IsTutor]
+
+    @extend_schema(request=TutorBankAccountSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = TutorBankAccountSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Success", "data": response})
+
+
+class TutorPayoutAPIView(APIView, CustomPagination):
+    permission_classes = [IsTutor]
+
+    @extend_schema(parameters=[OpenApiParameter(name="status", type=str)])
+    def get(self, request, pk=None):
+        if pk:
+            payout = get_object_or_404(PayoutRequest, id=pk, user=request.user)
+            response = PayoutSerializerOut(payout, context={"request": request}).data
+        else:
+            d_status = request.GET.get("status")
+            query = Q(user=request.user)
+            if d_status:
+                query &= Q(status=d_status)
+            queryset = self.paginate_queryset(PayoutRequest.objects.filter(query), request)
+            serializer = PayoutSerializerOut(queryset, many=True).data
+            response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Payout(s) Retrieved", "data": response})
+
+    @extend_schema(request=RequestPayoutSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = RequestPayoutSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Success", "data": response})
+
 
 
 

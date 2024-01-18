@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
-    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES
+    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES
 from student.models import Student
 
 
@@ -97,4 +97,30 @@ class TutorCalendar(models.Model):
     def __str__(self):
         return f"{self.user.username}"
 
+
+class TutorBankAccount(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    bank_name = models.CharField(max_length=200)
+    account_number = models.CharField(max_length=100)
+    account_name = models.CharField(max_length=200)
+    account_type = models.CharField(max_length=50, blank=True, null=True)
+    routing_number = models.CharField(max_length=300, blank=True, null=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.bank_name}"
+
+
+class PayoutRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    bank_account = models.ForeignKey(TutorBankAccount, on_delete=models.CASCADE)
+    coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
+    status = models.CharField(max_length=100, choices=PAYOUT_STATUS_CHOICES, default="pending")
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}: COIN - {self.coin}"
 
