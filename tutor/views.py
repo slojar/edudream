@@ -134,7 +134,7 @@ class TutorPayoutAPIView(APIView, CustomPagination):
     def get(self, request, pk=None):
         if pk:
             payout = get_object_or_404(PayoutRequest, id=pk, user=request.user)
-            response = PayoutSerializerOut(payout, context={"request": request}).data
+            response = PayoutSerializerOut(payout).data
         else:
             d_status = request.GET.get("status")
             query = Q(user=request.user)
