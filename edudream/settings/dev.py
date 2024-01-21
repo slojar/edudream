@@ -15,7 +15,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost",
     "https://edudream.tm-dev.xyz",
-    "https://edu-dream.netlify.app"
+    "https://edu-dream.netlify.app",
     "http://127.0.0.1"
 ]
 

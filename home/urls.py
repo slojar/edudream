@@ -21,5 +21,6 @@ urlpatterns = [
     path('submit-review', views.SubmitReviewAPIView.as_view(), name="submit-review"),
     path('payment-verify', views.VerifyPaymentAPIView.as_view(), name="payment-verify"),
     path('tutor-list', views.TutorListAPIView.as_view(), name="tutors"),
+    path('language', views.LanguageListAPIView.as_view(), name="language"),
 ]
 
