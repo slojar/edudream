@@ -13,7 +13,8 @@ from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOI
 from edudream.modules.email_template import tutor_register_email, parent_register_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
-from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage
+from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
+    Subject
 from location.models import Country, State, City
 from student.models import Student
 from tutor.models import TutorDetail, Classroom
@@ -465,4 +466,8 @@ class LanguageSerializerOut(serializers.ModelSerializer):
         exclude = []
 
 
+class SubjectSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        exclude = []
 

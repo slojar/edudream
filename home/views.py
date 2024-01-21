@@ -14,10 +14,11 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
 from edudream.modules.utils import complete_payment, get_site_details
-from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language
+from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
-    PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut
+    PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
+    SubjectSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -187,4 +188,12 @@ class LanguageListAPIView(ListAPIView):
     queryset = Language.objects.all().order_by("name")
     serializer_class = LanguageSerializerOut
 
+
+class SubjectListAPIView(ListAPIView):
+    permission_classes = []
+    queryset = Subject.objects.filter(active=True).order_by("name")
+    serializer_class = SubjectSerializerOut
+    pagination_class = CustomPagination
+    filter_backends = [SearchFilter]
+    search_fields = ["name", "grade"]
 
