@@ -114,7 +114,7 @@ class SignUpSerializerIn(serializers.Serializer):
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
     funfact = serializers.CharField(required=False)
-    linkedin = serializers.CharField(required=False)
+    linkedin = serializers.URLField(required=False)
     education_status = serializers.CharField(required=False)
     university_name = serializers.CharField(required=False)
     discipline = serializers.CharField(required=False)
@@ -253,7 +253,7 @@ class SignUpSerializerIn(serializers.Serializer):
             Thread(target=parent_register_email, args=[user]).start()
         # Send Verification token to email
 
-        return UserSerializerOut(user, context=self.context).data
+        return UserSerializerOut(user, context={"request": self.context.get("request")}).data
 
 
 class LoginSerializerIn(serializers.Serializer):
