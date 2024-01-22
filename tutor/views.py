@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -16,7 +17,7 @@ from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSeri
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(parameters=[OpenApiParameter(name="completed", type=str)])
     def get(self, request, pk=None):
@@ -35,7 +36,7 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
 
 
 class UpdateClassroomStatusAPIView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(request=ApproveDeclineClassroomSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
@@ -49,7 +50,7 @@ class UpdateClassroomStatusAPIView(APIView):
 
 
 class DisputeAPIView(APIView, CustomPagination):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(
         parameters=[OpenApiParameter(name="status", type=str), OpenApiParameter(name="search", type=str),
@@ -85,7 +86,7 @@ class DisputeAPIView(APIView, CustomPagination):
 
 
 class CreateDisputeAPIView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(request=DisputeSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
@@ -96,7 +97,7 @@ class CreateDisputeAPIView(APIView):
 
 
 class TutorCalendarAPIView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(request=TutorCalendarSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
@@ -117,7 +118,7 @@ class TutorCalendarListAPIView(ListAPIView):
 
 
 class CreateBankAccountAPIView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(request=TutorBankAccountSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
@@ -128,7 +129,7 @@ class CreateBankAccountAPIView(APIView):
 
 
 class TutorPayoutAPIView(APIView, CustomPagination):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     @extend_schema(parameters=[OpenApiParameter(name="status", type=str)])
     def get(self, request, pk=None):
