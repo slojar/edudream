@@ -29,8 +29,8 @@ class Profile(models.Model):
     mobile_number = models.CharField(max_length=20)
     dob = models.DateTimeField(blank=True, null=True)
     address = models.CharField(max_length=300, blank=True, null=True)
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True)
-    state = models.ForeignKey(State, on_delete=models.SET_NULL, null=True)
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True)
+    state = models.ForeignKey(State, on_delete=models.SET_NULL, null=True, blank=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True)
     account_type = models.CharField(max_length=100, choices=ACCOUNT_TYPE_CHOICES, default="tutor")
     email_verified = models.BooleanField(default=False)
@@ -42,6 +42,9 @@ class Profile(models.Model):
     # referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
     referral_code = models.CharField(default="", unique=True, max_length=50, blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "city", "state", "country", "referred_by"])]
 
     def get_full_name(self):
         return f'{self.user.first_name} {self.user.last_name}'

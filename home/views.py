@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.filters import SearchFilter
 
 from edudream.modules.exceptions import raise_serializer_error_msg
@@ -44,7 +44,7 @@ class LoginAPIView(APIView):
         user = serializer.save()
         return Response({
             "detail": "Login Successful", "data": UserSerializerOut(user, context={"request": request}).data,
-            "access_token": f"{RefreshToken.for_user(user)}"
+            "access_token": f"{AccessToken.for_user(user)}"
         })
 
 
