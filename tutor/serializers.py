@@ -21,8 +21,28 @@ from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBa
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
-    language = serializers.CharField(source="language.name")
     bank_accounts = serializers.SerializerMethodField()
+    diploma_file = serializers.SerializerMethodField()
+    proficiency_test_file = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+
+    def get_profile_picture(self, obj):
+        request = self.context.get("request")
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture)
+        return None
+
+    def get_proficiency_test_file(self, obj):
+        request = self.context.get("request")
+        if obj.proficiency_test_file:
+            return request.build_absolute_uri(obj.proficiency_test_file)
+        return None
+
+    def get_diploma_file(self, obj):
+        request = self.context.get("request")
+        if obj.diploma_file:
+            return request.build_absolute_uri(obj.diploma_file)
+        return None
 
     def get_bank_accounts(self, obj):
         return TutorBankAccountSerializerOut(TutorBankAccount.objects.filter(user=obj.user), many=True).data

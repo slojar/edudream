@@ -48,7 +48,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        exclude = ["dob", "address", "city", "state", "stripe_customer_id"]
+        exclude = ["dob", "address", "city", "state", "stripe_customer_id", "email_verified_code"]
 
 
 class UserSerializerOut(serializers.ModelSerializer):
@@ -89,7 +89,7 @@ class UserSerializerOut(serializers.ModelSerializer):
 
     def get_is_tutor(self, obj):
         try:
-            return TutorDetailSerializerOut(TutorDetail.objects.get(user=obj)).data
+            return TutorDetailSerializerOut(TutorDetail.objects.get(user=obj), context={"request": self.context.get("request")}).data
         except TutorDetail.DoesNotExist:
             return False
 
@@ -110,7 +110,8 @@ class SignUpSerializerIn(serializers.Serializer):
     # city = serializers.IntegerField()
     # state = serializers.IntegerField()
     country = serializers.IntegerField()
-    languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
+    # languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
+    languages = serializers.CharField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
     funfact = serializers.CharField(required=False)
@@ -197,7 +198,7 @@ class SignUpSerializerIn(serializers.Serializer):
         user.save()
 
         if languages:
-            for language in languages:
+            for language in eval(languages):
                 language_id = language["language_id"]
                 language_proficiency = language["proficiency"]
 
@@ -231,7 +232,7 @@ class SignUpSerializerIn(serializers.Serializer):
         # Create TutorDetail if account type is "tutor"
         if acct_type == "tutor":
             Profile.objects.filter(user=user).update(active=False)
-            tutor_detail = TutorDetail.objects.get_or_create(user=user)
+            tutor_detail, _ = TutorDetail.objects.get_or_create(user=user)
             tutor_detail.bio = bio
             tutor_detail.hobbies = hobbies
             tutor_detail.funfact = funfact

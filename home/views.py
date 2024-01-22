@@ -28,8 +28,6 @@ class SignUpAPIView(APIView):
 
     @extend_schema(request=SignUpSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
-        from edudream.modules.utils import log_request
-        log_request(f"DATA FROM FRONTEND: {request.data}")
         serializer = SignUpSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
