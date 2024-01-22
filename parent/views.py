@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics, status
@@ -12,7 +13,7 @@ from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn, 
 
 
 class CreateStudentAPIView(APIView):
-    permission_classes = [IsParent]
+    permission_classes = [IsAuthenticated & IsParent]
 
     @extend_schema(request=StudentSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
@@ -23,7 +24,7 @@ class CreateStudentAPIView(APIView):
 
 
 class EditStudentAPIView(APIView):
-    permission_classes = [IsParent]
+    permission_classes = [IsAuthenticated & IsParent]
 
     @extend_schema(request=StudentSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
@@ -35,7 +36,7 @@ class EditStudentAPIView(APIView):
 
 
 class RetrieveDeleteStudent(generics.RetrieveDestroyAPIView):
-    permission_classes = [IsParent]
+    permission_classes = [IsAuthenticated & IsParent]
     serializer_class = ParentStudentSerializerOut
     lookup_field = "id"
 
@@ -44,7 +45,7 @@ class RetrieveDeleteStudent(generics.RetrieveDestroyAPIView):
 
 
 class ListStudentAPIView(generics.ListAPIView):
-    permission_classes = [IsParent]
+    permission_classes = [IsAuthenticated & IsParent]
     serializer_class = ParentStudentSerializerOut
     queryset = Student.objects.filter()
     pagination_class = CustomPagination
@@ -54,7 +55,7 @@ class ListStudentAPIView(generics.ListAPIView):
 
 
 class FundWalletAPIView(APIView):
-    permission_classes = [IsParent]
+    permission_classes = [IsAuthenticated & IsParent]
 
     @extend_schema(request=FundWalletSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
