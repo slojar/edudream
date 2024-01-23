@@ -64,6 +64,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     description = serializers.CharField()
     tutor_id = serializers.IntegerField()
     start_date = serializers.DateTimeField()
+    # duration = serializers.IntegerField(help_text="Duration in minutes")
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
 
@@ -73,6 +74,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         description = validated_data.get("description")
         tutor_id = validated_data.get("tutor_id")
         start_date = validated_data.get("start_date")
+        # duration = validated_data.get("duration")
         end_date = validated_data.get("end_date")
         subject_id = validated_data.get("subject_id")
 
@@ -82,10 +84,25 @@ class CreateClassSerializerIn(serializers.Serializer):
         tutor_user = tutor.user
         d_site = get_site_details()
 
+        # Get Duration
+        start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
+        end_date_convert = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+        time_difference = end_date_convert - start_date_convert
+        duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
+
+        if duration < 15 or duration > 120:
+            raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
+
         # Check Tutor Calendar
-        date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
-        if not TutorCalendar.objects.filter(user=tutor_user, day_of_the_week=date_convert.isoweekday(), time_from__hour=date_convert.hour, status="available"):
+        if not TutorCalendar.objects.filter(
+                user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
+                time_from__hour=start_date_convert.hour, status="available"
+        ):
             raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
+
+        # Calculate Class Amount
+        subject_amount = subject.amount  # coin value per subject per hour
+        class_amount = duration * subject_amount / 60
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
@@ -93,7 +110,7 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Check parent balance is available for class amount
         balance = user.parent.wallet.balance
-        if subject.amount > balance:
+        if class_amount > balance:
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
@@ -103,7 +120,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
-            end_date=new_end_time, amount=subject.amount, subjects=subject
+            end_date=new_end_time, amount=class_amount, subjects=subject
         )
         # Notify Tutor of created class
         Thread(target=tutor_class_creation_email, args=[classroom]).start()

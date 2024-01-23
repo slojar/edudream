@@ -34,7 +34,7 @@ class StripeAPI:
     #     success_url = kwargs.get("success_url")
     #     cancel_url = kwargs.get("cancel_url")
     #     mode = kwargs.get("mode", "payment")
-    #     currency = kwargs.get("currency", "usd")
+    #     currency = kwargs.get("currency", "eur")
     #     client_reference_id = kwargs.get("client_reference_id")
     #     customer = kwargs.get("customer")
     #     customer_email = kwargs.get("customer_email")

@@ -111,7 +111,7 @@ class FundWalletSerializerIn(serializers.Serializer):
             success, response = StripeAPI.create_payment_session(
                 name=user.get_full_name(),
                 amount=amount,
-                currency_code="usd",
+                currency_code="eur",
                 description=description,
                 return_url=callback_url,
                 customer_id=stripe_customer_id,
@@ -131,7 +131,7 @@ class FundWalletSerializerIn(serializers.Serializer):
                 text = str(response).lower()
                 start_index = text.index("converts to approximately")
                 approx = text[start_index:]
-                response = f"Amount must convert to at least 50 cents. {amount}USD  {approx}"
+                response = f"Amount must convert to at least 50 cents. {amount}EUR  {approx}"
 
             if not success:
                 raise InvalidRequestException({'detail': response})
