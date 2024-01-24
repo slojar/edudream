@@ -163,7 +163,7 @@ class CreateTutorPayoutAPIView(APIView):
         serializer = RequestPayoutSerializerIn(data=request.data)
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
-        return Response()
+        return Response(response)
 
 
 class CreateTutorSubjectAPIView(APIView):
