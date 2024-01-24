@@ -19,16 +19,23 @@ from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSeri
 class TutorClassRoomAPIView(APIView, CustomPagination):
     permission_classes = [IsAuthenticated & IsTutor]
 
-    @extend_schema(parameters=[OpenApiParameter(name="completed", type=str)])
+    @extend_schema(
+        parameters=[OpenApiParameter(name="status", type=str), OpenApiParameter(name="date_from", type=str),
+                    OpenApiParameter(name="date_to", type=str)]
+    )
     def get(self, request, pk=None):
         if pk:
             item = get_object_or_404(Classroom, id=pk, tutor=request.user)
             response = ClassRoomSerializerOut(item, context={"request": request}).data
         else:
-            completed = request.GET.get("completed")
+            class_status = request.GET.get("status")
+            date_from = request.GET.get("date_from")
+            date_to = request.GET.get("date_to")
             query = Q(tutor=request.user)
-            if completed == "true":
-                query &= Q(completed=True)
+            if class_status:
+                query &= Q(status=class_status)
+            if date_from and date_to:
+                query &= Q(created_on__range=[date_from, date_to])
             queryset = self.paginate_queryset(Classroom.objects.filter(query), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data

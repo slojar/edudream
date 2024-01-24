@@ -67,6 +67,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     # duration = serializers.IntegerField(help_text="Duration in minutes")
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
+    book_now = serializers.BooleanField(default=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
