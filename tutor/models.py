@@ -124,3 +124,24 @@ class PayoutRequest(models.Model):
     def __str__(self):
         return f"{self.user.username}: COIN - {self.coin}"
 
+
+class TutorSubject(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    subject = models.ForeignKey("home.Subject", on_delete=models.CASCADE)
+    tags = models.CharField(max_length=300, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.subject.name} - {self.subject.grade}"
+
+
+class TutorSubjectDocument(models.Model):
+    tutor_subject = models.ForeignKey(TutorSubject, on_delete=models.CASCADE)
+    file = models.FileField(upload_to="tutor-subject-document")
+
+    def __str__(self):
+        return str(self.tutor_subject.subject.name)
+
+
+
+
+

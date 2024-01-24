@@ -50,4 +50,7 @@ PAYOUT_STATUS_CHOICES = (
     ("pending", "Pending"), ("approved", "Approved"), ("declined", "Decline")
 )
 
+GRADE_CHOICES = (
+    ("mid_school", "Middle School"), ("high_school", "High School")
+)
 

@@ -47,11 +47,8 @@ class CreateClassRoomAPIView(APIView):
     def post(self, request):
         serializer = CreateClassSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
-        user = serializer.save()
-        return Response({
-            "detail": "Classroom request sent successfully",
-            "data": ClassRoomSerializerOut(user, context={"request": request}).data
-        })
+        response = serializer.save()
+        return Response(response)
 
 
 

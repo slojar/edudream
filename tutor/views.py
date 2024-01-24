@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,10 +10,11 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor
-from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest
+from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
     DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut, TutorBankAccountSerializerIn, \
-    RequestPayoutSerializerIn, PayoutSerializerOut
+    RequestPayoutSerializerIn, PayoutSerializerOut, TutorSubjectSerializerIn, TutorSubjectSerializerOut, \
+    TutorSubjectDocumentSerializerIn
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
@@ -153,14 +154,40 @@ class TutorPayoutAPIView(APIView, CustomPagination):
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Payout(s) Retrieved", "data": response})
 
+
+class CreateTutorPayoutAPIView(APIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+
     @extend_schema(request=RequestPayoutSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = RequestPayoutSerializerIn(data=request.data)
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
+        return Response()
+
+
+class CreateTutorSubjectAPIView(APIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+
+    @extend_schema(request=TutorSubjectSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = TutorSubjectSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
         return Response({"detail": "Success", "data": response})
 
 
+class TutorSubjectListAPIView(ListAPIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+    serializer_class = TutorSubjectSerializerOut
 
+    def get_queryset(self):
+        return TutorSubject.objects.filter(user=self.request.user)
+
+
+class UploadSubjectDocumentCreateAPIView(CreateAPIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+    serializer_class = TutorSubjectDocumentSerializerIn
+    queryset = TutorSubjectDocument.objects.all()
 
 

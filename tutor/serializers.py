@@ -17,7 +17,8 @@ from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
 from home.models import Subject, Transaction
 from student.models import Student
-from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest
+from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
+    TutorSubjectDocument
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
@@ -64,10 +65,9 @@ class CreateClassSerializerIn(serializers.Serializer):
     description = serializers.CharField()
     tutor_id = serializers.IntegerField()
     start_date = serializers.DateTimeField()
-    # duration = serializers.IntegerField(help_text="Duration in minutes")
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
-    book_now = serializers.BooleanField(default=False)
+    book_now = serializers.BooleanField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -78,6 +78,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # duration = validated_data.get("duration")
         end_date = validated_data.get("end_date")
         subject_id = validated_data.get("subject_id")
+        book_now = validated_data.get("book_now", False)
 
         tutor = get_object_or_404(TutorDetail, user__id=tutor_id)
         subject = get_object_or_404(Subject, id=subject_id)
@@ -118,6 +119,14 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Add grace period
         new_end_time = end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+
+        if not book_now:
+            return {
+                "detail": "Classroom estimation complete",
+                "data": {"student_name": str(user.get_full_name()).upper(), "level": subject.grade,
+                         "subject": subject.name, "start_at": start_date, "end_at": end_date,
+                         "duration": f"{duration} minutes", "total_coin": class_amount}
+            }
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
@@ -128,7 +137,10 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom]).start()
 
-        return ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
+        return {
+            "detail": "Classroom request sent successfully",
+            "data": ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
+        }
 
 
 class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
@@ -321,11 +333,13 @@ class RequestPayoutSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     amount = serializers.FloatField()
     bank_account_id = serializers.IntegerField()
+    request_now = serializers.BooleanField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         coin = validated_data.get("amount")
         bank_acct_id = validated_data.get("bank_account_id")
+        request_now = validated_data.get("request_now", False)
         user_wallet = user.wallet
 
         bank_acct = get_object_or_404(TutorBankAccount, user=user, id=bank_acct_id)
@@ -335,12 +349,71 @@ class RequestPayoutSerializerIn(serializers.Serializer):
             raise InvalidRequestException({"detail": "Insufficient balance"})
         payout_ratio = get_site_details().payout_coin_to_amount
         amount = decimal.Decimal(coin) * payout_ratio
+
+        if not request_now:
+            return {
+                "detail": "Payout estimation complete",
+                "data": {"name": str(user.get_full_name()).upper(), "wallet_balance": user_wallet.balance,
+                         "coin_to_withdraw": coin, "amount_equivalent": f"EUR{amount}"}
+            }
         # Create Payout Request
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user]).start()
-        return PayoutSerializerOut(payout).data
+        return {"detail": "Success", "data": PayoutSerializerOut(payout).data}
 
+
+class TutorSubjectDocumentSerializerIn(serializers.ModelSerializer):
+    class Meta:
+        model = TutorSubjectDocument
+        exclude = []
+
+
+class TutorSubjectDocumentSerializerOut(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
+    def get_file(self, obj):
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.file)
+
+    class Meta:
+        model = TutorSubjectDocument
+        exclude = ["tutor_subject"]
+
+
+class TutorSubjectSerializerOut(serializers.ModelSerializer):
+    documents = serializers.SerializerMethodField()
+
+    def get_docmuents(self, obj):
+        request_context = {"request": self.context.get("request")}
+        tutor_documents = TutorSubjectDocument.objects.filter(tutor_subject=obj)
+        if tutor_documents.exists():
+            return TutorSubjectDocumentSerializerOut(tutor_documents, many=True, context=request_context).data
+        return None
+
+    class Meta:
+        model = TutorSubject
+        exclude = []
+
+
+class TutorSubjectSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    subject_id = serializers.IntegerField()
+    tags = serializers.CharField(max_length=300, required=False)
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        subject_id = validated_data.get("subject_id")
+        tag = validated_data.get("tags")
+
+        subject = get_object_or_404(Subject, id=subject_id)
+
+        # Create Subject Settings
+        tutor_subject, _ = TutorSubject.objects.get_or_create(user=user, subject=subject)
+        tutor_subject.tags = tag
+        tutor_subject.save()
+
+        return TutorSubjectSerializerOut(tutor_subject, context={"request": self.context.get("request")}).data
 
 
 

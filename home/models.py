@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from edudream.modules.choices import TRANSACTION_TYPE_CHOICES, TRANSACTION_STATUS_CHOICES, ACCOUNT_TYPE_CHOICES, \
-    PROFICIENCY_TYPE_CHOICES
+    PROFICIENCY_TYPE_CHOICES, GRADE_CHOICES
 from location.models import City, State, Country
 from tutor.models import Classroom
 
@@ -109,7 +109,7 @@ class Notification(models.Model):
 
 class Subject(models.Model):
     name = models.CharField(max_length=200)
-    grade = models.CharField(max_length=50, blank=True, null=True)
+    grade = models.CharField(max_length=50, choices=GRADE_CHOICES, default="mid_school")
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     active = models.BooleanField(default=True)
     created_on = models.DateTimeField(auto_now_add=True)
