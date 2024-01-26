@@ -4,7 +4,23 @@ from . import views
 app_name = "superadmin"
 
 urlpatterns = [
-    # path('create-user/', views.CreateUserAPIView.as_view(), name="create-user"),
-    # path('login/', views.LoginAPIView.as_view(), name="login"),
+    path('login', views.AdminLoginAPIView.as_view(), name="login"),
+    path('dashboard', views.DashboardAPIView.as_view(), name="dashboard"),
+    path('tutor', views.TutorListAPIVIew.as_view(), name="tutor"),
+    path('tutor/<int:pk>', views.TutorListAPIVIew.as_view(), name="tutor-detail"),
+    path('tutor-status/<int:pk>', views.UpdateTutorStatusAPIView.as_view(), name="tutor-status"),
+    path('parent', views.ParentListAPIView.as_view(), name="parent"),
+    path('parent/<int:pk>', views.ParentListAPIView.as_view(), name="parent-detail"),
+    path('classroom', views.ClassRoomListAPIView.as_view(), name="classroom"),
+    path('classroom/<int:pk>', views.ClassRoomListAPIView.as_view(), name="classroom-detail"),
+    path('reviews', views.ClassReviewListAPIView.as_view(), name="review"),
+    path('reviews/<int:id>', views.ClassReviewRetrieveAPIView.as_view(), name="review-detail"),
+    path('add-payment-plan', views.PaymentPlanCreateAPIView.as_view(), name="create-payment-plan"),
+    path('payment-plan', views.PaymentPlanListAPIView.as_view(), name="payment-plan"),
+    path('payment-plan/<int:id>', views.PaymentPlanRetrieveUpdateDeleteAPIView.as_view(), name="payment-plan-detail"),
+    path('add-language', views.LanguageCreateAPIView.as_view(), name="add-language"),
+    path('language', views.LanguageListAPIView.as_view(), name="language"),
+    path('language/<int:id>', views.LanguageDeleteAPIView.as_view(), name="delete-language"),
+
 ]
 

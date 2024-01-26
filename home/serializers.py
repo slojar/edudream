@@ -16,6 +16,7 @@ from edudream.modules.utils import generate_random_otp, log_request, encrypt_tex
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject
 from location.models import Country, State, City
+from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from tutor.models import TutorDetail, Classroom
 from tutor.serializers import TutorDetailSerializerOut
@@ -33,7 +34,7 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     detail = serializers.SerializerMethodField()
 
     def get_detail(self, obj):
-        return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj)).data
+        return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj), context={"request": self.context.get("request")}).data
 
     class Meta:
         model = Profile
@@ -42,6 +43,12 @@ class TutorListSerializerOut(serializers.ModelSerializer):
 
 class ProfileSerializerOut(serializers.ModelSerializer):
     wallet_balance = serializers.SerializerMethodField()
+    children = serializers.SerializerMethodField()
+
+    def get_children(self, obj):
+        if Student.objects.filter(parent=obj, parent__account_type="parent").exists():
+            return ParentStudentSerializerOut(Student.objects.filter(parent=obj, parent__account_type="parent"), many=True).data
+        return None
 
     def get_wallet_balance(self, obj):
         return Wallet.objects.filter(user=obj.user).last().balance
