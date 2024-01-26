@@ -33,6 +33,7 @@ class Profile(models.Model):
     state = models.ForeignKey(State, on_delete=models.SET_NULL, null=True, blank=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True)
     account_type = models.CharField(max_length=100, choices=ACCOUNT_TYPE_CHOICES, default="tutor")
+    profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
     email_verified = models.BooleanField(default=False)
     email_verified_code = models.CharField(max_length=200, blank=True, null=True)
     code_expiry = models.DateTimeField(blank=True, null=True)
@@ -101,7 +102,6 @@ class Card(models.Model):
 class Notification(models.Model):
     user = models.ManyToManyField(User)
     message = models.CharField(max_length=500)
-    read = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

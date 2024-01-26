@@ -44,6 +44,13 @@ class TutorListSerializerOut(serializers.ModelSerializer):
 class ProfileSerializerOut(serializers.ModelSerializer):
     wallet_balance = serializers.SerializerMethodField()
     children = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+
+    def get_profile_picture(self, obj):
+        request = self.context.get("request")
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture)
+        return None
 
     def get_children(self, obj):
         if Student.objects.filter(parent=obj, parent__account_type="parent").exists():
@@ -69,12 +76,13 @@ class UserSerializerOut(serializers.ModelSerializer):
 
     def get_user_detail(self, obj):
         try:
-            return ProfileSerializerOut(Profile.objects.get(user=obj)).data
+            return ProfileSerializerOut(Profile.objects.get(user=obj), context={"request": self.context.get("request")}).data
         except Profile.DoesNotExist:
             return None
 
     def get_is_student(self, obj):
         if Student.objects.filter(user=obj).exists():
+            request = self.context.get("request")
             student = Student.objects.get(user=obj)
             parent = student.parent
             return {
@@ -84,6 +92,7 @@ class UserSerializerOut(serializers.ModelSerializer):
                 # "city_id": parent.city_id,
                 # "state_id": parent.state_id,
                 "country_id": parent.country_id,
+                "profile_picture": request.build_absolute_uri(student.profile_picture),
                 # "city_name": parent.city.name,
                 # "state_name": parent.state.name,
                 "country_name": parent.country.name,
@@ -484,6 +493,30 @@ class NotificationSerializerOut(serializers.ModelSerializer):
     class Meta:
         model = Notification
         exclude = []
+
+
+class UploadProfilePictureSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    image = serializers.ImageField()
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        image = validated_data.get("image")
+
+        # Check if authenticated user is a student
+        if Student.objects.filter(user=user).exists():
+            student = Student.objects.get(user=user)
+            student.profile_picture = image
+            student.save()
+        else:
+            user_profile = get_object_or_404(Profile, user=user)
+            user_profile.profile_picture = image
+            user_profile.save()
+        return UserSerializerOut(user, context={"request": self.context.get("request")}).data
+
+
+
+
 
 
 

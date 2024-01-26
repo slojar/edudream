@@ -20,7 +20,6 @@ class TutorDetail(models.Model):
     diploma_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     proficiency_test_grade = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
-    profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
     rest_period = models.IntegerField(default=10)
     subjects = models.ManyToManyField("home.Subject")
     max_student_required = models.IntegerField(default=10)

@@ -25,13 +25,6 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     bank_accounts = serializers.SerializerMethodField()
     diploma_file = serializers.SerializerMethodField()
     proficiency_test_file = serializers.SerializerMethodField()
-    profile_picture = serializers.SerializerMethodField()
-
-    def get_profile_picture(self, obj):
-        request = self.context.get("request")
-        if obj.profile_picture:
-            return request.build_absolute_uri(obj.profile_picture)
-        return None
 
     def get_proficiency_test_file(self, obj):
         request = self.context.get("request")

@@ -20,7 +20,7 @@ from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
-    SubjectSerializerOut, NotificationSerializerOut
+    SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn
 
 
 class SignUpAPIView(APIView):
@@ -207,20 +207,24 @@ class NotificationAPIView(APIView, CustomPagination):
     def get(self, request, pk=None):
         if pk:
             queryset = get_object_or_404(Notification, id=pk, user__in=[request.user])
-            queryset.read = True
-            queryset.save()
             serializer = NotificationSerializerOut(queryset).data
             return Response({"detail": "Success", "data": serializer})
 
-        read = request.GET.get("read")
-        query = Q(user__in=[request.user])
-        if read == "true":
-            query &= Q(read=True)
-        if read == "false":
-            query &= Q(read=False)
-
-        queryset = self.paginate_queryset(Notification.objects.filter(query), request)
+        queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
+
+
+class UploadProfilePictureAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=UploadProfilePictureSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = UploadProfilePictureSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
 

@@ -25,5 +25,6 @@ urlpatterns = [
     path('subjects', views.SubjectListAPIView.as_view(), name="subjects"),
     path('notification', views.NotificationAPIView.as_view(), name="notification"),
     path('notification/<int:pk>', views.NotificationAPIView.as_view(), name="notification-detail"),
+    path('upload-avatar', views.UploadProfilePictureAPIView.as_view(), name="upload-avatar"),
 ]
 
