@@ -12,12 +12,12 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
-from home.models import Profile, ClassReview, PaymentPlan, Language
+from home.models import Profile, ClassReview, PaymentPlan, Language, Notification
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
-    PaymentPlanSerializerOut, LanguageSerializerOut
+    PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
-from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn
+from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn
 from tutor.models import Classroom
 from tutor.serializers import ClassRoomSerializerOut
 
@@ -226,6 +226,24 @@ class LanguageDeleteAPIView(DestroyAPIView):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializerOut
     lookup_field = "id"
+
+
+class NotificationListAPIView(ListAPIView):
+    permission_classes = [IsAdminUser]
+    queryset = Notification.objects.all().order_by("-id")
+    serializer_class = NotificationSerializerOut
+    pagination_class = CustomPagination
+
+
+class SendNotificationAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(request=NotificationSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = NotificationSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Notification created",  "data": response})
 
 
 

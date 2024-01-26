@@ -16,11 +16,11 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
 from edudream.modules.utils import complete_payment, get_site_details
-from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject
+from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
-    SubjectSerializerOut
+    SubjectSerializerOut, NotificationSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -198,4 +198,29 @@ class SubjectListAPIView(ListAPIView):
     pagination_class = CustomPagination
     filter_backends = [SearchFilter]
     search_fields = ["name", "grade"]
+
+
+class NotificationAPIView(APIView, CustomPagination):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(parameters=[OpenApiParameter(name="read", type=str)])
+    def get(self, request, pk=None):
+        if pk:
+            queryset = get_object_or_404(Notification, id=pk, user__in=[request.user])
+            queryset.read = True
+            queryset.save()
+            serializer = NotificationSerializerOut(queryset).data
+            return Response({"detail": "Success", "data": serializer})
+
+        read = request.GET.get("read")
+        query = Q(user__in=[request.user])
+        if read == "true":
+            query &= Q(read=True)
+        if read == "false":
+            query &= Q(read=False)
+
+        queryset = self.paginate_queryset(Notification.objects.filter(query), request)
+        serializer = NotificationSerializerOut(queryset, many=True).data
+        response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Success", "data": response})
 

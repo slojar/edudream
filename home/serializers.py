@@ -14,7 +14,7 @@ from edudream.modules.email_template import tutor_register_email, parent_registe
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
-    Subject
+    Subject, Notification
 from location.models import Country, State, City
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
@@ -478,4 +478,13 @@ class SubjectSerializerOut(serializers.ModelSerializer):
     class Meta:
         model = Subject
         exclude = []
+
+
+class NotificationSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        exclude = []
+
+
+
 

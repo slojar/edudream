@@ -384,7 +384,7 @@ class TutorSubjectDocumentSerializerOut(serializers.ModelSerializer):
 class TutorSubjectSerializerOut(serializers.ModelSerializer):
     documents = serializers.SerializerMethodField()
 
-    def get_docmuents(self, obj):
+    def get_documents(self, obj):
         request_context = {"request": self.context.get("request")}
         tutor_documents = TutorSubjectDocument.objects.filter(tutor_subject=obj)
         if tutor_documents.exists():

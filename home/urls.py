@@ -23,5 +23,7 @@ urlpatterns = [
     path('tutor-list', views.TutorListAPIView.as_view(), name="tutors"),
     path('language', views.LanguageListAPIView.as_view(), name="language"),
     path('subjects', views.SubjectListAPIView.as_view(), name="subjects"),
+    path('notification', views.NotificationAPIView.as_view(), name="notification"),
+    path('notification/<int:pk>', views.NotificationAPIView.as_view(), name="notification-detail"),
 ]
 

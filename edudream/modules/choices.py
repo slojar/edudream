@@ -54,3 +54,9 @@ GRADE_CHOICES = (
     ("mid_school", "Middle School"), ("high_school", "High School")
 )
 
+SEND_NOTIFICATION_TYPE_CHOICES = (
+    ("tutor", "Tutor"), ("parent", "Parent"), ("student", "Student"), ("all", "All")
+)
+
+
+
