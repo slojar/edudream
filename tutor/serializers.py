@@ -86,7 +86,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         else:
             student = get_object_or_404(Student, user=user)
 
-        tutor = get_object_or_404(TutorDetail, user__id=tutor_id)
+        tutor = get_object_or_404(TutorDetail, user_id=tutor_id)
         subject = get_object_or_404(Subject, id=subject_id)
         tutor_user = tutor.user
         d_site = get_site_details()
