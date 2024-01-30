@@ -15,7 +15,7 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
     student_class_cancel_email, parent_low_threshold_email, payout_request_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import get_site_details
-from home.models import Subject, Transaction
+from home.models import Subject, Transaction, Profile
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
     TutorSubjectDocument
@@ -57,6 +57,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     tutor_id = serializers.IntegerField()
+    student_id = serializers.IntegerField(required=False)
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
@@ -67,15 +68,26 @@ class CreateClassSerializerIn(serializers.Serializer):
         name = validated_data.get("name")
         description = validated_data.get("description")
         tutor_id = validated_data.get("tutor_id")
+        student_id = validated_data.get("student_id")
         start_date = validated_data.get("start_date")
         # duration = validated_data.get("duration")
         end_date = validated_data.get("end_date")
         subject_id = validated_data.get("subject_id")
         book_now = validated_data.get("book_now", False)
+        parent_profile = None
+
+        try:
+            parent_profile = Profile.objects.get(user=user, account_type="parent")
+        except Profile.DoesNotExist:
+            pass
+
+        if parent_profile:
+            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+        else:
+            student = get_object_or_404(Student, user=user)
 
         tutor = get_object_or_404(TutorDetail, user__id=tutor_id)
         subject = get_object_or_404(Subject, id=subject_id)
-        student = get_object_or_404(Student, user=user)
         tutor_user = tutor.user
         d_site = get_site_details()
 
