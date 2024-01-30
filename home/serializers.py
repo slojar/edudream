@@ -42,7 +42,7 @@ class TutorListSerializerOut(serializers.ModelSerializer):
 
 
 class ProfileSerializerOut(serializers.ModelSerializer):
-    wallet_balance = serializers.SerializerMethodField()
+    wallet = serializers.SerializerMethodField()
     children = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
 
@@ -57,8 +57,9 @@ class ProfileSerializerOut(serializers.ModelSerializer):
             return ParentStudentSerializerOut(Student.objects.filter(parent=obj, parent__account_type="parent"), many=True).data
         return None
 
-    def get_wallet_balance(self, obj):
-        return Wallet.objects.filter(user=obj.user).last().balance
+    def get_wallet(self, obj):
+        balance = Wallet.objects.filter(user=obj.user).last().balance
+        return {"balance": balance, "approximate_hours": float(balance / 7.5)}
 
     class Meta:
         model = Profile
