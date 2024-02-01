@@ -88,6 +88,7 @@ class UserSerializerOut(serializers.ModelSerializer):
             parent = student.parent
             return {
                 # "dob": student.dob,
+                "user_id": student.user_id,
                 "grade": student.grade,
                 # "address": parent.address,
                 # "city_id": parent.city_id,
@@ -100,7 +101,8 @@ class UserSerializerOut(serializers.ModelSerializer):
                 # "full_address": parent.get_full_address(),
                 "parent_name": parent.get_full_name(),
                 "parent_email": parent.email(),
-                "parent_mobile": parent.mobile_number
+                "parent_mobile": parent.mobile_number,
+                "parent_wallet_balance": parent.user.wallet.balance
             }
         return False
 

@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
-from edudream.modules.permissions import IsStudent
+from edudream.modules.permissions import IsStudent, IsParent
 from tutor.models import Classroom
 from tutor.serializers import CreateClassSerializerIn, ClassRoomSerializerOut
 
@@ -41,7 +41,7 @@ class StudentClassRoomAPIView(APIView, CustomPagination):
 
 
 class CreateClassRoomAPIView(APIView):
-    permission_classes = [IsAuthenticated & IsStudent]
+    permission_classes = [IsAuthenticated & (IsStudent | IsParent)]
 
     @extend_schema(request=CreateClassSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
