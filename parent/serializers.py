@@ -69,7 +69,7 @@ class StudentSerializerIn(serializers.Serializer):
                     pass
 
         # Create student instance
-        student = Student.objects.create(user=student_user, parent__user=user, grade=grade, note_to_tutor=student_note)
+        student = Student.objects.create(user=student_user, grade=grade, note_to_tutor=student_note, parent_id=user.profile.id)
         if help_subjects:
             student.help_subject.clear()
             for subject in help_subjects:
