@@ -1,19 +1,11 @@
 import stripe
 from django.conf import settings
 
+stripe.api_key = settings.STRIPE_API_KEY
+
 
 class StripeAPI:
     
-    def __init__(self):
-        stripe.api_key = settings.STRIPE_API_KEY
-
-    # @classmethod
-    # def stripe_detail(cls):
-    #     site = get_site_details().site
-    #     payment_gateway, _ = PaymentGateway.objects.get_or_create(site=site, name='stripe')
-    #     stripe_obj, new = Stripe.objects.get_or_create(payment_gateway=payment_gateway)
-    #     return stripe_obj
-    #
     @classmethod
     def create_customer(cls, name, email, phone, **kwargs):
         customer = stripe.Customer.create(
