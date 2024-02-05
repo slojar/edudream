@@ -1,8 +1,6 @@
 import stripe
 from django.conf import settings
 
-from edudream.modules.utils import get_site_details
-
 stripe.api_key = settings.STRIPE_API_KEY
 
 
@@ -102,6 +100,7 @@ class StripeAPI:
     @classmethod
     def create_payment_session(cls, name, amount, currency_code, **kwargs):
         from edudream.modules.utils import log_request
+        from edudream.modules.utils import get_site_details
         site_setting = get_site_details()
         frontend_base_url = site_setting.frontend_url
 
