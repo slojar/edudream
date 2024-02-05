@@ -103,7 +103,9 @@ class FundWalletSerializerIn(serializers.Serializer):
 
         plan = get_object_or_404(PaymentPlan, id=plan_id)
         amount = float(plan.amount)
-        stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
+        stripe_customer_id = ""
+        if user.profile.stripe_customer_id:
+            stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
         description = f'Wallet funding: {user.get_full_name()}'
         payment_reference = payment_link = None
 
