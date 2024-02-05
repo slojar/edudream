@@ -365,7 +365,7 @@ def complete_payment(ref_number):
                 referrer_wallet.refresh_from_db()
                 referrer_wallet.balance += referral_point
                 referrer_wallet.save()
-                # Create Referral TRansaction
+                # Create Referral Transaction
                 Transaction.objects.create(
                     user=referrer, transaction_type="bonus", amount=referral_point, status="completed",
                     narration=f"Referal bonus from {trans.user.get_full_name()}"
@@ -374,7 +374,10 @@ def complete_payment(ref_number):
             # Send Notification to user
 
         return True, "Payment updated"
-    ...
+    else:
+        trans.status = "failed"
+        trans.save()
+        return False, ""
 
 
 

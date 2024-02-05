@@ -92,13 +92,15 @@ class StudentSerializerIn(serializers.Serializer):
 class FundWalletSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     plan_id = serializers.IntegerField()
-    redirect_url = serializers.URLField()
+    ip_address = serializers.IPAddressField()
     # card_id = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         plan_id = validated_data.get("plan_id")
-        callback_url = validated_data.get("redirect_url")
+        ip_address = validated_data.get("ip_address")
+        request = self.context.get("request")
+        callback_url = request.build_absolute_uri('/payment-verify')
         # card_id = validated_data.get("card_id", None)
 
         plan = get_object_or_404(PaymentPlan, id=plan_id)
@@ -116,10 +118,13 @@ class FundWalletSerializerIn(serializers.Serializer):
         description = f'Wallet funding: {user.get_full_name()}'
         payment_reference = payment_link = None
 
+        # Calculate tax
+        tax_amount = StripeAPI.calculate_tax(user.get_full_name(), amount, ip_address)
+        total_amount = float(tax_amount.get("amount_total") / 100)
         while True:
             success, response = StripeAPI.create_payment_session(
                 name=user.get_full_name(),
-                amount=amount,
+                amount=total_amount,
                 currency_code="eur",
                 description=description,
                 return_url=callback_url,

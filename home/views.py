@@ -171,7 +171,9 @@ class VerifyPaymentAPIView(APIView):
         frontend_base_url = site_setting.frontend_url
         reference = request.GET.get("reference")
         success, response = complete_payment(reference)
-        # if success is False:
+        if success is False:
+            return HttpResponseRedirect(
+                redirect_to=f"{frontend_base_url}/verify-checkout?status={str(success).lower()}")
         #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
         return HttpResponseRedirect(redirect_to=f"{frontend_base_url}/verify-checkout?status={str(success).lower()}")
 

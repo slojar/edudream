@@ -1,3 +1,5 @@
+import uuid
+
 import stripe
 from django.conf import settings
 
@@ -96,6 +98,22 @@ class StripeAPI:
     #         return True, session
     #     except Exception as ex:
     #         return False, create_error_message('source', f"{ex}")
+
+    @classmethod
+    def calculate_tax(cls, customer_id, amount, ip_address):
+        from edudream.modules.utils import log_request
+        result = stripe.tax.Calculation.create(
+                  currency="eur",
+                  line_items=[
+                      {
+                          "amount": int(amount) * 100,
+                          "reference": f"Tax calculation for customer: {customer_id} - {uuid.uuid4()}"
+                      }
+                  ],
+                  customer_details={"ip_address": ip_address}
+                )
+        log_request(f'Stripe setup response: {result}')
+        return result
 
     @classmethod
     def create_payment_session(cls, name, amount, currency_code, **kwargs):
