@@ -77,17 +77,21 @@ class UserSerializerOut(serializers.ModelSerializer):
         if Student.objects.filter(user=obj).exists():
             student = Student.objects.get(user=obj)
             classroom = Classroom.objects.filter(student__user=obj)
+            tutors = [classes.tutor_id for classes in classroom]
+            tutor_list = list(dict.fromkeys(tutors))
             return {
-                "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student=student).distinct().count(),
+                "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
             }
         elif Profile.objects.filter(user=obj, account_type="parent").exists():
             classroom = Classroom.objects.filter(student__parent__user=obj)
+            tutors = [classes.tutor_id for classes in classroom]
+            tutor_list = list(dict.fromkeys(tutors))
             students = Student.objects.filter(parent__user=obj)
             return {
-                "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student__in=students).distinct().count(),
+                "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
                 "total_student": students.count(),
                 "active_classes": classroom.filter(status="accepted").count(),
