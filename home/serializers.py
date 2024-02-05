@@ -76,16 +76,32 @@ class UserSerializerOut(serializers.ModelSerializer):
     def get_stat(self, obj):
         if Student.objects.filter(user=obj).exists():
             student = Student.objects.get(user=obj)
+            classroom = Classroom.objects.filter(student__user=obj)
             return {
                 "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student=student).distinct().count(),
-                "total_subject": Subject.objects.filter(classroom__student=student).distinct().count()
+                "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
+                "active_classes": classroom.filter(status="accepted").count(),
+                "completed_classes": classroom.filter(status="completed").count(),
             }
         elif Profile.objects.filter(user=obj, account_type="parent").exists():
+            classroom = Classroom.objects.filter(student__parent__user=obj)
             students = Student.objects.filter(parent__user=obj)
             return {
                 "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student__in=students).distinct().count(),
-                "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count()
+                "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
+                "total_student": students.count(),
+                "active_classes": classroom.filter(status="accepted").count(),
+                "completed_classes": classroom.filter(status="completed").count(),
             }
+        elif Profile.objects.filter(user=obj, account_type="tutor").exists():
+            classroom = Classroom.objects.filter(tutor=obj)
+            return {
+                "total_subject": Subject.objects.filter(classroom__tutor__in=[obj]).distinct().count(),
+                "active_classes": classroom.filter(status="accepted").count(),
+                "completed_classes": classroom.filter(status="completed").count(),
+                "cancelled_classes": classroom.filter(status="cancelled").count(),
+            }
+
         else:
             return None
 
