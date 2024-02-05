@@ -42,6 +42,9 @@ EMAIL_URL = env('EMAIL_URL', None)
 EMAIL_API_KEY = env('EMAIL_API_KEY', None)
 EMAIL_FROM = env('EMAIL_FROM', None)
 
+# STRIPE KEY
+STRIPE_API_KEY = env('STRIPE_API_KEY', None)
+
 # Simple JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),

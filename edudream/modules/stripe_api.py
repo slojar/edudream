@@ -1,10 +1,11 @@
 import stripe
+from django.conf import settings
 
 
 class StripeAPI:
     
-    # def __init__(self):
-    #     stripe.api_key = self.stripe_detail().secret_key
+    def __init__(self):
+        stripe.api_key = settings.STRIPE_API_KEY
 
     # @classmethod
     # def stripe_detail(cls):
