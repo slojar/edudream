@@ -29,13 +29,13 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     def get_proficiency_test_file(self, obj):
         request = self.context.get("request")
         if obj.proficiency_test_file:
-            return request.build_absolute_uri(obj.proficiency_test_file)
+            return request.build_absolute_uri(obj.proficiency_test_file.url)
         return None
 
     def get_diploma_file(self, obj):
         request = self.context.get("request")
         if obj.diploma_file:
-            return request.build_absolute_uri(obj.diploma_file)
+            return request.build_absolute_uri(obj.diploma_file.url)
         return None
 
     def get_bank_accounts(self, obj):
@@ -379,7 +379,7 @@ class TutorSubjectDocumentSerializerOut(serializers.ModelSerializer):
 
     def get_file(self, obj):
         request = self.context.get("request")
-        return request.build_absolute_uri(obj.file)
+        return request.build_absolute_uri(obj.file.url)
 
     class Meta:
         model = TutorSubjectDocument

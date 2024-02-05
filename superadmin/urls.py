@@ -23,6 +23,7 @@ urlpatterns = [
     path('language/<int:id>', views.LanguageDeleteAPIView.as_view(), name="delete-language"),
     path('message', views.NotificationListAPIView.as_view(), name="message"),
     path('send-message', views.SendNotificationAPIView.as_view(), name="send-message"),
+    path('change-password', views.AdminChangePasswordAPIView.as_view(), name="change-password"),
 
 ]
 

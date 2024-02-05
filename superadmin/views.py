@@ -17,7 +17,8 @@ from home.serializers import ProfileSerializerOut, TutorListSerializerOut, Class
     PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
-from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn
+from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
+    AdminChangePasswordSerializerIn
 from tutor.models import Classroom
 from tutor.serializers import ClassRoomSerializerOut
 
@@ -246,4 +247,13 @@ class SendNotificationAPIView(APIView):
         return Response({"detail": "Notification created",  "data": response})
 
 
+class AdminChangePasswordAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(request=AdminChangePasswordSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = AdminChangePasswordSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
 

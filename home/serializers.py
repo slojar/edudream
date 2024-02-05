@@ -49,7 +49,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
     def get_profile_picture(self, obj):
         request = self.context.get("request")
         if obj.profile_picture:
-            return request.build_absolute_uri(obj.profile_picture)
+            return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
     def get_children(self, obj):
@@ -71,6 +71,23 @@ class UserSerializerOut(serializers.ModelSerializer):
     is_tutor = serializers.SerializerMethodField()
     is_student = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
+    stat = serializers.SerializerMethodField()
+
+    def get_stat(self, obj):
+        if Student.objects.filter(user=obj).exists():
+            student = Student.objects.get(user=obj)
+            return {
+                "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student=student).distinct().count(),
+                "total_subject": Subject.objects.filter(classroom__student=student).distinct().count()
+            }
+        elif Profile.objects.filter(user=obj, account_type="parent").exists():
+            students = Student.objects.filter(parent__user=obj)
+            return {
+                "total_tutor": Profile.objects.filter(account_type="tutor", student__class_student__in=students).distinct().count(),
+                "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count()
+            }
+        else:
+            return None
 
     def get_languages(self, obj):
         return UserLanguageSerializerOut(UserLanguage.objects.filter(user=obj), many=True).data
@@ -94,7 +111,7 @@ class UserSerializerOut(serializers.ModelSerializer):
                 # "city_id": parent.city_id,
                 # "state_id": parent.state_id,
                 "country_id": parent.country_id,
-                "profile_picture": request.build_absolute_uri(student.profile_picture),
+                "profile_picture": request.build_absolute_uri(student.profile_picture.url),
                 # "city_name": parent.city.name,
                 # "state_name": parent.state.name,
                 "country_name": parent.country.name,
