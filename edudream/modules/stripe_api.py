@@ -1,6 +1,8 @@
 import stripe
 from django.conf import settings
 
+from edudream.modules.utils import get_site_details
+
 stripe.api_key = settings.STRIPE_API_KEY
 
 
@@ -100,6 +102,9 @@ class StripeAPI:
     @classmethod
     def create_payment_session(cls, name, amount, currency_code, **kwargs):
         from edudream.modules.utils import log_request
+        site_setting = get_site_details()
+        frontend_base_url = site_setting.frontend_url
+
         """
         Initiate a stripe transaction
         """
@@ -125,7 +130,8 @@ class StripeAPI:
                 mode="payment",
                 # description=description,
                 success_url=return_url + '&reference={CHECKOUT_SESSION_ID}',
-                cancel_url=f'{return_url}',
+                # cancel_url=f'{return_url}',
+                cancel_url=f"{frontend_base_url}/verify-checkout?status={str(False).lower()}",
                 customer=customer_id,
                 # metadata=metadata,
                 # payment_intent_data={
