@@ -116,7 +116,7 @@ class StripeAPI:
         return result
 
     @classmethod
-    def create_payment_session(cls, name, amount, currency_code, **kwargs):
+    def create_payment_session(cls, name, amount, **kwargs):
         from edudream.modules.utils import log_request
         from edudream.modules.utils import get_site_details
         site_setting = get_site_details()
@@ -126,16 +126,14 @@ class StripeAPI:
         Initiate a stripe transaction
         """
         try:
-            description = kwargs.get('description', )
             return_url = kwargs.get('return_url', )
             customer_id = kwargs.get('customer_id', )
-
             stripe_payment = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[
                     {
                         "price_data": {
-                            "currency": currency_code,
+                            "currency": "eur",
                             "product_data": {
                                 "name": name,
                             },
@@ -145,15 +143,9 @@ class StripeAPI:
                     }
                 ],
                 mode="payment",
-                # description=description,
                 success_url=return_url + '&reference={CHECKOUT_SESSION_ID}',
-                # cancel_url=f'{return_url}',
                 cancel_url=f"{frontend_base_url}/verify-checkout?status={str(False).lower()}",
                 customer=customer_id,
-                # metadata=metadata,
-                # payment_intent_data={
-                #     'setup_future_usage': 'on_session',
-                # },
             )
             return True, stripe_payment
         except Exception as err:

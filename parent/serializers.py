@@ -100,7 +100,7 @@ class FundWalletSerializerIn(serializers.Serializer):
         plan_id = validated_data.get("plan_id")
         ip_address = validated_data.get("ip_address")
         request = self.context.get("request")
-        callback_url = request.build_absolute_uri('/payment-verify')
+        callback_url = request.build_absolute_uri('/payment-verify?')
         # card_id = validated_data.get("card_id", None)
 
         plan = get_object_or_404(PaymentPlan, id=plan_id)
@@ -125,8 +125,6 @@ class FundWalletSerializerIn(serializers.Serializer):
             success, response = StripeAPI.create_payment_session(
                 name=user.get_full_name(),
                 amount=total_amount,
-                currency_code="eur",
-                description=description,
                 return_url=callback_url,
                 customer_id=stripe_customer_id,
             )
