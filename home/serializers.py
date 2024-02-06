@@ -123,6 +123,10 @@ class UserSerializerOut(serializers.ModelSerializer):
             request = self.context.get("request")
             student = Student.objects.get(user=obj)
             parent = student.parent
+            profile_picture = None
+            if student.profile_picture:
+                profile_picture = request.build_absolute_uri(student.profile_picture.url)
+
             return {
                 # "dob": student.dob,
                 "user_id": student.user_id,
@@ -131,7 +135,7 @@ class UserSerializerOut(serializers.ModelSerializer):
                 # "city_id": parent.city_id,
                 # "state_id": parent.state_id,
                 "country_id": parent.country_id,
-                "profile_picture": request.build_absolute_uri(student.profile_picture.url),
+                "profile_picture": profile_picture,
                 # "city_name": parent.city.name,
                 # "state_name": parent.state.name,
                 "country_name": parent.country.name,
