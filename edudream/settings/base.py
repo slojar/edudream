@@ -134,7 +134,5 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-CORS_ALLOW_HEADERS = list(default_headers) + ["ip-address", ]
-
 SITE_ID = 1
 
