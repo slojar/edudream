@@ -92,15 +92,17 @@ class StudentSerializerIn(serializers.Serializer):
 class FundWalletSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     plan_id = serializers.IntegerField()
-    ip_address = serializers.IPAddressField()
     # card_id = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         plan_id = validated_data.get("plan_id")
-        ip_address = validated_data.get("ip_address")
         request = self.context.get("request")
         callback_url = request.build_absolute_uri('/payment-verify?')
+        ip_address = request.headers.get('ip-address', None) or request.META.get("ip-address", None)
+        if not ip_address:
+            raise InvalidRequestException({"detail": "Header: ip-address is required"})
+
         # card_id = validated_data.get("card_id", None)
 
         plan = get_object_or_404(PaymentPlan, id=plan_id)
