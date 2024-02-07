@@ -131,12 +131,14 @@ def get_next_month_date(date, delta):
 
 def send_email(content, email, subject):
     payload = {
-        "key": email_api_key,
-        "message": {"text": content, "subject": subject, "from_email": email_from, "from_name": "",
-                    "to": [{"email": email, "name": ""}]}
+        "personalizations": [{"to": [{"email": email}]}], "from": {"email": email_from}, "subject": subject,
+        "content": [{"type": "text/plain", "value": content}]
     }
-    response = requests.request("POST", email_url, headers={'Content-Type': 'application/json'}, data=payload)
-    log_request(f"Sending email to: {email}, Response: {response.text}")
+    response = requests.request(
+        "POST", email_url, headers={"Content-Type": "application/json", "Authorization": f"Bearer {email_api_key}"},
+        data=payload
+    )
+    log_request(f"Sending email to: {email}\nResponse: {response.text}")
     return response.text
 
 
