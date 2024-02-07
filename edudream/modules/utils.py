@@ -1,6 +1,7 @@
 import base64
 import calendar
 import datetime
+import json
 import logging
 import re
 import secrets
@@ -130,10 +131,10 @@ def get_next_month_date(date, delta):
 
 
 def send_email(content, email, subject):
-    payload = {
-        "personalizations": [{"to": [{"email": email}]}], "from": {"email": email_from}, "subject": subject,
-        "content": [{"type": "text/plain", "value": content}]
-    }
+    payload = json.dumps({
+        "personalizations": [{"to": [{"email": email}]}], "from": {"email": email_from, "name": "EduDream"},
+        "subject": subject, "content": [{"type": "text/html", "value": content}]
+    })
     response = requests.request(
         "POST", email_url, headers={"Content-Type": "application/json", "Authorization": f"Bearer {email_api_key}"},
         data=payload
