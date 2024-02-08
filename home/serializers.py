@@ -116,7 +116,7 @@ class UserSerializerOut(serializers.ModelSerializer):
         try:
             return ProfileSerializerOut(Profile.objects.get(user=obj), context={"request": self.context.get("request")}).data
         except Profile.DoesNotExist:
-            return None
+            return {"account_type": "student"}
 
     def get_is_student(self, obj):
         if Student.objects.filter(user=obj).exists():

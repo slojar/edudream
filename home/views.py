@@ -49,7 +49,7 @@ class LoginAPIView(APIView):
 
 
 class ProfileAPIView(APIView):
-    permission_classes = [IsAuthenticated & (IsTutor | IsParent)]
+    permission_classes = [IsAuthenticated & (IsTutor | IsParent | IsStudent)]
 
     def get(self, request):
         return Response({"detail": "Success", "data": UserSerializerOut(request.user, context={"request": request}).data})
