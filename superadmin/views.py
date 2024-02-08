@@ -18,9 +18,9 @@ from home.serializers import ProfileSerializerOut, TutorListSerializerOut, Class
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
-    AdminChangePasswordSerializerIn
-from tutor.models import Classroom
-from tutor.serializers import ClassRoomSerializerOut
+    AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn
+from tutor.models import Classroom, PayoutRequest
+from tutor.serializers import ClassRoomSerializerOut, PayoutSerializerOut
 
 
 class DashboardAPIView(APIView):
@@ -256,4 +256,51 @@ class AdminChangePasswordAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
+
+
+class PayoutListAPIView(APIView, CustomPagination):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="date_from", type=str),
+                               OpenApiParameter(name="date_to", type=str), OpenApiParameter(name="status", type=str)])
+    def get(self, request, pk=None):
+        search = request.GET.get("search")
+        date_from = request.GET.get("date_from")
+        date_to = request.GET.get("date_to")
+        pay_status = request.GET.get("status")
+        # amount_from = request.GET.get("amount_from")
+        # amount_to = request.GET.get("amount_to")
+
+        if pk:
+            queryset = get_object_or_404(PayoutRequest, id=pk)
+            serializer = PayoutSerializerOut(queryset, context={"request": request}).data
+            return Response({"detail": "Success", "data": serializer})
+
+        query = Q()
+        if search:
+            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | \
+                     Q(bank_account__account_number__exact=search) | Q(bank_account__bank_name__icontains=search)
+        if pay_status:
+            query &= Q(status=pay_status)
+        if date_from and date_to:
+            query &= Q(created_on__range=[date_from, date_to])
+
+        queryset = self.paginate_queryset(PayoutRequest.objects.filter(query).order_by("-id").distinct(), request)
+        serializer = PayoutSerializerOut(queryset, many=True, context={"request": request}).data
+        response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Success", "data": response})
+
+
+class ApprovePayoutRequestAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def put(self, request, pk):
+        payout_request = get_object_or_404(PayoutRequest, id=pk, status="pending")
+        serializer = ApproveDeclinePayoutSerializerIn(instance=payout_request, data=request.data, context={'request': request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Payout request updated", "data": response})
+
+
+
 

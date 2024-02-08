@@ -214,3 +214,54 @@ class StripeAPI:
     @classmethod
     def retrieve_payment_intent(cls, payment_intent):
         return stripe.PaymentIntent.retrieve(payment_intent)
+
+    @classmethod
+    def create_connect_account(cls, user):
+        from edudream.modules.utils import log_request
+        result = stripe.Account.create(
+            type="custom", country=str(user.profile.country.alpha2code).upper(), email=user.email,
+            capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
+        )
+        log_request(f'Connect account creation response: {result}')
+        return result
+
+    @classmethod
+    def create_external_account(cls, acct, **kwargs):
+        from edudream.modules.utils import log_request
+        result = stripe.Account.create_external_account(
+            account=acct,
+            external_account={"account_number": kwargs.get("account_no"), "country": kwargs.get("country_code"),
+                              "currency": kwargs.get("currency_code"), "routing_number": kwargs.get("routing_no"),
+                              "object": "bank_account", }
+        )
+        log_request(f'Bank external account creation response: {result}')
+        return result
+
+    @classmethod
+    def transfer_to_connect_account(cls, amount, acct, desc):
+        from edudream.modules.utils import log_request
+        result = stripe.Transfer.create(amount=int(amount * 100), currency="eur", destination=acct, description=desc)
+        log_request(f'Transfer to connect account response: {result}')
+        return result
+
+    @classmethod
+    def payout_to_external_account(cls, amount, acct):
+        from edudream.modules.utils import log_request
+        result = stripe.Payout.create(amount=int(amount * 100), currency="eur", destination=acct)
+        log_request(f'Payout to external account response: {result}')
+        return result
+
+    @classmethod
+    def get_account_balance(cls):
+        from edudream.modules.utils import log_request
+        result = stripe.Balance.retrieve()
+        data = result.get("available")
+        balance = 0
+        eur_amount = [item['amount'] for item in data if item['currency'] == 'eur']
+        if eur_amount:
+            balance = eur_amount[0]
+        log_request(f'Check balance response: {result}')
+        return balance
+
+
+

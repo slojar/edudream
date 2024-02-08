@@ -14,8 +14,10 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
     tutor_class_approved_email, student_class_approved_email, student_class_declined_email, parent_class_cancel_email, \
     student_class_cancel_email, parent_low_threshold_email, payout_request_email
 from edudream.modules.exceptions import InvalidRequestException
-from edudream.modules.utils import get_site_details
+from edudream.modules.stripe_api import StripeAPI
+from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text
 from home.models import Subject, Transaction, Profile
+from location.models import Country
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
     TutorSubjectDocument
@@ -310,6 +312,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
     routing_number = serializers.CharField(required=False)
+    country_id = serializers.IntegerField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -318,14 +321,38 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
         acct_no = validated_data.get("account_number")
         acct_type = validated_data.get("account_type")
         routing_no = validated_data.get("routing_number")
+        country_id = validated_data.get("country_id")
 
-        acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name__iexact=bank, account_number=acct_no)
-        acct.account_name = acct_name
-        acct.account_type = acct_type
-        acct.routing_number = routing_no
-        acct.save()
+        country = get_object_or_404(Country, id=country_id, active=True)
+        tutor = get_object_or_404(Profile, user=user, account_type="tutor")
 
-        return TutorBankAccountSerializerOut(acct).data
+        if not tutor.stripe_connect_account_id:
+            # Create Connect Account for Tutor
+            connect_account = StripeAPI.create_connect_account(user)
+            connect_account_id = connect_account.get("id")
+            tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
+            tutor.save()
+
+        stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+
+        # Add Bank Details to Connected Stripe Account
+        external_account = StripeAPI.create_external_account(
+            acct=stripe_connected_acct, account_no=acct_no, country_code=str(country.alpha2code).upper(),
+            currency_code=str(country.currency_code).lower(), routing_no=routing_no
+        )
+        external_account_id = external_account.get("id")
+        if external_account_id:
+            acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name__iexact=bank, account_number=acct_no)
+            acct.account_name = acct_name
+            acct.account_type = acct_type
+            acct.routing_number = routing_no
+            acct.country = country
+            acct.stripe_external_account_id = encrypt_text(external_account_id)
+            acct.save()
+
+            return TutorBankAccountSerializerOut(acct).data
+        else:
+            raise InvalidRequestException({"detail": "Could not validate account number, please try again later"})
 
 
 class PayoutSerializerOut(serializers.ModelSerializer):

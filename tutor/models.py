@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 
 from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
     AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES
+from location.models import Country
 from student.models import Student
 
 
@@ -104,6 +105,8 @@ class TutorBankAccount(models.Model):
     account_name = models.CharField(max_length=200)
     account_type = models.CharField(max_length=50, blank=True, null=True)
     routing_number = models.CharField(max_length=300, blank=True, null=True)
+    country = models.ForeignKey(Country, on_delete=models.SET_NULL, blank=True, null=True)
+    stripe_external_account_id = models.TextField(blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 

@@ -24,6 +24,9 @@ urlpatterns = [
     path('message', views.NotificationListAPIView.as_view(), name="message"),
     path('send-message', views.SendNotificationAPIView.as_view(), name="send-message"),
     path('change-password', views.AdminChangePasswordAPIView.as_view(), name="change-password"),
+    path('payout', views.PayoutListAPIView.as_view(), name="payout"),
+    path('payout/<int:pk>', views.PayoutListAPIView.as_view(), name="payout-detail"),
+    path('update-payout/<int:pk>', views.ApprovePayoutRequestAPIView.as_view(), name="approve-decline-payout"),
 
 ]
 

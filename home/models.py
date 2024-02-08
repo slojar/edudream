@@ -39,6 +39,7 @@ class Profile(models.Model):
     code_expiry = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     stripe_customer_id = models.TextField(blank=True, null=True)
+    stripe_connect_account_id = models.TextField(blank=True, null=True)
     referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="referred_by")
     # referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
     referral_code = models.CharField(default="", unique=True, max_length=50, blank=True, null=True)

@@ -58,5 +58,9 @@ SEND_NOTIFICATION_TYPE_CHOICES = (
     ("tutor", "Tutor"), ("parent", "Parent"), ("student", "Student"), ("all", "All")
 )
 
+APPROVE_OR_DECLINE_CHOICES = (
+    ("approved", "Approve"), ("declined", "Decline")
+)
+
 
 
