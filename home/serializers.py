@@ -186,6 +186,7 @@ class SignUpSerializerIn(serializers.Serializer):
     proficiency_test_grade = serializers.CharField(required=False)
     rest_period = serializers.IntegerField(required=False)
     referral_code = serializers.CharField(required=False)
+    subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
 
     def create(self, validated_data):
         f_name = validated_data.get("first_name")
@@ -214,6 +215,8 @@ class SignUpSerializerIn(serializers.Serializer):
         proficiency_test_grade = validated_data.get("proficiency_test_grade")
         rest_period = validated_data.get("rest_period", 10)
         referral_code = validated_data.get("referral_code")
+        subjects = validated_data.get("subject")
+
         required_for_tutor = [
             bio, hobbies, funfact, linkedin, education_status, university_name, discipline, diploma_type, diploma_file,
             proficiency_test_file, diploma_grade, languages, proficiency_test_grade
@@ -306,6 +309,11 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
             tutor_detail.rest_period = rest_period
+            if subjects:
+                tutor_detail.subjects.clear()
+                for subject in subjects:
+                    tutor_detail.subjects.add(subject)
+
             tutor_detail.save()
             # Send Register Email to Tutor
             Thread(target=tutor_register_email, args=[user]).start()
