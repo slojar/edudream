@@ -98,8 +98,22 @@ def tutor_register_email(user):
         name = "EduDream Tutor"
 
     message = f"Dear {name}, <br><br>You have successfully registered on Edudream as a Tutor" \
-              f"<br>Please login to your dashboard to complete your profile"
+              f"<br>Your account is under review, and will be active shortly."
     subject = "Signup Successful"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+def tutor_status_email(user):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Tutor"
+
+    message = f"Dear {name}, <br><br>Your Tutor profile on EduDream is now active" \
+              f"<br>Please login to your dashboard to complete or update your profile"
+    subject = "Account Activated"
     contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
     send_email(contents, email, subject)
     return True
