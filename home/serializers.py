@@ -371,6 +371,8 @@ class ProfileSerializerIn(serializers.Serializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     address = serializers.CharField(max_length=300, required=False)
     mobile_number = serializers.CharField(max_length=20, required=False)
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
     dob = serializers.DateTimeField(required=False)
     city_id = serializers.IntegerField(required=False)
     state_id = serializers.IntegerField(required=False)
