@@ -12,7 +12,8 @@ from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES
     AVAILABILITY_STATUS_CHOICES
 from edudream.modules.email_template import tutor_class_creation_email, parent_class_creation_email, \
     tutor_class_approved_email, student_class_approved_email, student_class_declined_email, parent_class_cancel_email, \
-    student_class_cancel_email, parent_low_threshold_email, payout_request_email
+    student_class_cancel_email, parent_low_threshold_email, payout_request_email, parent_intro_call_email, \
+    tutor_intro_call_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text
@@ -447,6 +448,69 @@ class TutorSubjectSerializerIn(serializers.Serializer):
 
         return TutorSubjectSerializerOut(tutor_subject, context={"request": self.context.get("request")}).data
 
+
+class IntroCallSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Logged in student/parent
+    tutor_id = serializers.IntegerField(help_text="Tutor User ID")
+    student_id = serializers.IntegerField(required=False)
+    start_date = serializers.DateTimeField()
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        tutor_id = validated_data.get("tutor_id")
+        student_id = validated_data.get("student_id")
+        start_date = str(validated_data.get("start_date"))
+        parent_profile = None
+
+        try:
+            parent_profile = Profile.objects.get(user=user, account_type="parent")
+        except Profile.DoesNotExist:
+            pass
+
+        if parent_profile:
+            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+        else:
+            student = get_object_or_404(Student, user=user)
+
+        tutor = get_object_or_404(TutorDetail, user_id=tutor_id)
+        tutor_user = tutor.user
+        d_site = get_site_details()
+
+        # Calculate Call End Period
+        call_duration = int(d_site.intro_call_duration)
+        start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
+        end_date = start_date_convert + datetime.timedelta(minutes=call_duration)
+        # Check Tutor Calendar
+        # if not TutorCalendar.objects.filter(
+        #         user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
+        #         time_from__hour=start_date_convert.hour, status="available"
+        # ):
+        #     raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
+
+        # Check Tutor availability
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
+            raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
+
+    # try:
+        meeting_id = str(uuid.uuid4())
+        tutor_email = tutor_user.email
+        tutor_name = str("{} {}").format(tutor_user.first_name, tutor_user.last_name).upper()
+        sender_email = student.email
+        if parent_profile:
+            sender_email = parent_profile.email()
+        link = generate_meeting_link(
+            meeting_name=f"Intro call {tutor_name}", attending=[tutor_email, sender_email],
+            request_id=meeting_id,
+            narration=f"Intro call {tutor_name}", start_date=start_date, end_date=end_date
+        )
+        # Send invitation link to tutor, parent and/or student
+        Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
+        Thread(target=tutor_intro_call_email, args=[tutor_user, user.get_full_name(), start_date, end_date, link]).start()
+
+        return "Intro call booked successfully. Detail will be sent to your email address"
+    # except Exception as err:
+    #     log_request(f"Error while booking intro call\nError: {err}")
+    #     raise InvalidRequestException({"detail": "Cannot process request at the moment. Please try again later"})
 
 
 

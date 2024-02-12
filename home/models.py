@@ -172,6 +172,7 @@ class SiteSetting(models.Model):
     referral_coin = models.DecimalField(default=4, decimal_places=2, max_digits=20)
     payout_coin_to_amount = models.DecimalField(default=1, decimal_places=2, max_digits=20)
     class_grace_period = models.IntegerField(blank=True, null=True, default=0)
+    intro_call_duration = models.IntegerField(blank=True, null=True, default=15)
     enquiry_email = models.CharField(max_length=200, blank=True, null=True)
     frontend_url = models.CharField(max_length=200, blank=True, null=True)
     escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)

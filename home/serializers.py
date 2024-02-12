@@ -63,7 +63,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        exclude = ["dob", "address", "city", "state", "stripe_customer_id", "email_verified_code"]
+        exclude = ["dob", "address", "city", "state", "stripe_customer_id", "email_verified_code", "stripe_customer_id", "stripe_connect_account_id"]
 
 
 class UserSerializerOut(serializers.ModelSerializer):
@@ -389,6 +389,8 @@ class ProfileSerializerIn(serializers.Serializer):
         instance.address = validated_data.get('address', instance.address)
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
         instance.dob = validated_data.get('dob', instance.dob)
+        user.first_name = validated_data.get('first_name', user.first_name)
+        user.last_name = validated_data.get('last_name', user.last_name)
         if country_id:
             country = get_object_or_404(Country, id=country_id)
             instance.country = country
@@ -398,6 +400,7 @@ class ProfileSerializerIn(serializers.Serializer):
         if city_id:
             city = get_object_or_404(City, id=city_id)
             instance.city = city
+        user.save()
         instance.save()
 
         if instance.account_type == "tutor":

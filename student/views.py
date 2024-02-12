@@ -10,7 +10,7 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsStudent, IsParent
 from tutor.models import Classroom
-from tutor.serializers import CreateClassSerializerIn, ClassRoomSerializerOut
+from tutor.serializers import CreateClassSerializerIn, ClassRoomSerializerOut, IntroCallSerializerIn
 
 
 class StudentClassRoomAPIView(APIView, CustomPagination):
@@ -50,5 +50,15 @@ class CreateClassRoomAPIView(APIView):
         response = serializer.save()
         return Response(response)
 
+
+class IntroCallAPIView(APIView):
+    permission_classes = [IsAuthenticated & (IsStudent | IsParent)]
+
+    @extend_schema(request=IntroCallSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = IntroCallSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response(response)
 
 

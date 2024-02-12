@@ -136,5 +136,5 @@ media/
 *.DS_Store
 
 logs/
-edudream/modules/calender_auth.json
+calender_auth.json
 edudream/modules/edudream.json

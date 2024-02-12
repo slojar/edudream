@@ -191,4 +191,37 @@ def payout_request_email(user):
     return True
 
 
+def parent_intro_call_email(user, tutor_name, start_date, end_date, link):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Parent"
+
+    message = f"Dear {name}, <br><br>Your Virtual Intro Call with tutor {tutor_name} on EduDream has been scheduled." \
+              f"<br>Start: <strong>{start_date}</strong>" \
+              f"<br>End: <strong>{end_date}</strong>" \
+              f"<br>Meeting Link: <strong>{link}</strong>"
+    subject = f"EduDream: Intro Call with {tutor_name}"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+def tutor_intro_call_email(user, u_name, start_date, end_date, link):
+    email = user.email
+    name = user.first_name
+    if not name:
+        name = "EduDream Tutor"
+
+    message = f"Dear {name}, <br><br>You have a Virtual Intro Call request from {u_name} on EduDream." \
+              f"<br>Start: <strong>{start_date}</strong>" \
+              f"<br>End: <strong>{end_date}</strong>" \
+              f"<br>Meeting Link: <strong>{link}</strong>"
+    subject = f"EduDream: Intro Call with {u_name}"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
+
+
 
