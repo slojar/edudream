@@ -63,7 +63,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        exclude = ["dob", "address", "city", "state", "stripe_customer_id", "email_verified_code", "stripe_customer_id", "stripe_connect_account_id"]
+        exclude = ["dob", "address", "city", "state", "email_verified_code", "stripe_customer_id", "stripe_connect_account_id"]
 
 
 class UserSerializerOut(serializers.ModelSerializer):
