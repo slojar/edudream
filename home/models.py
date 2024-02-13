@@ -122,6 +122,7 @@ class Subject(models.Model):
 
 class PaymentPlan(models.Model):
     name = models.CharField(max_length=100)
+    descripttion = models.CharField(max_length=300, blank=True, null=True)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     created_on = models.DateTimeField(auto_now_add=True)
