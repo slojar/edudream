@@ -218,7 +218,7 @@ class SignUpSerializerIn(serializers.Serializer):
         subjects = validated_data.get("subject")
 
         required_for_tutor = [
-            bio, hobbies, funfact, linkedin, education_status, university_name, discipline, diploma_type, diploma_file,
+            bio, hobbies, funfact, education_status, university_name, discipline, diploma_type, diploma_file,
             proficiency_test_file, diploma_grade, languages, proficiency_test_grade
         ]
         if acct_type == "tutor" and not all(required_for_tutor):

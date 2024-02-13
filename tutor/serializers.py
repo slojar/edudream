@@ -177,11 +177,12 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             #     meeting_name=f"{instance.name}", attending=[tutor_email, student_email], request_id=meeting_id,
             #     narration=instance.description, start_date=instance.start_date, end_date=instance.end_date
             # )
-            link = WebexAPI.create_meeting(
-                start_date=instance.start_date, end_date=instance.end_date, title=instance.name,
-                narration=instance.description, attending=[{"name": str(student_name), "email": str(student_email)},
-                                                           {"name": str(tutor_name), "email": str(tutor_email)}]
-            )
+            # link = WebexAPI.create_meeting(
+            #     start_date=instance.start_date, end_date=instance.end_date, title=instance.name,
+            #     narration=instance.description, attending=[{"name": str(student_name), "email": str(student_email)},
+            #                                                {"name": str(tutor_name), "email": str(tutor_email)}]
+            # )
+            link = "https://meet.google.com/qoc-igja-sws"
             instance.status = "accepted"
             instance.meeting_link = link
             # Debit parent wallet
@@ -515,11 +516,12 @@ class IntroCallSerializerIn(serializers.Serializer):
         #     narration=f"Intro call {tutor_name}", start_date=start_date, end_date=end_date
         # )
         # link = WebexAPI.authorize()
-        link = WebexAPI.create_meeting(
-            start_date=str(start_date_convert), end_date=str(end_date), title=f"Intro call {tutor_name}",
-            narration=f"Intro call {tutor_name}", attending=[{"name": str(sender_name), "email": str(sender_email)},
-                                                             {"name": str(tutor_name), "email": str(tutor_email)}]
-        )
+        # link = WebexAPI.create_meeting(
+        #     start_date=str(start_date_convert), end_date=str(end_date), title=f"Intro call {tutor_name}",
+        #     narration=f"Intro call {tutor_name}", attending=[{"name": str(sender_name), "email": str(sender_email)},
+        #                                                      {"name": str(tutor_name), "email": str(tutor_email)}]
+        # )
+        link = "https://meet.google.com/qoc-igja-sws"
 
         # Send invitation link to tutor, parent and/or student
         Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
