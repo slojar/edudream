@@ -45,6 +45,10 @@ EMAIL_FROM = env('EMAIL_FROM', None)
 # STRIPE KEY
 STRIPE_API_KEY = env('STRIPE_API_KEY', None)
 
+# WEBEX
+WEBEX_API_KEY = env('WEBEX_API_KEY', None)
+WEBEX_BASE_URL = env('WEBEX_BASE_URL', None)
+
 # Simple JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),

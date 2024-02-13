@@ -32,8 +32,8 @@ class StateListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         country_id = self.request.GET.get("country_id")
-        country = get_object_or_404(Country, id=country_id, active=True)
-        return State.objects.filter(country=country, active=True)
+        country = get_object_or_404(Country, id=country_id)
+        return State.objects.filter(country=country)
 
 
 class PopulateLocationAPIView(APIView):

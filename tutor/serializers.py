@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
 
-from edudream.modules.GoogleAPI import generate_meeting_link
+from edudream.modules.webex import WebexAPI
 from edudream.modules.choices import ACCEPT_DECLINE_STATUS, DISPUTE_TYPE_CHOICES, DAY_OF_THE_WEEK_CHOICES, \
     AVAILABILITY_STATUS_CHOICES
 from edudream.modules.email_template import tutor_class_creation_email, parent_class_creation_email, \
@@ -115,7 +115,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         class_amount = duration * subject_amount / 60
 
         # Check Tutor availability
-        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+                                    status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
 
         # Check parent balance is available for class amount
@@ -167,12 +168,19 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
 
         if action == "accept":
             # Generate meeting link
-            meeting_id = str(uuid.uuid4())
+            # meeting_id = str(uuid.uuid4())
             tutor_email = instance.tutor.email
+            tutor_name = instance.tutor.get_full_name()
+            student_name = student.get_full_name()
             student_email = student.email
-            link = generate_meeting_link(
-                meeting_name=f"{instance.name}", attending=[tutor_email, student_email], request_id=meeting_id,
-                narration=instance.description, start_date=instance.start_date, end_date=instance.end_date
+            # link = generate_meeting_link(
+            #     meeting_name=f"{instance.name}", attending=[tutor_email, student_email], request_id=meeting_id,
+            #     narration=instance.description, start_date=instance.start_date, end_date=instance.end_date
+            # )
+            link = WebexAPI.create_meeting(
+                start_date=instance.start_date, end_date=instance.end_date, title=instance.name,
+                narration=instance.description, attending=[{"name": str(student_name), "email": str(student_email)},
+                                                           {"name": str(tutor_name), "email": str(tutor_email)}]
             )
             instance.status = "accepted"
             instance.meeting_link = link
@@ -488,30 +496,37 @@ class IntroCallSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
 
         # Check Tutor availability
-        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, status__in=["new", "accepted"]).exists():
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+                                    status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
 
-    # try:
-        meeting_id = str(uuid.uuid4())
+        # try:
+        #     meeting_id = str(uuid.uuid4())
         tutor_email = tutor_user.email
         tutor_name = str("{} {}").format(tutor_user.first_name, tutor_user.last_name).upper()
-        sender_email = student.email
+        sender_email = student.user.email
+        sender_name = student.user.get_full_name()
         if parent_profile:
             sender_email = parent_profile.email()
-        link = generate_meeting_link(
-            meeting_name=f"Intro call {tutor_name}", attending=[tutor_email, sender_email],
-            request_id=meeting_id,
-            narration=f"Intro call {tutor_name}", start_date=start_date, end_date=end_date
+            sender_name = parent_profile.get_full_name()
+        # link = generate_meeting_link(
+        #     meeting_name=f"Intro call {tutor_name}", attending=[tutor_email, sender_email],
+        #     request_id=meeting_id,
+        #     narration=f"Intro call {tutor_name}", start_date=start_date, end_date=end_date
+        # )
+        # link = WebexAPI.authorize()
+        link = WebexAPI.create_meeting(
+            start_date=str(start_date_convert), end_date=str(end_date), title=f"Intro call {tutor_name}",
+            narration=f"Intro call {tutor_name}", attending=[{"name": str(sender_name), "email": str(sender_email)},
+                                                             {"name": str(tutor_name), "email": str(tutor_email)}]
         )
+
         # Send invitation link to tutor, parent and/or student
         Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
-        Thread(target=tutor_intro_call_email, args=[tutor_user, user.get_full_name(), start_date, end_date, link]).start()
+        Thread(target=tutor_intro_call_email,
+               args=[tutor_user, user.get_full_name(), start_date, end_date, link]).start()
 
         return "Intro call booked successfully. Detail will be sent to your email address"
     # except Exception as err:
     #     log_request(f"Error while booking intro call\nError: {err}")
     #     raise InvalidRequestException({"detail": "Cannot process request at the moment. Please try again later"})
-
-
-
-
