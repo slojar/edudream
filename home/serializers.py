@@ -496,6 +496,11 @@ class ChatMessageSerializerIn(serializers.Serializer):
 
 
 class PaymentPlanSerializerOut(serializers.ModelSerializer):
+    average_hour = serializers.SerializerMethodField()
+
+    def get_average_hour(self, obj):
+        return int(float(obj.coin) / 7.5).__ceil__()
+
     class Meta:
         model = PaymentPlan
         exclude = []
