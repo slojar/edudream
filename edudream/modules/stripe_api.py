@@ -219,7 +219,7 @@ class StripeAPI:
     def create_connect_account(cls, user):
         from edudream.modules.utils import log_request
         result = stripe.Account.create(
-            type="custom", country=str(user.profile.country.alpha2code).upper(), email=user.email,
+            type="custom", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
         )
         log_request(f'Connect account creation response: {result}')

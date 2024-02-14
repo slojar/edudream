@@ -15,7 +15,7 @@ from rest_framework.filters import SearchFilter
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details
+from edudream.modules.utils import complete_payment, get_site_details, zoom_login_refresh
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -227,6 +227,20 @@ class UploadProfilePictureAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
+
+
+# CRON
+class RefreshZoomTokenAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        from edudream.modules.utils import get_site_details, encrypt_text
+        d_site = get_site_details()
+        response = zoom_login_refresh()
+        access_token = response["access_token"]
+        d_site.zoom_token = encrypt_text(access_token)
+        d_site.save()
+        return Response(response)
 
 
 

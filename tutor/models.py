@@ -38,6 +38,7 @@ class Classroom(models.Model):
     student = models.ForeignKey(Student, related_name="class_student", on_delete=models.SET_NULL, blank=True, null=True)
     start_date = models.DateTimeField(blank=True, null=True)
     end_date = models.DateTimeField(blank=True, null=True)
+    expected_duration = models.IntegerField(blank=True, null=True)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     status = models.CharField(max_length=50, choices=CLASS_STATUS_CHOICES, default="new")
     meeting_link = models.CharField(max_length=300, blank=True, null=True)

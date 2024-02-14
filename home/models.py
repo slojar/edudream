@@ -177,6 +177,7 @@ class SiteSetting(models.Model):
     enquiry_email = models.CharField(max_length=200, blank=True, null=True)
     frontend_url = models.CharField(max_length=200, blank=True, null=True)
     escrow_balance = models.DecimalField(decimal_places=2, max_digits=20, default=0)
+    zoom_token = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.site.name
