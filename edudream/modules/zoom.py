@@ -10,17 +10,13 @@ from edudream.modules.utils import generate_random_password
 base_url = settings.ZOOM_BASE_URL
 zoom_email = settings.ZOOM_EMAIL
 
-toktn = "eyJzdiI6IjAwMDAwMSIsImFsZyI6IkhTNTEyIiwidiI6IjIuMCIsImtpZCI6ImUxNTczNGVhLWNlNDYtNDVlZi04MmE5LWU4OWUxNjFjMjE5NiJ9.eyJhdWQiOiJodHRwczovL29hdXRoLnpvb20udXMiLCJ1aWQiOiIzX2lpZ3c2VlRNVzcyOUdWeW1lUUZRIiwidmVyIjo5LCJhdWlkIjoiNzkxZjY0YjVkOTYyN2MyYTgyYjg2OTQ4NWM2MTdiMDYiLCJuYmYiOjE3MDc5NDIwNzYsImNvZGUiOiI1eVpSbWpOTVMyT01zaUkwV1Q3UFVnd2pTdHBPcTVXOHAiLCJpc3MiOiJ6bTpjaWQ6aG1mVkJZdzJUQkMxQVBWb0xHNzhNdyIsImdubyI6MCwiZXhwIjoxNzA3OTQ1Njc2LCJ0eXBlIjozLCJpYXQiOjE3MDc5NDIwNzYsImFpZCI6ImtJeGNNQXBvVHh1bG40NzRpSVkzRmcifQ.BxsPQ8YamozCKX6SWgtcrEesfpBGCAu5PP6PqhoYcClyJ0tsknDEq6oNL6N_ton7RX_b0boX4rgEbJPLXhvEig"
-
 
 class ZoomAPI:
 
     @classmethod
     def get_header(cls):
         from edudream.modules.utils import get_site_details, decrypt_text
-        # return {"Authorization": f"Bearer {decrypt_text(get_site_details().zoom_token)}",
-        return {"Authorization": f"Bearer {toktn}",
-                "Content-Type": "application/json"}
+        return {"Authorization": f"Bearer {decrypt_text(get_site_details().zoom_token)}", "Content-Type": "application/json"}
 
     @classmethod
     def log_request(cls, *args):
