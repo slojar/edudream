@@ -1,7 +1,7 @@
 import logging
 
 from django.db.models import Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
@@ -240,7 +240,4 @@ class RefreshZoomTokenAPIView(APIView):
         access_token = response["access_token"]
         d_site.zoom_token = encrypt_text(access_token)
         d_site.save()
-        return Response(response)
-
-
-
+        return JsonResponse({"detail": "Cron Ran Successfully"})
