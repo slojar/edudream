@@ -170,7 +170,6 @@ class SignUpSerializerIn(serializers.Serializer):
     # city = serializers.IntegerField()
     # state = serializers.IntegerField()
     country = serializers.IntegerField()
-    # languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
     languages = serializers.CharField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
@@ -182,6 +181,7 @@ class SignUpSerializerIn(serializers.Serializer):
     diploma_type = serializers.CharField(required=False)
     diploma_grade = serializers.CharField(required=False)
     diploma_file = serializers.FileField(required=False)
+    resume = serializers.FileField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
     proficiency_test_grade = serializers.CharField(required=False)
     rest_period = serializers.IntegerField(required=False)
@@ -216,10 +216,11 @@ class SignUpSerializerIn(serializers.Serializer):
         rest_period = validated_data.get("rest_period", 10)
         referral_code = validated_data.get("referral_code")
         subjects = validated_data.get("subject")
+        resume_file = validated_data.get("resume")
 
         required_for_tutor = [
             bio, hobbies, funfact, education_status, university_name, discipline, diploma_type, diploma_file,
-            proficiency_test_file, diploma_grade, languages, proficiency_test_grade
+            proficiency_test_file, diploma_grade, languages, proficiency_test_grade, resume_file
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": "Please submit all required details"})
@@ -308,6 +309,7 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_grade = diploma_grade
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
             if subjects:
                 tutor_detail.subjects.clear()

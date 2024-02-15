@@ -15,7 +15,8 @@ from edudream.modules.utils import create_country_state_city
 class CountryListAPIView(generics.ListAPIView):
     permission_classes = []
     serializer_class = CountrySerializer
-    queryset = Country.objects.filter(active=True)
+    # queryset = Country.objects.filter(active=True)
+    queryset = Country.objects.all()
 
 
 @extend_schema_view(
