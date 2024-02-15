@@ -5,14 +5,27 @@ import json
 import logging
 import re
 import secrets
+
+from django.contrib.sites.models import Site
 from django.utils import timezone
 import requests
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
+from requests.auth import HTTPBasicAuth
 
+from home.models import SiteSetting, Transaction
 from location.models import City, State, Country
+
+from edudream.modules.stripe_api import StripeAPI
+
+email_from = settings.EMAIL_FROM
+email_url = settings.EMAIL_URL
+email_api_key = settings.EMAIL_API_KEY
+zoom_auth_url = settings.ZOOM_AUTH_URL
+zoom_client_id = settings.ZOOM_CLIENT_ID
+zoom_client_secret = settings.ZOOM_CLIENT_SECRET
 
 
 def log_request(*args):
@@ -122,10 +135,15 @@ def get_next_month_date(date, delta):
 
 
 def send_email(content, email, subject):
-    payload = json.dumps({"Message": content, "address": email, "Subject": subject})
-    response = requests.request("POST", settings.EMAIL_URL, headers={'Content-Type': 'application/json'}, data=payload)
-    # log_request(f"Email sent to: {email}")
-    log_request(f"Sending email to: {email}, Response: {response.text}")
+    payload = json.dumps({
+        "personalizations": [{"to": [{"email": email}]}], "from": {"email": email_from, "name": "EduDream"},
+        "subject": subject, "content": [{"type": "text/html", "value": content}]
+    })
+    response = requests.request(
+        "POST", email_url, headers={"Content-Type": "application/json", "Authorization": f"Bearer {email_api_key}"},
+        data=payload
+    )
+    log_request(f"Sending email to: {email}\nResponse: {response.text}")
     return response.text
 
 
@@ -304,8 +322,76 @@ def create_country_state_city():
     return True
 
 
+def get_site_details():
+    try:
+        site, created = SiteSetting.objects.get_or_create(site=Site.objects.get_current())
+    except Exception as ex:
+        logging.exception(str(ex))
+        site = SiteSetting.objects.filter(site=Site.objects.get_current()).first()
+    return site
 
 
+def complete_payment(ref_number):
+    try:
+        trans = Transaction.objects.get(reference=ref_number, status="pending")
+    except Transaction.DoesNotExist:
+        return False, f'Reference Number ({ref_number}) not found'
+
+    reference = str(ref_number)
+
+    if str(ref_number).lower().startswith('cs_'):
+        try:
+            result = StripeAPI.retrieve_checkout_session(session_id=reference)
+            reference = result.get('payment_intent')
+        except Exception as ex:
+            logging.error(ex)
+            pass
+
+    result = dict()
+    if str(reference).lower().startswith('pi_'):
+        result = StripeAPI.retrieve_payment_intent(payment_intent=reference)
+    if str(reference).lower().startswith('cs_'):
+        result = StripeAPI.retrieve_checkout_session(session_id=reference)
+
+    if result.get('status') and str(result.get('status')).lower() in ['succeeded', 'success', 'successful']:
+        trans.status = "completed"
+        trans.save()
+
+        if trans.transaction_type == "fund_wallet":
+            # Add coin equivalent of Payment Plan to Wallet balance
+            customer_wallet = trans.user.wallet
+            customer_wallet.refresh_from_db()
+            customer_wallet.balance += trans.plan.coin
+            customer_wallet.save()
+            # Confirm if this is customer's first deposit, and credit referrer
+            first_fund_wallet = Transaction.objects.filter(transaction_type="fund_wallet", status="completed").first()
+            referrer = trans.user.profile.referred_by
+            if first_fund_wallet == trans and referrer is not None:
+                referral_point = get_site_details().referral_coin
+                referrer_wallet = referrer.wallet
+                referrer_wallet.refresh_from_db()
+                referrer_wallet.balance += referral_point
+                referrer_wallet.save()
+                # Create Referral Transaction
+                Transaction.objects.create(
+                    user=referrer, transaction_type="bonus", amount=referral_point, status="completed",
+                    narration=f"Referal bonus from {trans.user.get_full_name()}"
+                )
+                # Send notification to referrer
+            # Send Notification to user
+
+        return True, "Payment updated"
+    else:
+        trans.status = "failed"
+        trans.save()
+        return False, ""
+
+
+# CRON-JOBS
+def zoom_login_refresh():
+    url = zoom_auth_url
+    response = requests.request("POST", url=url, auth=HTTPBasicAuth(str(zoom_client_id), str(zoom_client_secret)))
+    return response.json()
 
 
 

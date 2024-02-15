@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
 
     # Installed Apps
     'home.apps.HomeConfig',
@@ -31,6 +32,8 @@ INSTALLED_APPS = [
     'location.apps.LocationConfig',
 
     # Dependencies
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -104,21 +107,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CORS_ALLOW_HEADERS = list(default_headers) + ["x-api-key", ]
-# "ipAddress", "browser", "os", "device"]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'), ]
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 logging.basicConfig(
-    filename=os.path.join(LOG_DIR, 'bi-backend.log'),
+    filename=os.path.join(LOG_DIR, 'edudream.log'),
     filemode='a',
     level=logging.DEBUG,
     format='[{asctime}] {levelname} {module} {thread:d} - {message}',
@@ -128,8 +129,10 @@ logging.basicConfig(
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SITE_ID = 1
+

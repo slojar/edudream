@@ -1,53 +1,41 @@
 from rest_framework.permissions import BasePermission
 
-from account.models import UserDetail
+from home.models import Profile
+from student.models import Student
+from tutor.models import TutorDetail
 
 
-class IsRiskAdmin(BasePermission):
+class IsParent(BasePermission):
     def has_permission(self, request, view):
         try:
-            user_detail = UserDetail.objects.get(user=request.user)
-        except UserDetail.DoesNotExist:
+            parent = Profile.objects.get(user=request.user)
+        except Profile.DoesNotExist:
             return False
-        if user_detail.role == "risk":
+        if parent.account_type == "parent":
             return True
         else:
             return False
 
 
-class IsAdmin(BasePermission):
+class IsTutor(BasePermission):
     def has_permission(self, request, view):
         try:
-            user_detail = UserDetail.objects.get(user=request.user)
-        except UserDetail.DoesNotExist:
+            TutorDetail.objects.get(user=request.user)
+            return True
+        except TutorDetail.DoesNotExist:
             return False
-        if user_detail.role == "admin":
+
+
+class IsStudent(BasePermission):
+    def has_permission(self, request, view):
+        try:
+            student = Student.objects.get(user=request.user)
+        except Student.DoesNotExist:
+            return False
+        if student.parent.email_verified:
             return True
         else:
             return False
 
-
-class IsPrivilegedAdmin(BasePermission):
-    def has_permission(self, request, view):
-        try:
-            user_detail = UserDetail.objects.get(user=request.user)
-        except UserDetail.DoesNotExist:
-            return False
-        if user_detail.role == "privileged":
-            return True
-        else:
-            return False
-
-
-class IsHelpDeskAdmin(BasePermission):
-    def has_permission(self, request, view):
-        try:
-            user_detail = UserDetail.objects.get(user=request.user)
-        except UserDetail.DoesNotExist:
-            return False
-        if user_detail.role == "helpdesk":
-            return True
-        else:
-            return False
 
 
