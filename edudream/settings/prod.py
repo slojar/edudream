@@ -8,11 +8,8 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://localhost:80",
-    "http://localhost:3000",
-    "http://localhost",
-    "http://127.0.0.1"
+    "https://api.edudream.fr",
+    "https://edudream.fr",
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
@@ -30,10 +27,25 @@ DATABASES = {
 }
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# EMAIL SETTINGS
+EMAIL_URL = env('EMAIL_URL', None)
+EMAIL_API_KEY = env('EMAIL_API_KEY', None)
+EMAIL_FROM = env('EMAIL_FROM', None)
+
+# STRIPE KEY
+STRIPE_API_KEY = env('STRIPE_API_KEY', None)
+
+# ZOOM
+ZOOM_EMAIL = env('ZOOM_EMAIL', None)
+ZOOM_CLIENT_ID = env('ZOOM_CLIENT_ID', None)
+ZOOM_CLIENT_SECRET = env('ZOOM_CLIENT_SECRET', None)
+ZOOM_BASE_URL = env('ZOOM_BASE_URL', None)
+ZOOM_AUTH_URL = env('ZOOM_AUTH_URL', None)
+
 # Simple JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=3),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'UPDATE_LAST_LOGIN': True,
     'AUTH_HEADER_TYPES': ('Bearer', 'Token',),
 }
