@@ -387,6 +387,13 @@ def complete_payment(ref_number):
         return False, ""
 
 
+def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
+    if len(number_to_mask) <= num_chars_to_mask:
+        return mask_char * len(number_to_mask)
+    else:
+        return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
+
+
 # CRON-JOBS
 def zoom_login_refresh():
     url = zoom_auth_url

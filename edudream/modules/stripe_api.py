@@ -218,11 +218,30 @@ class StripeAPI:
     @classmethod
     def create_connect_account(cls, user):
         from edudream.modules.utils import log_request
+        account_token = stripe.Token.create(
+            account={
+                "individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True, "business_type": "individual"},
+        )
+        log_request(f'Account creation token response: {account_token}')
+
         result = stripe.Account.create(
             type="custom", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
+            account_token=account_token.get("id"),
+
         )
         log_request(f'Connect account creation response: {result}')
+        return result
+
+    @classmethod
+    def create_connect_account_token(cls, user):
+        from edudream.modules.utils import log_request
+        result = stripe.Token.create(
+            account={"individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True, },
+        )
+        log_request(f'Account creation token response: {result}')
         return result
 
     @classmethod

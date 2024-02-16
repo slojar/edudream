@@ -12,7 +12,7 @@ from tutor.models import TutorDetail
 
 class TestStudentTestCase(TestCase):
     def setUp(self):
-        country = Country.objects.create(name="Nigeria", alpha2code="NG", active=True, currency_code="NGR")
+        country = Country.objects.create(name="Canada", alpha2code="CA", active=True, currency_code="CAD")
         # Create Tutor User
         tutor_user = User.objects.create(username="test_tutor@email.com", password=make_password("Test@123"), email="test_tutor@email.com")
         Profile.objects.create(user=tutor_user, mobile_number="08105700751", account_type="tutor", active=True, country=country)
@@ -32,7 +32,8 @@ class TestStudentTestCase(TestCase):
         data = {
             "bank_name": "Test Bank",
             "account_name": "Sunday Olaofe",
-            "account_number": "1290199209",
+            "account_number": "000123456789",
+            "routing_number": "11000-000",
             "country_id": 1
         }
         url = reverse("tutor:add-bank")

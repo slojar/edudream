@@ -16,7 +16,7 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
     tutor_intro_call_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text
+from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number
 from home.models import Subject, Transaction, Profile
 from location.models import Country
 from student.models import Student
@@ -306,9 +306,22 @@ class TutorCalendarSerializerIn(serializers.Serializer):
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):
+    account_number = serializers.SerializerMethodField()
+    routing_number = serializers.SerializerMethodField()
+
+    def get_routing_number(self, obj):
+        if obj.routing_number:
+            return mask_number(obj.routing_number, 5)
+        return None
+
+    def get_account_number(self, obj):
+        if obj.account_number:
+            return mask_number(obj.account_number, 5)
+        return None
+
     class Meta:
         model = TutorBankAccount
-        exclude = []
+        exclude = ["stripe_external_account_id"]
 
 
 class TutorBankAccountSerializerIn(serializers.Serializer):
@@ -317,7 +330,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_name = serializers.CharField()
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
-    routing_number = serializers.CharField(required=False)
+    routing_number = serializers.CharField()
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
