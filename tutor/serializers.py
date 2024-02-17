@@ -342,7 +342,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
         routing_no = validated_data.get("routing_number")
         country_id = validated_data.get("country_id")
 
-        country = get_object_or_404(Country, id=country_id, active=True)
+        country = get_object_or_404(Country, id=country_id)
         tutor = get_object_or_404(Profile, user=user, account_type="tutor")
 
         try:

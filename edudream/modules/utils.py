@@ -14,6 +14,7 @@ from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
 from requests.auth import HTTPBasicAuth
+from translate import Translator
 
 from home.models import SiteSetting, Transaction
 from location.models import City, State, Country
@@ -392,6 +393,12 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
         return mask_char * len(number_to_mask)
     else:
         return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
+
+
+def translate_to_language(content, language):
+    translator = Translator(to_lang=language)
+    translated_content = translator.translate(content)
+    return translated_content
 
 
 # CRON-JOBS
