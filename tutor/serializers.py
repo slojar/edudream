@@ -302,7 +302,7 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         avail.status = avail_status
         avail.save()
 
-        return TutorCalendarSerializerOut(avail).data
+        return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):
