@@ -13,7 +13,6 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
-from requests.auth import HTTPBasicAuth
 from translate import Translator
 
 from home.models import SiteSetting, Transaction
@@ -24,9 +23,6 @@ from edudream.modules.stripe_api import StripeAPI
 email_from = settings.EMAIL_FROM
 email_url = settings.EMAIL_URL
 email_api_key = settings.EMAIL_API_KEY
-zoom_auth_url = settings.ZOOM_AUTH_URL
-zoom_client_id = settings.ZOOM_CLIENT_ID
-zoom_client_secret = settings.ZOOM_CLIENT_SECRET
 
 
 def log_request(*args):
@@ -399,13 +395,6 @@ def translate_to_language(content, language):
     translator = Translator(to_lang=language)
     translated_content = translator.translate(content)
     return translated_content
-
-
-# CRON-JOBS
-def zoom_login_refresh():
-    url = zoom_auth_url
-    response = requests.request("POST", url=url, auth=HTTPBasicAuth(str(zoom_client_id), str(zoom_client_secret)))
-    return response.json()
 
 
 
