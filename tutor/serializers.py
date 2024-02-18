@@ -386,13 +386,13 @@ class PayoutSerializerOut(serializers.ModelSerializer):
 
 class RequestPayoutSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    amount = serializers.FloatField()
+    # amount = serializers.FloatField()
     bank_account_id = serializers.IntegerField()
     request_now = serializers.BooleanField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
-        coin = validated_data.get("amount")
+        # coin = validated_data.get("amount")
         bank_acct_id = validated_data.get("bank_account_id")
         request_now = validated_data.get("request_now", False)
         user_wallet = user.wallet
@@ -400,8 +400,7 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         bank_acct = get_object_or_404(TutorBankAccount, user=user, id=bank_acct_id)
         # Check if user balance is enough for withdrawal request
         user_wallet.refresh_from_db()
-        if coin > user_wallet.balance:
-            raise InvalidRequestException({"detail": "Insufficient balance"})
+        coin = user_wallet.balance
         payout_ratio = get_site_details().payout_coin_to_amount
         amount = decimal.Decimal(coin) * payout_ratio
 

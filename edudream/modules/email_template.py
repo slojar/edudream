@@ -205,8 +205,8 @@ def payout_request_email(user):
     if not name:
         name = "EduDream Tutor"
 
-    message = f"Dear {name}, <br><br>You payout request has been created and forwarded to admin for approval" \
-              f"<br>You will get a notification once the request is treated."
+    message = f"Dear {name}, <br><br>Your payout request has been created and will be proccessed in seven (7) days" \
+              f"<br>The fund will reflect in select account."
     subject = "Payout Request"
     translated_content = translate_to_language(message, "fr")
     translated_subject = translate_to_language(subject, "fr")

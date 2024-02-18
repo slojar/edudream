@@ -12,10 +12,11 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.filters import SearchFilter
 
+from edudream.modules.cron import zoom_login_refresh, payout_cron_job
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details, zoom_login_refresh
+from edudream.modules.utils import complete_payment, get_site_details
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -230,7 +231,7 @@ class UploadProfilePictureAPIView(APIView):
 
 
 # CRON
-class RefreshZoomTokenAPIView(APIView):
+class RefreshZoomTokenCronAPIView(APIView):
     permission_classes = []
 
     def get(self, request):
@@ -241,3 +242,13 @@ class RefreshZoomTokenAPIView(APIView):
         d_site.zoom_token = encrypt_text(access_token)
         d_site.save()
         return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class PayoutProcessingCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        payout_cron_job()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+

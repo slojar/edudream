@@ -47,7 +47,7 @@ PROFICIENCY_TYPE_CHOICES = (
 )
 
 PAYOUT_STATUS_CHOICES = (
-    ("pending", "Pending"), ("approved", "Approved"), ("declined", "Decline")
+    ("pending", "Pending"), ("processed", "Processed")
 )
 
 GRADE_CHOICES = (
