@@ -109,7 +109,7 @@ class TutorCalendarAPIView(APIView):
 
     @extend_schema(request=TutorCalendarSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
-        serializer = TutorCalendarSerializerIn(data=request.data)
+        serializer = TutorCalendarSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": "Calendar updated", "data": response})
