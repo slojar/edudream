@@ -39,7 +39,7 @@ class DashboardAPIView(APIView):
         data["recent_tutors"] = TutorListSerializerOut(
             tutors.filter(active=True, user__tutordetail__isnull=False).order_by("-id")[:10], many=True, context={"request": request}).data
         data["recent_parents"] = ProfileSerializerOut(
-            parents.filter(user__tutordetail__isnull=True).order_by("-id")[:10], many=True).data
+            parents.filter(user__tutordetail__isnull=True).order_by("-id")[:10], many=True, context={"request": request}).data
         data["recent_students"] = ParentStudentSerializerOut(students.order_by("-id")[:10], many=True, context={"request": request}).data
         return Response({"detail": "Success", "data": data})
 
