@@ -17,11 +17,12 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
 from edudream.modules.utils import complete_payment, get_site_details
-from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification
+from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
-    SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn
+    SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
+    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -228,6 +229,23 @@ class UploadProfilePictureAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
+
+
+class FeedBackAndConsultationAPIView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=FeedbackAndConsultationSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = FeedbackAndConsultationSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+class TestimonialListAPIView(ListAPIView):
+    permission_classes = []
+    serializer_class = TestimonialSerializerOut
+    queryset = Testimonial.objects.all().order_by("?")
 
 
 # CRON
