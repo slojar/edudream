@@ -121,7 +121,7 @@ class TutorCalendarListAPIView(ListAPIView):
     serializer_class = TutorCalendarSerializerOut
 
     def get_queryset(self):
-        tutor_id = self.kwargs.get("tutor_id")
+        tutor_id = self.request.GET.get("tutor_id")
         return TutorCalendar.objects.filter(user_id=tutor_id)
 
 
