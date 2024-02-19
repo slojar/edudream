@@ -59,7 +59,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     def get_wallet(self, obj):
         balance = Wallet.objects.filter(user=obj.user).last().balance
-        return {"balance": balance, "approximate_hours": float(float(balance) / 7.5).__ceil__()}
+        return {"balance": balance, "approximate_hours": round(float(balance) / 7.5)}
 
     class Meta:
         model = Profile
@@ -501,7 +501,7 @@ class PaymentPlanSerializerOut(serializers.ModelSerializer):
     average_hour = serializers.SerializerMethodField()
 
     def get_average_hour(self, obj):
-        return int(float(obj.coin) / 7.5).__ceil__()
+        return round(float(obj.coin) / 7.5)
 
     class Meta:
         model = PaymentPlan
