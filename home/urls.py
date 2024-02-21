@@ -28,6 +28,9 @@ urlpatterns = [
     path('upload-avatar', views.UploadProfilePictureAPIView.as_view(), name="upload-avatar"),
     path('feedback', views.FeedBackAndConsultationAPIView.as_view(), name="feedback"),
     path('testimonials', views.TestimonialListAPIView.as_view(), name="testimonial"),
+    path('classroom', views.TutorClassroomListAPIView.as_view(), name="classroom"),
+    path('request-otp', views.RequestOTPView.as_view(), name="request-otp"),
+    path('reset-password', views.ForgotPasswordView.as_view(), name="reset-password"),
 
     # CRON-JOBS
     path('refresh-zoom', views.RefreshZoomTokenCronAPIView.as_view(), name="zoom-refresh"),

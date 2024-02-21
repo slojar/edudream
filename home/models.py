@@ -36,6 +36,7 @@ class Profile(models.Model):
     profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
     email_verified = models.BooleanField(default=False)
     email_verified_code = models.CharField(max_length=200, blank=True, null=True)
+    otp = models.TextField(blank=True, null=True)
     code_expiry = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     stripe_customer_id = models.TextField(blank=True, null=True)
@@ -198,6 +199,7 @@ class ClassReview(models.Model):
 class Testimonial(models.Model):
     title = models.CharField(max_length=50)
     name = models.CharField(max_length=300)
+    language = models.CharField(max_length=100, default="english")
     content = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)

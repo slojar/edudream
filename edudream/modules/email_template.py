@@ -277,5 +277,14 @@ def consultation_email(email, f_name, f_email, acct_type):
     return True
 
 
+def send_otp_token_to_email(user_profile, otp):
+    email = user_profile.user.email
+    message = f"Hello, <br><br>Kindly use the below One Time Token, to complete your action<br><br>" \
+              f"OTP: <strong>{otp}</strong>"
+    subject = "EduDream: One-Time-Passcode"
+    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
+    send_email(contents, email, subject)
+    return True
+
 
 

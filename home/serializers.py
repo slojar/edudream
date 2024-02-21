@@ -12,9 +12,10 @@ from rest_framework import serializers
 from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOICES, CONSULTATION_ACCOUNT_TYPE, \
     CONSULTATION_TYPE_CHOICES
 from edudream.modules.email_template import tutor_register_email, parent_register_email, feedback_email, \
-    consultation_email
+    consultation_email, send_otp_token_to_email
 from edudream.modules.exceptions import InvalidRequestException
-from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
+from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker, \
+    decrypt_text
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
 from location.models import Country, State, City
@@ -183,7 +184,7 @@ class SignUpSerializerIn(serializers.Serializer):
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
     funfact = serializers.CharField(required=False)
-    linkedin = serializers.URLField(required=False)
+    linkedin = serializers.CharField(required=False)
     education_status = serializers.CharField(required=False)
     university_name = serializers.CharField(required=False)
     discipline = serializers.CharField(required=False)
@@ -213,7 +214,7 @@ class SignUpSerializerIn(serializers.Serializer):
         bio = validated_data.get("bio")
         hobbies = validated_data.get("hobbies")
         funfact = validated_data.get("funfact")
-        linkedin = validated_data.get("linkedin")
+        linkedin = validated_data.get("linkedin", "http")
         education_status = validated_data.get("education_status")
         university_name = validated_data.get("university_name")
         discipline = validated_data.get("discipline")
@@ -269,6 +270,9 @@ class SignUpSerializerIn(serializers.Serializer):
         user.last_name = l_name
         user.set_password(raw_password=password)
         user.save()
+
+        if not str(linkedin).startswith("http"):
+            linkedin = f"https://{linkedin}"
 
         if languages:
             for language in eval(languages):
@@ -626,6 +630,63 @@ class TestimonialSerializerOut(serializers.ModelSerializer):
         exclude = []
 
 
+class RequestOTPSerializerIn(serializers.Serializer):
+    email = serializers.EmailField()
 
+    def create(self, validated_data):
+        email = validated_data.get("email")
+
+        try:
+            user_detail = Profile.objects.get(user__email=email)
+        except Profile.DoesNotExist:
+            raise InvalidRequestException({"detail": "User not found"})
+
+        expiry = get_next_minute(timezone.now(), 15)
+        random_otp = generate_random_otp()
+        encrypted_otp = encrypt_text(random_otp)
+        user_detail.otp = encrypted_otp
+        user_detail.code_expiry = expiry
+        user_detail.save()
+
+        # Send OTP to user
+        Thread(target=send_otp_token_to_email, args=[user_detail, random_otp]).start()
+        return "OTP has been sent to your email address"
+
+
+class ForgotPasswordSerializerIn(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField()
+    new_password = serializers.CharField()
+    confirm_password = serializers.CharField()
+
+    def create(self, validated_data):
+        email = validated_data.get('email')
+        otp = validated_data.get('otp')
+        password = validated_data.get('new_password')
+        confirm_password = validated_data.get('confirm_password')
+
+        try:
+            user_detail = Profile.objects.get(user__email=email)
+        except Profile.DoesNotExist:
+            raise InvalidRequestException({"detail": "User not found"})
+
+        if timezone.now() > user_detail.code_expiry:
+            raise InvalidRequestException({"detail": "OTP has expired, Please request for another one"})
+
+        if otp != decrypt_text(user_detail.otp):
+            raise InvalidRequestException({"detail": "Invalid OTP"})
+
+        try:
+            validate_password(password=password)
+        except Exception as err:
+            raise InvalidRequestException({'detail': ', '.join(list(err))})
+
+        if password != confirm_password:
+            raise InvalidRequestException({"detail": "Passwords does not match"})
+
+        user_detail.user.password = make_password(password)
+        user_detail.user.save()
+
+        return "Password reset successful"
 
 
