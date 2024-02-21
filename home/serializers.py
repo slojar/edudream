@@ -34,7 +34,13 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id")
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
+    tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
+
+    def get_tutor_languages(self, obj):
+        if UserLanguage.objects.filter(user__profile=obj).exists():
+            return UserLanguageSerializerOut(UserLanguage.objects.filter(user__profile=obj), many=True).data
+        return None
 
     def get_detail(self, obj):
         return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj), context={"request": self.context.get("request")}).data
@@ -385,6 +391,7 @@ class ProfileSerializerIn(serializers.Serializer):
     bio = serializers.CharField(required=False)
     max_student = serializers.IntegerField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
+    allow_intro_call = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -414,6 +421,7 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail = TutorDetail.objects.get(user=user)
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
+            tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
