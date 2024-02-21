@@ -9,12 +9,14 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
-from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOICES
-from edudream.modules.email_template import tutor_register_email, parent_register_email
+from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOICES, CONSULTATION_ACCOUNT_TYPE, \
+    CONSULTATION_TYPE_CHOICES
+from edudream.modules.email_template import tutor_register_email, parent_register_email, feedback_email, \
+    consultation_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
-    Subject, Notification
+    Subject, Notification, Testimonial
 from location.models import Country, State, City
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
@@ -29,9 +31,16 @@ class UserLanguageSerializerOut(serializers.ModelSerializer):
 
 
 class TutorListSerializerOut(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source="user.id")
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
+    tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
+
+    def get_tutor_languages(self, obj):
+        if UserLanguage.objects.filter(user__profile=obj).exists():
+            return UserLanguageSerializerOut(UserLanguage.objects.filter(user__profile=obj), many=True).data
+        return None
 
     def get_detail(self, obj):
         return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj), context={"request": self.context.get("request")}).data
@@ -382,6 +391,7 @@ class ProfileSerializerIn(serializers.Serializer):
     bio = serializers.CharField(required=False)
     max_student = serializers.IntegerField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
+    allow_intro_call = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -411,6 +421,7 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail = TutorDetail.objects.get(user=user)
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
+            tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
@@ -579,7 +590,40 @@ class UploadProfilePictureSerializerIn(serializers.Serializer):
         return UserSerializerOut(user, context={"request": self.context.get("request")}).data
 
 
+class FeedbackAndConsultationSerializerIn(serializers.Serializer):
+    request_type = serializers.ChoiceField(choices=CONSULTATION_TYPE_CHOICES)
+    full_name = serializers.CharField()
+    email_address = serializers.EmailField()
+    message = serializers.CharField(required=False)
+    user_type = serializers.ChoiceField(choices=CONSULTATION_ACCOUNT_TYPE, required=False)
 
+    def create(self, validated_data):
+        request_type = validated_data.get("request_type")
+        name = validated_data.get("full_name")
+        email = validated_data.get("email_address")
+        msg = validated_data.get("message")
+        user_type = validated_data.get("user_type")
+        from edudream.modules.utils import get_site_details
+        email_to = str(get_site_details().enquiry_email)
+
+        if request_type == "feedback" and not msg:
+            raise InvalidRequestException({"detail": "message is required"})
+
+        if request_type == "consult" and not user_type:
+            raise InvalidRequestException({"detail": "User type is required"})
+
+        if request_type == "feedback":
+            Thread(target=feedback_email, args=[email_to, name, email, msg]).start()
+        if request_type == "consult":
+            request_type = "consultation"
+            Thread(target=consultation_email, args=[email_to, name, email, user_type]).start()
+        return f"{str(request_type).upper()} submitted successfully"
+
+
+class TestimonialSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = Testimonial
+        exclude = []
 
 
 

@@ -62,5 +62,12 @@ APPROVE_OR_DECLINE_CHOICES = (
     ("approved", "Approve"), ("declined", "Decline")
 )
 
+CONSULTATION_TYPE_CHOICES = (
+    ("consult", "Consultation"), ("feedback", "Feedback")
+)
+
+CONSULTATION_ACCOUNT_TYPE = (
+    ("parent", "Parent"), ("student", "Student"), ("tutor", "Tutor")
+)
 
 

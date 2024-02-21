@@ -1,3 +1,4 @@
+import ast
 import logging
 
 from django.db.models import Q
@@ -17,11 +18,12 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
 from edudream.modules.utils import complete_payment, get_site_details
-from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification
+from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
-    SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn
+    SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
+    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -179,13 +181,41 @@ class VerifyPaymentAPIView(APIView):
         return HttpResponseRedirect(redirect_to=f"{frontend_base_url}/verify-checkout?status={str(success).lower()}")
 
 
-class TutorListAPIView(ListAPIView):
+class TutorListAPIView(APIView, CustomPagination):
     permission_classes = []
-    queryset = Profile.objects.filter(account_type="tutor", active=True).order_by("?")
-    serializer_class = TutorListSerializerOut
-    pagination_class = CustomPagination
-    filter_backends = [SearchFilter]
-    search_fields = ["user__first_name", "user__last_name"]
+
+    @extend_schema(
+        parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="country", type=str),
+                    OpenApiParameter(name="grade", type=str), OpenApiParameter(name="diploma_type", type=str),
+                    OpenApiParameter(name="university_name", type=str)]
+    )
+    def get(self, request):
+        search = request.GET.get("search")  # Tutor name Subject name
+        country = request.GET.get("country", list())  # Arrays of ID
+        grade = request.GET.get("grade")  # Subject grades
+        diploma_type = request.GET.get("diploma_type")  # diploma_type
+        university_name = request.GET.get("university_name")  # university_name
+
+        query = Q(account_type="tutor", active=True)
+
+        if search:
+            school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
+            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(user__tutordetail__subjects__in=school_subject_name)
+        if country:
+            country_ids = ast.literal_eval(str(country))
+            query &= Q(country_id__in=country_ids)
+        if grade:
+            school_grade_subject = [item for item in Subject.objects.filter(grade__exact=grade)]
+            query &= Q(user__tutordetail__subjects__in=school_grade_subject)
+        if diploma_type:
+            query &= Q(user__tutordetail__diploma_type__iexact=diploma_type)
+        if university_name:
+            query &= Q(user__tutordetail__university_name__icontains=university_name)
+
+        queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
+        serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
+        response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Tutor retrieved", "data": response})
 
 
 class LanguageListAPIView(ListAPIView):
@@ -228,6 +258,23 @@ class UploadProfilePictureAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
+
+
+class FeedBackAndConsultationAPIView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=FeedbackAndConsultationSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = FeedbackAndConsultationSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+class TestimonialListAPIView(ListAPIView):
+    permission_classes = []
+    serializer_class = TestimonialSerializerOut
+    queryset = Testimonial.objects.all().order_by("?")
 
 
 # CRON

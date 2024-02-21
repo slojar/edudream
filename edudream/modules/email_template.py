@@ -251,5 +251,31 @@ def tutor_intro_call_email(user, u_name, start_date, end_date, link):
     return True
 
 
+def feedback_email(email, f_name, f_email, msg):
+    name = "EduDream Admin"
+    message = f"Dear {name}, <br><br>You have received a new feedback from {f_name} on EduDream." \
+              f"<br>Email: <strong>{f_email}</strong>" \
+              f"<br>Message: <strong>{msg}</strong>"
+    subject = f"EduDream: New Feedback"
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
+def consultation_email(email, f_name, f_email, acct_type):
+    name = "EduDream Admin"
+    message = f"Dear {name}, <br><br>You have received a new consultation request from {f_name} on EduDream." \
+              f"<br>Email: <strong>{f_email}</strong>" \
+              f"<br>Account Type: <strong>{acct_type}</strong>"
+    subject = f"EduDream: New Consultation Request"
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
 
 

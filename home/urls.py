@@ -26,6 +26,8 @@ urlpatterns = [
     path('notification', views.NotificationAPIView.as_view(), name="notification"),
     path('notification/<int:pk>', views.NotificationAPIView.as_view(), name="notification-detail"),
     path('upload-avatar', views.UploadProfilePictureAPIView.as_view(), name="upload-avatar"),
+    path('feedback', views.FeedBackAndConsultationAPIView.as_view(), name="feedback"),
+    path('testimonials', views.TestimonialListAPIView.as_view(), name="testimonial"),
 
     # CRON-JOBS
     path('refresh-zoom', views.RefreshZoomTokenCronAPIView.as_view(), name="zoom-refresh"),
