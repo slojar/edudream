@@ -36,6 +36,7 @@ class Profile(models.Model):
     profile_picture = models.ImageField(upload_to="profile-pictures", blank=True, null=True)
     email_verified = models.BooleanField(default=False)
     email_verified_code = models.CharField(max_length=200, blank=True, null=True)
+    otp = models.TextField(blank=True, null=True)
     code_expiry = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     stripe_customer_id = models.TextField(blank=True, null=True)

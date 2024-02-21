@@ -494,6 +494,9 @@ class IntroCallSerializerIn(serializers.Serializer):
             student = get_object_or_404(Student, user=user)
 
         tutor = get_object_or_404(TutorDetail, user_id=tutor_id)
+        if not tutor.allow_intro_call:
+            raise InvalidRequestException({"detail": "Tutor is not accepting intro call at the moment"})
+
         tutor_user = tutor.user
         d_site = get_site_details()
 

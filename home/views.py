@@ -23,7 +23,9 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
     SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
-    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut
+    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn
+from tutor.models import Classroom
+from tutor.serializers import ClassRoomSerializerOut
 
 
 class SignUpAPIView(APIView):
@@ -275,6 +277,38 @@ class TestimonialListAPIView(ListAPIView):
     permission_classes = []
     serializer_class = TestimonialSerializerOut
     queryset = Testimonial.objects.all().order_by("?")
+
+
+@extend_schema(parameters=[OpenApiParameter(name="tutor_id", type=str)])
+class TutorClassroomListAPIView(ListAPIView):
+    permission_classes = []
+    serializer_class = ClassRoomSerializerOut
+
+    def get_queryset(self):
+        tutor_id = self.request.GET.get("tutor_id")
+        return Classroom.objects.filter(tutor_id=tutor_id)
+
+
+class RequestOTPView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=RequestOTPSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = RequestOTPSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+class ForgotPasswordView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=RequestOTPSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = ForgotPasswordSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
 
 
 # CRON
