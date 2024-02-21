@@ -273,10 +273,14 @@ class FeedBackAndConsultationAPIView(APIView):
         return Response({"detail": response})
 
 
+@extend_schema(parameters=[OpenApiParameter(name="language", type=str)])
 class TestimonialListAPIView(ListAPIView):
     permission_classes = []
     serializer_class = TestimonialSerializerOut
-    queryset = Testimonial.objects.all().order_by("?")
+
+    def get_queryset(self):
+        lang = self.request.GET.get("language", "french")
+        return Testimonial.objects.filter(language=lang).order_by("?")
 
 
 @extend_schema(parameters=[OpenApiParameter(name="tutor_id", type=str)])

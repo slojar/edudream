@@ -199,6 +199,7 @@ class ClassReview(models.Model):
 class Testimonial(models.Model):
     title = models.CharField(max_length=50)
     name = models.CharField(max_length=300)
+    language = models.CharField(max_length=100, default="english")
     content = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
