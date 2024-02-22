@@ -13,6 +13,7 @@ urlpatterns = [
     path('calendar', views.TutorCalendarListAPIView.as_view(), name="list-calendar"),
     path('add-calendar', views.TutorCalendarAPIView.as_view(), name="add-to-calendar"),
     path('add-bank', views.CreateBankAccountAPIView.as_view(), name="add-bank"),
+    path('delete-bank/<int:id>', views.DeleteBankAccountAPIView.as_view(), name="delete-bank"),
     path('create-payout', views.CreateTutorPayoutAPIView.as_view(), name="create-payout"),
     path('payout', views.TutorPayoutAPIView.as_view(), name="payout"),
     path('payout/<int:pk>', views.TutorPayoutAPIView.as_view(), name="payout-detail"),
