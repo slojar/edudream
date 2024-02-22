@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
-from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,11 +10,12 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor
-from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument
+from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
+    TutorBankAccount
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
     DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut, TutorBankAccountSerializerIn, \
     RequestPayoutSerializerIn, PayoutSerializerOut, TutorSubjectSerializerIn, TutorSubjectSerializerOut, \
-    TutorSubjectDocumentSerializerIn
+    TutorSubjectDocumentSerializerIn, TutorBankAccountSerializerOut
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
@@ -189,5 +190,15 @@ class UploadSubjectDocumentCreateAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated & IsTutor]
     serializer_class = TutorSubjectDocumentSerializerIn
     queryset = TutorSubjectDocument.objects.all()
+
+
+class DeleteBankAccountAPIView(DestroyAPIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+    serializer_class = TutorBankAccountSerializerOut
+    lookup_field = "id"
+
+    def get_queryset(self):
+        # bank_id = self.kwargs.get("id")
+        return TutorBankAccount.objects.filter(user=self.request.user)
 
 
