@@ -93,14 +93,15 @@ class FundWalletSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     plan_id = serializers.IntegerField()
     ip_address = serializers.IPAddressField()
-    # card_id = serializers.IntegerField(required=False)
+    redirect_language = serializers.CharField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         plan_id = validated_data.get("plan_id")
         ip_address = validated_data.get("ip_address")
         request = self.context.get("request")
-        callback_url = request.build_absolute_uri('/payment-verify?')
+        language = validated_data.get("redirect_language", "en")
+        callback_url = request.build_absolute_uri(f'/payment-verify?lang={language}')
 
         # card_id = validated_data.get("card_id", None)
 
