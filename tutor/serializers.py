@@ -72,9 +72,9 @@ class CreateClassSerializerIn(serializers.Serializer):
         description = validated_data.get("description")
         tutor_id = validated_data.get("tutor_id")
         student_id = validated_data.get("student_id")
-        start_date = validated_data.get("start_date")
+        start_date = str(validated_data.get("start_date"))
         # duration = validated_data.get("duration")
-        end_date = validated_data.get("end_date")
+        end_date = str(validated_data.get("end_date"))
         subject_id = validated_data.get("subject_id")
         book_now = validated_data.get("book_now", False)
         parent_profile = None
@@ -85,7 +85,7 @@ class CreateClassSerializerIn(serializers.Serializer):
             pass
 
         if parent_profile:
-            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+            student = get_object_or_404(Student, id=student_id, parent__user=user)
         else:
             student = get_object_or_404(Student, user=user)
 
@@ -489,7 +489,7 @@ class IntroCallSerializerIn(serializers.Serializer):
             pass
 
         if parent_profile:
-            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+            student = get_object_or_404(Student, id=student_id, parent__user=user)
         else:
             student = get_object_or_404(Student, user=user)
 
