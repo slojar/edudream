@@ -85,7 +85,7 @@ class CreateClassSerializerIn(serializers.Serializer):
             pass
 
         if parent_profile:
-            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+            student = get_object_or_404(Student, id=student_id, parent__user=user)
         else:
             student = get_object_or_404(Student, user=user)
 
@@ -489,7 +489,7 @@ class IntroCallSerializerIn(serializers.Serializer):
             pass
 
         if parent_profile:
-            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+            student = get_object_or_404(Student, id=student_id, parent__user=user)
         else:
             student = get_object_or_404(Student, user=user)
 
