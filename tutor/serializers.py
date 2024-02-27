@@ -103,6 +103,10 @@ class CreateClassSerializerIn(serializers.Serializer):
         if duration < 15 or duration > 120:
             raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
 
+        # Check if duration does not exceed tutor max hour
+        if duration > tutor_user.tutordetail.max_hour_class_hour:
+            raise InvalidRequestException({"detail": "Duration cannot be greater than tutor teaching period"})
+
         # Check Tutor Calendar
         if not TutorCalendar.objects.filter(
                 user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
@@ -113,16 +117,12 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         class_amount = duration * subject_amount / 60
+        log_request(class_amount)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
                                     status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
-
-        # Check parent balance is available for class amount
-        balance = student.parent.user.wallet.balance
-        if class_amount > balance:
-            raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
@@ -136,6 +136,12 @@ class CreateClassSerializerIn(serializers.Serializer):
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
                          "duration": f"{duration} minutes", "total_coin": class_amount}
             }
+
+        # Check parent balance is available for class amount
+        balance = student.parent.user.wallet.balance
+        if class_amount > balance:
+            raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
+
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,

@@ -396,6 +396,7 @@ class ProfileSerializerIn(serializers.Serializer):
     max_student = serializers.IntegerField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
     allow_intro_call = serializers.BooleanField(required=False)
+    max_hour_class_hour = serializers.IntegerField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -426,6 +427,7 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
             tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
+            tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
