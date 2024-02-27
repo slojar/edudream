@@ -1,6 +1,5 @@
 import datetime
 import decimal
-import uuid
 from threading import Thread
 
 from django.shortcuts import get_object_or_404
@@ -16,7 +15,8 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
     tutor_intro_call_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request
+from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
+    create_notification
 from home.models import Subject, Transaction, Profile
 from location.models import Country
 from student.models import Student
@@ -103,6 +103,10 @@ class CreateClassSerializerIn(serializers.Serializer):
         if duration < 15 or duration > 120:
             raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
 
+        # Check if duration does not exceed tutor max hour
+        if duration > tutor_user.tutordetail.max_hour_class_hour:
+            raise InvalidRequestException({"detail": "Duration cannot be greater than tutor teaching period"})
+
         # Check Tutor Calendar
         if not TutorCalendar.objects.filter(
                 user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
@@ -119,11 +123,6 @@ class CreateClassSerializerIn(serializers.Serializer):
                                     status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
 
-        # Check parent balance is available for class amount
-        balance = student.parent.user.wallet.balance
-        if class_amount > balance:
-            raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
-
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
         # Add grace period
@@ -136,6 +135,12 @@ class CreateClassSerializerIn(serializers.Serializer):
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
                          "duration": f"{duration} minutes", "total_coin": class_amount}
             }
+
+        # Check parent balance is available for class amount
+        balance = student.parent.user.wallet.balance
+        if class_amount > balance:
+            raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
+
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
@@ -145,6 +150,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom]).start()
+        Thread(target=create_notification, args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification, args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
 
         return {
             "detail": "Classroom request sent successfully",
@@ -205,6 +212,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
+            Thread(target=create_notification, args=[student.user, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
             if not instance.status == "accepted":

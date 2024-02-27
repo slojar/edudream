@@ -239,12 +239,15 @@ class SubjectListAPIView(ListAPIView):
 class NotificationAPIView(APIView, CustomPagination):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(parameters=[OpenApiParameter(name="read", type=str)])
+    @extend_schema(parameters=[OpenApiParameter(name="readall", type=str)])
     def get(self, request, pk=None):
+        readall = request.GET.get("readall")
+        query = Notification.objects.filter(user__in=[request.user])
         if pk:
-            queryset = get_object_or_404(Notification, id=pk, user__in=[request.user])
-            serializer = NotificationSerializerOut(queryset).data
-            return Response({"detail": "Success", "data": serializer})
+            query = Notification.objects.filter(id=pk, user__in=[request.user])
+            query.update(read=True)
+        if readall:
+            query.update(read=True)
 
         queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]), request)
         serializer = NotificationSerializerOut(queryset, many=True).data

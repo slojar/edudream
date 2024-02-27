@@ -26,7 +26,8 @@ class TutorDetail(models.Model):
     subjects = models.ManyToManyField("home.Subject")
     max_student_required = models.IntegerField(default=10)
     updated_on = models.DateTimeField(auto_now=True)
-    allow_intro_call = models.BooleanField(default=False)
+    allow_intro_call = models.BooleanField(default=True)
+    max_hour_class_hour = models.IntegerField(default=120)
 
     def __str__(self):
         return f"{self.user.username}"

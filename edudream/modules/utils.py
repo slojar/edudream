@@ -15,7 +15,7 @@ from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
 from translate import Translator
 
-from home.models import SiteSetting, Transaction
+from home.models import SiteSetting, Transaction, Notification
 from location.models import City, State, Country
 
 from edudream.modules.stripe_api import StripeAPI
@@ -397,6 +397,10 @@ def translate_to_language(content, language):
     return translated_content
 
 
+def create_notification(user, text):
+    notify = Notification.objects.create(message=text)
+    notify.user.add(user)
+    return True
 
 
 

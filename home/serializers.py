@@ -15,7 +15,7 @@ from edudream.modules.email_template import tutor_register_email, parent_registe
     consultation_email, send_otp_token_to_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker, \
-    decrypt_text
+    decrypt_text, create_notification
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
 from location.models import Country, State, City
@@ -337,6 +337,7 @@ class SignUpSerializerIn(serializers.Serializer):
             Thread(target=parent_register_email, args=[user]).start()
         # Send Verification token to email
 
+        Thread(target=create_notification, args=[user, "Welcome to EduDream"]).start()
         return UserSerializerOut(user, context={"request": self.context.get("request")}).data
 
 
@@ -378,7 +379,7 @@ class LoginSerializerIn(serializers.Serializer):
             # raise InvalidRequestException({
             #     "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
             # })
-
+        Thread(target=create_notification, args=[user, "Login successful"]).start()
         return user
 
 
@@ -396,6 +397,7 @@ class ProfileSerializerIn(serializers.Serializer):
     max_student = serializers.IntegerField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
     allow_intro_call = serializers.BooleanField(required=False)
+    max_hour_class_hour = serializers.IntegerField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -426,6 +428,7 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
             tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
+            tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
@@ -470,6 +473,8 @@ class ChangePasswordSerializerIn(serializers.Serializer):
 
         user.password = make_password(password=new_password)
         user.save()
+
+        Thread(target=create_notification, args=[user, "Password changed successfully"]).start()
 
         return "Password Reset Successful"
 
