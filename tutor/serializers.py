@@ -1,6 +1,5 @@
 import datetime
 import decimal
-import uuid
 from threading import Thread
 
 from django.shortcuts import get_object_or_404
@@ -16,7 +15,8 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
     tutor_intro_call_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request
+from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
+    create_notification
 from home.models import Subject, Transaction, Profile
 from location.models import Country
 from student.models import Student
@@ -117,7 +117,6 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         class_amount = duration * subject_amount / 60
-        log_request(class_amount)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
@@ -151,6 +150,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom]).start()
+        Thread(target=create_notification, args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification, args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
 
         return {
             "detail": "Classroom request sent successfully",
@@ -211,6 +212,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
+            Thread(target=create_notification, args=[student.user, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
             if not instance.status == "accepted":
