@@ -95,8 +95,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         d_site = get_site_details()
 
         # Get Duration
-        start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
-        end_date_convert = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
+        start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
+        end_date_convert = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S%z")
         time_difference = end_date_convert - start_date_convert
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
@@ -120,14 +120,14 @@ class CreateClassSerializerIn(serializers.Serializer):
             raise InvalidRequestException({"detail": "Period booked by another user, please select another period"})
 
         # Check parent balance is available for class amount
-        balance = user.parent.wallet.balance
+        balance = student.parent.user.wallet.balance
         if class_amount > balance:
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
         # Add grace period
-        new_end_time = end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
 
         if not book_now:
             return {
