@@ -181,7 +181,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             student_name = student.get_full_name()
             student_email = student.email
             link = ZoomAPI.create_meeting(
-                start_date=instance.start_date, duration=instance.expected_duration,
+                start_date=str(instance.start_date), duration=instance.expected_duration,
                 attending=[{"name": str(student_name), "email": str(student_email)},
                            {"name": str(tutor_name), "email": str(tutor_email)}], narration=instance.description,
                 title=instance.name

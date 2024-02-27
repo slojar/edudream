@@ -49,7 +49,6 @@ class TestHomeTestCase(TestCase):
         data = {"tutor_id": 2}
         url = reverse("home:classroom")
         response = self.client.get(url, data)
-        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 

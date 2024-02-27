@@ -32,8 +32,6 @@ class TestStudentTestCase(TestCase):
         header_data = {"Authorization": f"Bearer {self.test_valid_login()}"}
         url = reverse("tutor:delete-bank", kwargs={"id": 1})
         response = self.client.delete(url, headers=header_data)
-        print(response.headers)
-        print(response.status_code)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_add_bank(self):
@@ -47,7 +45,6 @@ class TestStudentTestCase(TestCase):
         }
         url = reverse("tutor:add-bank")
         response = self.client.post(url, data, headers=header_data)
-        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_intro_call(self):
@@ -55,7 +52,5 @@ class TestStudentTestCase(TestCase):
         data = {"tutor_id": 3, "start_date": "2024-02-15 13:06:30"}
         url = reverse("student:intro-call")
         response = self.client.post(url, data, headers=header_data)
-        print(response.headers)
-        print(response.json())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
