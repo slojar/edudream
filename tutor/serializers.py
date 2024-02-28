@@ -212,7 +212,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
-            Thread(target=create_notification, args=[student.user, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
             Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
