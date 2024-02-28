@@ -181,7 +181,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             student_name = student.get_full_name()
             student_email = student.email
             link = ZoomAPI.create_meeting(
-                start_date=instance.start_date, duration=instance.expected_duration,
+                start_date=str(instance.start_date), duration=instance.expected_duration,
                 attending=[{"name": str(student_name), "email": str(student_email)},
                            {"name": str(tutor_name), "email": str(tutor_email)}], narration=instance.description,
                 title=instance.name
@@ -212,7 +212,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
-            Thread(target=create_notification, args=[student.user, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
             Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
@@ -372,7 +372,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
             )
             external_account_id = external_account.get("id")
             if external_account_id:
-                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name__iexact=bank, account_number=acct_no)
+                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank, account_number=acct_no)
                 acct.account_name = acct_name
                 acct.account_type = acct_type
                 acct.routing_number = routing_no

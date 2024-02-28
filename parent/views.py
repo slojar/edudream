@@ -96,7 +96,7 @@ class ParentStudentClassRoomAPIView(APIView, CustomPagination):
             if class_status:
                 query &= Q(status=class_status)
             if date_from and date_to:
-                query &= Q(created_on__range=[date_from, date_to])
+                query &= Q(start_date__range=[date_from, date_to])
 
             queryset = self.paginate_queryset(Classroom.objects.filter(query), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data

@@ -164,7 +164,7 @@ class ClassRoomListAPIView(APIView, CustomPagination):
         if class_status:
             query &= Q(status=class_status)
         if date_from and date_to:
-            query &= Q(created_on__range=[date_from, date_to])
+            query &= Q(start_date__range=[date_from, date_to])
         # if amount_to and amount_from:
         #     query &= Q()
 
