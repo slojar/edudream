@@ -372,7 +372,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
             )
             external_account_id = external_account.get("id")
             if external_account_id:
-                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name__iexact=bank, account_number=acct_no)
+                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank, account_number=acct_no)
                 acct.account_name = acct_name
                 acct.account_type = acct_type
                 acct.routing_number = routing_no
