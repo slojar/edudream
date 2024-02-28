@@ -249,7 +249,7 @@ class NotificationAPIView(APIView, CustomPagination):
         if readall:
             query.update(read=True)
 
-        queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]), request)
+        queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]).order_by("-id"), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})
