@@ -161,7 +161,7 @@ class CreateTutorPayoutAPIView(APIView):
 
     @extend_schema(request=RequestPayoutSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
-        serializer = RequestPayoutSerializerIn(data=request.data)
+        serializer = RequestPayoutSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response(response)

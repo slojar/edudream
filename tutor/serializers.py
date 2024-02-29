@@ -423,7 +423,7 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user]).start()
-        return {"detail": "Success", "data": PayoutSerializerOut(payout).data}
+        return {"detail": "Success", "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
 
 
 class TutorSubjectDocumentSerializerIn(serializers.ModelSerializer):
