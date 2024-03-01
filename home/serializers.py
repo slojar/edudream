@@ -655,7 +655,8 @@ class RequestOTPSerializerIn(serializers.Serializer):
 
         # Send OTP to user
         Thread(target=send_otp_token_to_email, args=[user_detail, random_otp]).start()
-        return "OTP has been sent to your email address"
+        return {"detail": "OTP has been sent to your email address", "otp": f"Use this OTP :- {random_otp}. This keyword 'OTP' will be remove before going live"}
+        # return "OTP has been sent to your email address"
 
 
 class ForgotPasswordSerializerIn(serializers.Serializer):
