@@ -7,7 +7,7 @@ from rest_framework import status
 from home.models import Profile, Wallet
 from location.models import Country
 from student.models import Student
-from tutor.models import TutorDetail, TutorBankAccount
+from tutor.models import TutorDetail, TutorBankAccount, TutorCalendar
 
 
 class TestStudentTestCase(TestCase):
@@ -19,6 +19,7 @@ class TestStudentTestCase(TestCase):
         Wallet.objects.create(user=tutor_user)
         TutorBankAccount.objects.create(user=tutor_user, bank_name="Test Bank", account_number="3456543")
         tutor_detail = TutorDetail.objects.create(user=tutor_user)
+        TutorCalendar.objects.create(user=tutor_user, day_of_the_week=1, time_from="13:00", time_to="14:01", status="available")
 
     def test_valid_login(self):
         data = {"email_address": "test_tutor@email.com", "password": "Test@123"}
@@ -51,6 +52,13 @@ class TestStudentTestCase(TestCase):
         header_data = {"Authorization": f"Bearer {self.test_valid_login()}"}
         data = {"tutor_id": 3, "start_date": "2024-02-15 13:06:30"}
         url = reverse("student:intro-call")
+        response = self.client.post(url, data, headers=header_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_create_tutor_calender(self):
+        header_data = {"Authorization": f"Bearer {self.test_valid_login()}"}
+        data = {"week_day": 1, "start_time": "14:00", "end_time": "15:00", "status": "available"}
+        url = reverse("tutor:add-to-calendar")
         response = self.client.post(url, data, headers=header_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
