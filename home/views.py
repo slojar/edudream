@@ -316,7 +316,7 @@ class RequestOTPView(APIView):
 class ForgotPasswordView(APIView):
     permission_classes = []
 
-    @extend_schema(request=RequestOTPSerializerIn, responses={status.HTTP_200_OK})
+    @extend_schema(request=ForgotPasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = ForgotPasswordSerializerIn(data=request.data)
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
