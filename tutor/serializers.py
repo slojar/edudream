@@ -2,6 +2,7 @@ import datetime
 import decimal
 from threading import Thread
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -305,6 +306,10 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         start_period = validated_data.get("start_time")
         end_period = validated_data.get("end_time")
         avail_status = validated_data.get("status")
+
+        # Check if time within a day already exists
+        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
+            raise InvalidRequestException({"detail": "Overlapping time frame"})
 
         avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
         avail.time_to = end_period
