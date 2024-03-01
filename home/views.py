@@ -57,7 +57,8 @@ class ProfileAPIView(APIView):
     permission_classes = [IsAuthenticated & (IsTutor | IsParent | IsStudent)]
 
     def get(self, request):
-        return Response({"detail": "Success", "data": UserSerializerOut(request.user, context={"request": request}).data})
+        return Response(
+            {"detail": "Success", "data": UserSerializerOut(request.user, context={"request": request}).data})
 
     @extend_schema(request=ProfileSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request):
@@ -65,7 +66,8 @@ class ProfileAPIView(APIView):
         serializer = ProfileSerializerIn(instance=instance, data=request.data, context={'request': request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         user = serializer.save()
-        return Response({"detail": "Profile updated", "data": UserSerializerOut(user, context={"request": request}).data})
+        return Response(
+            {"detail": "Profile updated", "data": UserSerializerOut(user, context={"request": request}).data})
 
 
 class ChangePasswordAPIView(APIView):
@@ -181,7 +183,8 @@ class VerifyPaymentAPIView(APIView):
             return HttpResponseRedirect(
                 redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
         #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
-        return HttpResponseRedirect(redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
+        return HttpResponseRedirect(
+            redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
 
 
 class TutorListAPIView(APIView, CustomPagination):
@@ -203,7 +206,8 @@ class TutorListAPIView(APIView, CustomPagination):
 
         if search:
             school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
-            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(user__tutordetail__subjects__in=school_subject_name)
+            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
+                user__tutordetail__subjects__in=school_subject_name)
         if country:
             country_ids = ast.literal_eval(str(country))
             query &= Q(country_id__in=country_ids)
@@ -333,11 +337,69 @@ class RefreshZoomTokenCronAPIView(APIView):
         return JsonResponse({"detail": "Cron Ran Successfully"})
 
 
+class ChatListAPIView(APIView):
+    permission_classes = [IsAuthenticated & (IsStudent | IsTutor)]
+
+    def get(self, request):
+        # Get all users logged in user can chat with
+        result = list()
+        if IsStudent:
+            all_classroom = Classroom.objects.filter(status__in=["accepted", "completed", "cancelled"],
+                                                     student__user=request.user)
+            for tut in all_classroom:
+                message = None
+                if ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
+                                              receiver_id__in=[request.user.id, tut.tutor_id]).exists():
+                    message = str(
+                        ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
+                                                   receiver_id__in=[request.user.id, tut.tutor_id]).last().message
+                    )
+                image = None
+                if tut.tutor.profile.profile_picture:
+                    image = request.build_absolute_uri(tut.tutor.profile.profile_picture.url)
+                user_data = {
+                    "user_id": tut.tutor_id,
+                    "name": tut.tutor.get_full_name(),
+                    "image": image,
+                    "last_message": message
+                }
+                user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
+
+                if not user_id_exists:
+                    result.append(user_data)
+
+        if IsTutor:
+            all_classroom = Classroom.objects.filter(status__in=["accepted", "completed", "cancelled"],
+                                                     tutor=request.user)
+            for stu in all_classroom:
+                message = None
+                if ChatMessage.objects.filter(sender_id__in=[request.user.id, stu.student.user_id],
+                                              receiver_id__in=[request.user.id, stu.student.user_id]).exists():
+                    message = str(
+                        ChatMessage.objects.filter(sender_id__in=[request.user.id, stu.student.user_id],
+                                                   receiver_id__in=[request.user.id,
+                                                                    stu.student.user_id]).last().message
+                    )
+                image = None
+                if stu.student.profile_picture:
+                    image = request.build_absolute_uri(stu.student.profile_picture.url)
+                user_data = {
+                    "user_id": stu.student.user_id,
+                    "name": stu.student.user.get_full_name(),
+                    "image": image,
+                    "last_message": message
+                }
+                user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
+
+                if not user_id_exists:
+                    result.append(user_data)
+
+        return Response({"detail": "Success", "data": result})
+
+
 class PayoutProcessingCronAPIView(APIView):
     permission_classes = []
 
     def get(self, request):
         payout_cron_job()
         return JsonResponse({"detail": "Cron Ran Successfully"})
-
-
