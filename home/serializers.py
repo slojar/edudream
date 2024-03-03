@@ -486,6 +486,15 @@ class TransactionSerializerOut(serializers.ModelSerializer):
 
 
 class ChatMessageSerializerOut(serializers.ModelSerializer):
+    attachment = serializers.SerializerMethodField()
+
+    def get_attachment(self, obj):
+        file = None
+        if obj.attachment:
+            request = self.context.get("request")
+            file = request.build_absolute_uri(obj.attachment.url)
+        return file
+
     class Meta:
         model = ChatMessage
         exclude = []

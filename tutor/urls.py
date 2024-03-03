@@ -5,6 +5,7 @@ app_name = "tutor"
 
 urlpatterns = [
     path('classroom', views.TutorClassRoomAPIView.as_view(), name="classroom"),
+    path('custom-classroom', views.CustomClassAPIView.as_view(), name="classroom"),
     path('classroom/<int:pk>', views.TutorClassRoomAPIView.as_view(), name="classroom-detail"),
     path('classroom-status/<int:pk>', views.UpdateClassroomStatusAPIView.as_view(), name="classroom-status"),
     path('dispute', views.DisputeAPIView.as_view(), name="dispute"),

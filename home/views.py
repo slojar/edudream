@@ -407,3 +407,10 @@ class PayoutProcessingCronAPIView(APIView):
     def get(self, request):
         payout_cron_job()
         return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class WebhookAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        return JsonResponse({"detail": "Webhook successful"})
