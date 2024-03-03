@@ -554,3 +554,120 @@ class IntroCallSerializerIn(serializers.Serializer):
     # except Exception as err:
     #     log_request(f"Error while booking intro call\nError: {err}")
     #     raise InvalidRequestException({"detail": "Cannot process request at the moment. Please try again later"})
+
+
+class CustomClassSerializerIn(serializers.Serializer):
+    auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Logged in tutor
+    name = serializers.CharField()
+    note = serializers.CharField()
+    student_id = serializers.IntegerField()
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+    subject_id = serializers.IntegerField()
+
+    def create(self, validated_data):
+        user = validated_data.get("auth_user")
+        name = validated_data.get("name")
+        description = validated_data.get("note")
+        student_id = validated_data.get("student_id")
+        start_date = str(validated_data.get("start_date"))
+        end_date = str(validated_data.get("end_date"))
+        subject_id = validated_data.get("subject_id")
+
+        student = get_object_or_404(Student, user_id=student_id)
+        subject = get_object_or_404(Subject, id=subject_id)
+        d_site = get_site_details()
+        parent_wallet = student.parent.user.wallet
+
+        # Get Duration
+        start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
+        end_date_convert = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S%z")
+        time_difference = end_date_convert - start_date_convert
+        duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
+
+        if duration < 15 or duration > 120:
+            raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
+
+        # Check if duration does not exceed tutor max hour
+        if duration > user.tutordetail.max_hour_class_hour:
+            raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
+
+        # Check Tutor Calendar
+        if not TutorCalendar.objects.filter(
+                user=user, day_of_the_week=start_date_convert.isoweekday(),
+                time_from__hour=start_date_convert.hour, status="available"
+        ):
+            raise InvalidRequestException({"detail": "Selected period is not valid, based on your availability"})
+
+        # Calculate Class Amount
+        subject_amount = subject.amount  # coin value per subject per hour
+        class_amount = duration * subject_amount / 60
+
+        # Check Tutor availability
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+                                    status__in=["new", "accepted"]).exists():
+            raise InvalidRequestException({"detail": "This period is booked, please select another period"})
+
+        # Check if call occurred earlier. If yes, then add tutor rest period to start time
+
+        # Add grace period
+        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
+
+        # Check parent balance is available for class amount
+        balance = student.parent.user.wallet.balance
+        if class_amount > balance:
+            raise InvalidRequestException({"detail": "Student's wallet balance is too low for this action"})
+
+        # Generate meeting link
+        tutor_email = user.email
+        tutor_name = user.get_full_name()
+        student_name = student.user.get_full_name()
+        student_email = student.user.email
+        link = ZoomAPI.create_meeting(
+            start_date=str(start_date), duration=duration,
+            attending=[{"name": str(student_name), "email": str(student_email)},
+                       {"name": str(tutor_name), "email": str(tutor_email)}], narration=description,
+            title=name
+        )
+
+        # Debit parent wallet
+        parent_wallet.refresh_from_db()
+        parent_wallet.balance -= class_amount
+        parent_wallet.save()
+        # Check parent new wallet balance and compare coin threshold
+        parent_wallet.refresh_from_db()
+        if parent_wallet.balance < d_site.coin_threshold:
+            # Send low coin threshold email to parent
+            Thread(target=parent_low_threshold_email, args=[student.parent.user, parent_wallet.balance]).start()
+
+        # Add amount to Escrow Balance
+        d_site.refresh_from_db()
+        d_site.escrow_balance += class_amount
+        d_site.save()
+        # Create transaction
+        Transaction.objects.create(
+            user=student.parent.user, transaction_type="course_payment", amount=class_amount, narration=description,
+            status="completed"
+        )
+
+        # Create class for student
+        classroom = Classroom.objects.create(
+            name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
+            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted"
+        )
+
+        # Send meeting link to student
+        # Thread(target=student_class_approved_email, args=[instance]).start()
+        # Send notification to parent
+        # Send meeting link to tutor
+        # Thread(target=tutor_class_approved_email, args=[instance]).start()
+        # Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
+        # Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
+
+        return {
+            "detail": "Custom class created successfully",
+            "data": ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
+        }
+
+
+

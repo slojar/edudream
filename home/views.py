@@ -309,13 +309,14 @@ class RequestOTPView(APIView):
         serializer = RequestOTPSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
-        return Response({"detail": response})
+        # return Response({"detail": response})
+        return Response(response)
 
 
 class ForgotPasswordView(APIView):
     permission_classes = []
 
-    @extend_schema(request=RequestOTPSerializerIn, responses={status.HTTP_200_OK})
+    @extend_schema(request=ForgotPasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = ForgotPasswordSerializerIn(data=request.data)
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
@@ -348,12 +349,13 @@ class ChatListAPIView(APIView):
                                                      student__user=request.user)
             for tut in all_classroom:
                 message = None
+                date_created = None
                 if ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
                                               receiver_id__in=[request.user.id, tut.tutor_id]).exists():
-                    message = str(
-                        ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
-                                                   receiver_id__in=[request.user.id, tut.tutor_id]).last().message
-                    )
+                    chat = ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
+                                                      receiver_id__in=[request.user.id, tut.tutor_id]).last()
+                    message = str(chat.message)
+                    date_created = chat.created_on
                 image = None
                 if tut.tutor.profile.profile_picture:
                     image = request.build_absolute_uri(tut.tutor.profile.profile_picture.url)
@@ -361,7 +363,8 @@ class ChatListAPIView(APIView):
                     "user_id": tut.tutor_id,
                     "name": tut.tutor.get_full_name(),
                     "image": image,
-                    "last_message": message
+                    "last_message": message,
+                    "date": date_created
                 }
                 user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
 
@@ -373,13 +376,13 @@ class ChatListAPIView(APIView):
                                                      tutor=request.user)
             for stu in all_classroom:
                 message = None
+                date_created = None
                 if ChatMessage.objects.filter(sender_id__in=[request.user.id, stu.student.user_id],
                                               receiver_id__in=[request.user.id, stu.student.user_id]).exists():
-                    message = str(
-                        ChatMessage.objects.filter(sender_id__in=[request.user.id, stu.student.user_id],
-                                                   receiver_id__in=[request.user.id,
-                                                                    stu.student.user_id]).last().message
-                    )
+                    chat = ChatMessage.objects.filter(sender_id__in=[request.user.id, stu.student.user_id],
+                                                      receiver_id__in=[request.user.id, stu.student.user_id]).last()
+                    date_created = chat.created_on
+                    message = str(chat.message)
                 image = None
                 if stu.student.profile_picture:
                     image = request.build_absolute_uri(stu.student.profile_picture.url)
@@ -387,7 +390,8 @@ class ChatListAPIView(APIView):
                     "user_id": stu.student.user_id,
                     "name": stu.student.user.get_full_name(),
                     "image": image,
-                    "last_message": message
+                    "last_message": message,
+                    "date": date_created
                 }
                 user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
 
@@ -403,3 +407,10 @@ class PayoutProcessingCronAPIView(APIView):
     def get(self, request):
         payout_cron_job()
         return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class WebhookAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        return JsonResponse({"detail": "Webhook successful"})

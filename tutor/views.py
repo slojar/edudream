@@ -15,7 +15,18 @@ from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, Tutor
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
     DisputeSerializerOut, TutorCalendarSerializerIn, TutorCalendarSerializerOut, TutorBankAccountSerializerIn, \
     RequestPayoutSerializerIn, PayoutSerializerOut, TutorSubjectSerializerIn, TutorSubjectSerializerOut, \
-    TutorSubjectDocumentSerializerIn, TutorBankAccountSerializerOut
+    TutorSubjectDocumentSerializerIn, TutorBankAccountSerializerOut, CustomClassSerializerIn
+
+
+class CustomClassAPIView(APIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+
+    @extend_schema(request=CustomClassSerializerIn, responses={status.HTTP_201_CREATED})
+    def post(self, request):
+        serializer = CustomClassSerializerIn(data=request.data, context={"request": request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response(response)
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
