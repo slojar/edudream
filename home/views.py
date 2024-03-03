@@ -412,5 +412,5 @@ class PayoutProcessingCronAPIView(APIView):
 class WebhookAPIView(APIView):
     permission_classes = []
 
-    def get(self, request):
+    def post(self, request):
         return JsonResponse({"detail": "Webhook successful"})
