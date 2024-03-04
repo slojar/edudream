@@ -664,10 +664,7 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
         # Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
 
-        return {
-            "detail": "Custom class created successfully",
-            "data": ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
-        }
+        return ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
 
 
 

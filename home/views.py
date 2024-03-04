@@ -144,7 +144,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         query = Q(sender_id__in=[sender.id, receiver_id], receiver_id__in=[receiver_id, sender.id])
         if search:
             query &= Q(message__icontains=search)
-        messages = ChatMessage.objects.filter(query).distinct().order_by("-created_on")
+        messages = ChatMessage.objects.filter(query).distinct().order_by("created_on")
         messages.update(read=True)
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
