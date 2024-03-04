@@ -128,7 +128,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
 
     @extend_schema(request=ChatMessageSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
-        serializer = ChatMessageSerializerIn(data=request.data)
+        serializer = ChatMessageSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
