@@ -187,6 +187,8 @@ class SignUpSerializerIn(serializers.Serializer):
     linkedin = serializers.CharField(required=False)
     education_status = serializers.CharField(required=False)
     university_name = serializers.CharField(required=False)
+    high_school_attended = serializers.CharField(required=False)
+    high_school_subject = serializers.CharField(required=False)
     discipline = serializers.CharField(required=False)
     diploma_type = serializers.CharField(required=False)
     diploma_grade = serializers.CharField(required=False)
@@ -217,6 +219,8 @@ class SignUpSerializerIn(serializers.Serializer):
         linkedin = validated_data.get("linkedin", "http")
         education_status = validated_data.get("education_status")
         university_name = validated_data.get("university_name")
+        high_school_attended = validated_data.get("high_school_attended")
+        high_school_subject = validated_data.get("high_school_subject")
         discipline = validated_data.get("discipline")
         diploma_type = validated_data.get("diploma_type")
         diploma_file = validated_data.get("diploma_file")
@@ -316,6 +320,8 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.linkedin = linkedin
             tutor_detail.education_status = education_status
             tutor_detail.university_name = university_name
+            tutor_detail.high_school_attended = high_school_attended
+            tutor_detail.high_school_subject = high_school_subject
             tutor_detail.discipline = discipline
             tutor_detail.diploma_type = diploma_type
             tutor_detail.diploma_file = diploma_file

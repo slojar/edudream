@@ -15,6 +15,8 @@ class TutorDetail(models.Model):
     linkedin = models.CharField(max_length=200, default="", blank=True, null=True)
     education_status = models.CharField(max_length=100, default="")
     university_name = models.CharField(max_length=150, default="")
+    high_school_attended = models.CharField(max_length=200, blank=True, null=True)
+    high_school_subject = models.CharField(max_length=150, blank=True, null=True)
     discipline = models.CharField(max_length=150, default="")
     diploma_type = models.CharField(max_length=100, default="")
     diploma_grade = models.CharField(max_length=100, default="", blank=True, null=True)

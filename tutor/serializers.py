@@ -585,28 +585,28 @@ class CustomClassSerializerIn(serializers.Serializer):
         time_difference = end_date_convert - start_date_convert
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
-        if duration < 15 or duration > 120:
-            raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
+        # if duration < 15 or duration > 120:
+        #     raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
 
         # Check if duration does not exceed tutor max hour
-        if duration > user.tutordetail.max_hour_class_hour:
-            raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
+        # if duration > user.tutordetail.max_hour_class_hour:
+        #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
 
         # Check Tutor Calendar
-        if not TutorCalendar.objects.filter(
-                user=user, day_of_the_week=start_date_convert.isoweekday(),
-                time_from__hour=start_date_convert.hour, status="available"
-        ):
-            raise InvalidRequestException({"detail": "Selected period is not valid, based on your availability"})
+        # if not TutorCalendar.objects.filter(
+        #         user=user, day_of_the_week=start_date_convert.isoweekday(),
+        #         time_from__hour=start_date_convert.hour, status="available"
+        # ):
+        #     raise InvalidRequestException({"detail": "Selected period is not valid, based on your availability"})
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         class_amount = duration * subject_amount / 60
 
         # Check Tutor availability
-        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
-                                    status__in=["new", "accepted"]).exists():
-            raise InvalidRequestException({"detail": "This period is booked, please select another period"})
+        # if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+        #                             status__in=["new", "accepted"]).exists():
+        #     raise InvalidRequestException({"detail": "This period is booked, please select another period"})
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
