@@ -128,7 +128,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
 
     @extend_schema(request=ChatMessageSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
-        serializer = ChatMessageSerializerIn(data=request.data)
+        serializer = ChatMessageSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": response})
@@ -144,7 +144,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         query = Q(sender_id__in=[sender.id, receiver_id], receiver_id__in=[receiver_id, sender.id])
         if search:
             query &= Q(message__icontains=search)
-        messages = ChatMessage.objects.filter(query).distinct().order_by("-created_on")
+        messages = ChatMessage.objects.filter(query).distinct().order_by("created_on")
         messages.update(read=True)
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data

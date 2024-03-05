@@ -26,7 +26,7 @@ class CustomClassAPIView(APIView):
         serializer = CustomClassSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
-        return Response(response)
+        return Response({"detail": "Custom class created successfully", "data": response})
 
 
 class TutorClassRoomAPIView(APIView, CustomPagination):
