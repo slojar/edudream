@@ -36,6 +36,8 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     email = serializers.CharField(source="user.email")
+    proficiency_test_grade = serializers.CharField(source="user.tutordetail.proficiency_test_grade")
+    diploma_type = serializers.CharField(source="user.tutordetail.diploma_type")
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
 

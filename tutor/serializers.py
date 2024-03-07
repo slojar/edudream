@@ -326,6 +326,14 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         end_period = validated_data.get("end_time")
         avail_status = validated_data.get("status")
 
+        # Check if duration is more than tutor available duration
+        start_time = datetime.datetime.strptime(start_period, "%H:%M")
+        end_time = datetime.datetime.strptime(end_period, "%H:%M")
+        duration = (end_time - start_time).total_seconds() / 60
+
+        if duration > user.tutordetail.max_hour_class_hour:
+            raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
+
         # Check if time within a day already exists
         if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
             raise InvalidRequestException({"detail": "Overlapping time frame"})
