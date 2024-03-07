@@ -385,7 +385,6 @@ class LoginSerializerIn(serializers.Serializer):
             # raise InvalidRequestException({
             #     "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
             # })
-        Thread(target=create_notification, args=[user, "Login successful"]).start()
         return user
 
 

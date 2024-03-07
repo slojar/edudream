@@ -18,7 +18,7 @@ from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
     create_notification
-from home.models import Subject, Transaction, Profile
+from home.models import Subject, Transaction, Profile, ChatMessage
 from location.models import Country
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
@@ -61,6 +61,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     tutor_id = serializers.IntegerField()
+    calender_id = serializers.IntegerField()
     student_id = serializers.IntegerField(required=False)
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
@@ -77,6 +78,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # duration = validated_data.get("duration")
         end_date = str(validated_data.get("end_date"))
         subject_id = validated_data.get("subject_id")
+        tutor_calender_id = validated_data.get("calender_id")
         book_now = validated_data.get("book_now", False)
         parent_profile = None
 
@@ -91,6 +93,7 @@ class CreateClassSerializerIn(serializers.Serializer):
             student = get_object_or_404(Student, user=user)
 
         tutor = get_object_or_404(TutorDetail, user_id=tutor_id)
+        avail = get_object_or_404(TutorCalendar, id=tutor_calender_id, status="available")
         subject = get_object_or_404(Subject, id=subject_id)
         tutor_user = tutor.user
         d_site = get_site_details()
@@ -147,6 +150,9 @@ class CreateClassSerializerIn(serializers.Serializer):
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
             end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration
         )
+        avail.status = "not_available"
+        avail.classroom = classroom
+        avail.save()
         # Notify Tutor of created class
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
         # Notify Parent of created class
@@ -288,6 +294,19 @@ class DisputeSerializerIn(serializers.Serializer):
 
 
 class TutorCalendarSerializerOut(serializers.ModelSerializer):
+    classroom = serializers.SerializerMethodField()
+
+    def get_classroom(self, obj):
+        classroom = None
+        if obj.classroom:
+            classroom = dict()
+            classroom["id"] = obj.classroom_id
+            classroom["student_name"] = obj.classroom.student.get_full_name()
+            classroom["status"] = obj.classroom.status
+            classroom["class_type"] = obj.classroom.class_type
+            classroom["name"] = obj.classroom.name
+        return classroom
+
     class Meta:
         model = TutorCalendar
         exclude = []
@@ -585,30 +604,9 @@ class CustomClassSerializerIn(serializers.Serializer):
         time_difference = end_date_convert - start_date_convert
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
-        # if duration < 15 or duration > 120:
-        #     raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
-
-        # Check if duration does not exceed tutor max hour
-        # if duration > user.tutordetail.max_hour_class_hour:
-        #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
-
-        # Check Tutor Calendar
-        # if not TutorCalendar.objects.filter(
-        #         user=user, day_of_the_week=start_date_convert.isoweekday(),
-        #         time_from__hour=start_date_convert.hour, status="available"
-        # ):
-        #     raise InvalidRequestException({"detail": "Selected period is not valid, based on your availability"})
-
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         class_amount = duration * subject_amount / 60
-
-        # Check Tutor availability
-        # if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
-        #                             status__in=["new", "accepted"]).exists():
-        #     raise InvalidRequestException({"detail": "This period is booked, please select another period"})
-
-        # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
         # Add grace period
         new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
@@ -655,6 +653,13 @@ class CustomClassSerializerIn(serializers.Serializer):
             name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
             end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted"
         )
+
+        # Create ChatMessage for CustomClass
+        # ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
+        chat_message = f"Hi {student.user.get_full_name()}, \nI have just created a custom classroom. " \
+                       f"Please see details below:\nStart Date: {start_date}\n" \
+                       f"End Date: {end_date}\nClassroom Link: {link}"
+        ChatMessage.objects.create(sender=user, receiver=student.user, message=chat_message)
 
         # Send meeting link to student
         # Thread(target=student_class_approved_email, args=[instance]).start()
