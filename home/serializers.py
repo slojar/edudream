@@ -36,8 +36,6 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     email = serializers.CharField(source="user.email")
-    proficiency_test_grade = serializers.CharField(source="user.tutordetail.proficiency_test_grade")
-    diploma_type = serializers.CharField(source="user.tutordetail.diploma_type")
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
 
@@ -199,6 +197,7 @@ class SignUpSerializerIn(serializers.Serializer):
     resume = serializers.FileField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
     proficiency_test_grade = serializers.CharField(required=False)
+    proficiency_test_type = serializers.CharField(required=False)
     rest_period = serializers.IntegerField(required=False)
     referral_code = serializers.CharField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
@@ -230,6 +229,7 @@ class SignUpSerializerIn(serializers.Serializer):
         diploma_grade = validated_data.get("diploma_grade")
         proficiency_test_file = validated_data.get("proficiency_test_file")
         proficiency_test_grade = validated_data.get("proficiency_test_grade")
+        proficiency_test_type = validated_data.get("proficiency_test_type")
         rest_period = validated_data.get("rest_period", 10)
         referral_code = validated_data.get("referral_code")
         subjects = validated_data.get("subject")
@@ -331,6 +331,7 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_grade = diploma_grade
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
             if subjects:

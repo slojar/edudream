@@ -22,6 +22,7 @@ class TutorDetail(models.Model):
     diploma_grade = models.CharField(max_length=100, default="", blank=True, null=True)
     diploma_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     proficiency_test_grade = models.CharField(max_length=100, default="", blank=True, null=True)
+    proficiency_test_type = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_file = models.FileField(upload_to="proficiency-test-files", blank=True, null=True)
     resume = models.FileField(upload_to="curriculum-vitaes", blank=True, null=True)
     rest_period = models.IntegerField(default=10)
