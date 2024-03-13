@@ -2,7 +2,7 @@ import ast
 import logging
 
 from django.db.models import Q
-from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
@@ -412,9 +412,10 @@ class PayoutProcessingCronAPIView(APIView):
 class WebhookAPIView(APIView):
     permission_classes = []
 
-    def get(self, request):
-        reply = request.GET.get("input")
-        if reply == "1":
-            return HttpResponse("Transfer Menu\n1. Self \n2. Others")
-        return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
-        # return JsonResponse({"detail": "Webhook successful"})
+    def post(self, request):
+        # reply = request.GET.get("input")
+        # if reply == "1":
+        #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
+        # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
+
+        return JsonResponse({"detail": "Webhook successful"})
