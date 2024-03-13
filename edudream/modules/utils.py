@@ -5,6 +5,7 @@ import json
 import logging
 import re
 import secrets
+from threading import Thread
 
 from django.contrib.sites.models import Site
 from django.utils import timezone
@@ -375,6 +376,8 @@ def complete_payment(ref_number):
                     narration=f"Referal bonus from {trans.user.get_full_name()}"
                 )
                 # Send notification to referrer
+                Thread(target=create_notification, args=[referrer, f"Received referral bonus"]).start()
+
             # Send Notification to user
 
         return True, "Payment updated"

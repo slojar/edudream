@@ -35,6 +35,7 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id")
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
+    email = serializers.CharField(source="user.email")
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
 
@@ -196,6 +197,7 @@ class SignUpSerializerIn(serializers.Serializer):
     resume = serializers.FileField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
     proficiency_test_grade = serializers.CharField(required=False)
+    proficiency_test_type = serializers.CharField(required=False)
     rest_period = serializers.IntegerField(required=False)
     referral_code = serializers.CharField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
@@ -227,6 +229,7 @@ class SignUpSerializerIn(serializers.Serializer):
         diploma_grade = validated_data.get("diploma_grade")
         proficiency_test_file = validated_data.get("proficiency_test_file")
         proficiency_test_grade = validated_data.get("proficiency_test_grade")
+        proficiency_test_type = validated_data.get("proficiency_test_type")
         rest_period = validated_data.get("rest_period", 10)
         referral_code = validated_data.get("referral_code")
         subjects = validated_data.get("subject")
@@ -328,6 +331,7 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_grade = diploma_grade
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
             if subjects:
@@ -385,7 +389,6 @@ class LoginSerializerIn(serializers.Serializer):
             # raise InvalidRequestException({
             #     "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
             # })
-        Thread(target=create_notification, args=[user, "Login successful"]).start()
         return user
 
 
@@ -434,7 +437,7 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
             tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
-            tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
+            # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:

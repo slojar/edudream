@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
-    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES
+    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES, CLASS_TYPE_CHOICES
 from location.models import Country
 from student.models import Student
 
@@ -22,6 +22,7 @@ class TutorDetail(models.Model):
     diploma_grade = models.CharField(max_length=100, default="", blank=True, null=True)
     diploma_file = models.FileField(upload_to="diploma-files", blank=True, null=True)
     proficiency_test_grade = models.CharField(max_length=100, default="", blank=True, null=True)
+    proficiency_test_type = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_file = models.FileField(upload_to="proficiency-test-files", blank=True, null=True)
     resume = models.FileField(upload_to="curriculum-vitaes", blank=True, null=True)
     rest_period = models.IntegerField(default=10)
@@ -29,7 +30,7 @@ class TutorDetail(models.Model):
     max_student_required = models.IntegerField(default=10)
     updated_on = models.DateTimeField(auto_now=True)
     allow_intro_call = models.BooleanField(default=True)
-    max_hour_class_hour = models.IntegerField(default=120)
+    # max_hour_class_hour = models.IntegerField(default=120)
 
     def __str__(self):
         return f"{self.user.username}"
@@ -46,6 +47,7 @@ class Classroom(models.Model):
     expected_duration = models.IntegerField(blank=True, null=True)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     status = models.CharField(max_length=50, choices=CLASS_STATUS_CHOICES, default="new")
+    class_type = models.CharField(max_length=50, choices=CLASS_TYPE_CHOICES, default="normal")
     meeting_link = models.CharField(max_length=300, blank=True, null=True)
     decline_reason = models.CharField(max_length=300, blank=True, null=True)
     subjects = models.ForeignKey("home.Subject", on_delete=models.SET_NULL, null=True, blank=True)
@@ -93,6 +95,7 @@ class Dispute(models.Model):
 
 class TutorCalendar(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    classroom = models.ForeignKey(Classroom, on_delete=models.SET_NULL, blank=True, null=True)
     day_of_the_week = models.CharField(max_length=200, choices=DAY_OF_THE_WEEK_CHOICES, default="mon")
     time_from = models.TimeField(blank=True, null=True)
     time_to = models.TimeField(blank=True, null=True)

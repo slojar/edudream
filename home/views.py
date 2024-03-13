@@ -2,7 +2,7 @@ import ast
 import logging
 
 from django.db.models import Q
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
@@ -412,5 +412,6 @@ class PayoutProcessingCronAPIView(APIView):
 class WebhookAPIView(APIView):
     permission_classes = []
 
-    def post(self, request):
-        return JsonResponse({"detail": "Webhook successful"})
+    def get(self, request):
+        return HttpResponse("CON This is a test")
+        # return JsonResponse({"detail": "Webhook successful"})

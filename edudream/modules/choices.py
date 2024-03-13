@@ -32,6 +32,10 @@ CLASS_STATUS_CHOICES = (
     ("cancelled", "Cancelled")
 )
 
+CLASS_TYPE_CHOICES = (
+    ("normal", "Normal"), ("custom", "Custom")
+)
+
 AVAILABILITY_STATUS_CHOICES = (
     ("available", "Available"), ("not_available", "Not Available")
 )
