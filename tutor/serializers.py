@@ -157,8 +157,10 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom]).start()
-        Thread(target=create_notification, args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
-        Thread(target=create_notification, args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification,
+               args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification,
+               args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
 
         return {
             "detail": "Classroom request sent successfully",
@@ -219,8 +221,10 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
-            Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
-            Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
+            Thread(target=create_notification,
+                   args=[student, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification,
+                   args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
             if not instance.status == "accepted":
@@ -335,7 +339,8 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
 
         # Check if time within a day already exists
-        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
+        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
             # Get the schedule and update
             avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
                 Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
@@ -464,7 +469,8 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user]).start()
-        return {"detail": "Success", "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
+        return {"detail": "Success",
+                "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
 
 
 class TutorSubjectDocumentSerializerIn(serializers.ModelSerializer):
@@ -580,11 +586,13 @@ class IntroCallSerializerIn(serializers.Serializer):
             title=f"Intro call with {tutor_name}"
         )
 
-        # Send invitation link to tutor, parent and/or student
+        # Send invitation link to tutor, parent and/or student and create in-app notification
         if link is not None:
             Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
             Thread(target=tutor_intro_call_email,
                    args=[tutor_user, user.get_full_name(), start_date, end_date, link]).start()
+            Thread(target=create_notification, args=[user, f"Intro call scheduled with {tutor_name}"]).start()
+            Thread(target=create_notification, args=[user, f"New Intro call request from {sender_name}"]).start()
 
         return "Intro call booked successfully. Detail will be sent to your email address"
     # except Exception as err:
@@ -668,14 +676,15 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
-            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted"
+            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted",
+            class_type="custom"
         )
 
         # Create ChatMessage for CustomClass
         # ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
         chat_message = f"<p>Hi {student.user.get_full_name()}, &nbsp;I have just created a custom classroom.</p>" \
-                  f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
-                  f"<p>Classroom Link: <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>&quot;</p>"
+                       f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
+                       f"<p>Classroom Link: <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>&quot;</p>"
         ChatMessage.objects.create(sender=user, receiver=student.user, message=chat_message)
 
         # Send meeting link to student
@@ -687,6 +696,3 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
 
         return ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
-
-
-
