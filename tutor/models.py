@@ -38,7 +38,7 @@ class TutorDetail(models.Model):
 
 class Classroom(models.Model):
     name = models.CharField(max_length=200)
-    description = models.CharField(max_length=300)
+    description = models.CharField(max_length=300, blank=True, null=True)
     tutor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     # parent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="parent")
     student = models.ForeignKey(Student, related_name="class_student", on_delete=models.SET_NULL, blank=True, null=True)

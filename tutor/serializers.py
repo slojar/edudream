@@ -336,7 +336,16 @@ class TutorCalendarSerializerIn(serializers.Serializer):
 
         # Check if time within a day already exists
         if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
-            raise InvalidRequestException({"detail": "Overlapping time frame"})
+            # Get the schedule and update
+            avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
+            avail.time_from = start_period
+            avail.time_to = end_period
+            avail.status = avail_status
+            avail.save()
+            return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+
+            # raise InvalidRequestException({"detail": "Overlapping time frame"})
 
         avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
         avail.time_to = end_period
@@ -546,11 +555,11 @@ class IntroCallSerializerIn(serializers.Serializer):
         start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
         end_date = start_date_convert + datetime.timedelta(minutes=call_duration)
         # Check Tutor Calendar
-        if not TutorCalendar.objects.filter(
-                user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
-                time_from__hour=start_date_convert.hour, status="available"
-        ):
-            raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
+        # if not TutorCalendar.objects.filter(
+        #         user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
+        #         time_from__hour=start_date_convert.hour, status="available"
+        # ):
+        #     raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
@@ -586,7 +595,7 @@ class IntroCallSerializerIn(serializers.Serializer):
 class CustomClassSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Logged in tutor
     name = serializers.CharField()
-    note = serializers.CharField()
+    note = serializers.CharField(required=False)
     student_id = serializers.IntegerField()
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
@@ -664,9 +673,9 @@ class CustomClassSerializerIn(serializers.Serializer):
 
         # Create ChatMessage for CustomClass
         # ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
-        chat_message = f"Hi {student.user.get_full_name()}, \nI have just created a custom classroom. " \
-                       f"Please see details below:\nStart Date: {start_date}\n" \
-                       f"End Date: {end_date}\nClassroom Link: {link}"
+        chat_message = f"<p>Hi {student.user.get_full_name()}, &nbsp;I have just created a custom classroom.</p>" \
+                  f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
+                  f"<p>Classroom Link: <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>&quot;</p>"
         ChatMessage.objects.create(sender=user, receiver=student.user, message=chat_message)
 
         # Send meeting link to student
