@@ -413,5 +413,5 @@ class WebhookAPIView(APIView):
     permission_classes = []
 
     def get(self, request):
-        return HttpResponse("CON This is a test")
+        return HttpResponse("CON Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
         # return JsonResponse({"detail": "Webhook successful"})
