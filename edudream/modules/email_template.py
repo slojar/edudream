@@ -62,7 +62,7 @@ def tutor_class_approved_email(classroom):
 
 
 def student_class_approved_email(classroom):
-    email = classroom.student.user.email
+    email = classroom.student.parent.user.email
     class_name = classroom.name
     link = classroom.meeting_link
     student_name = str(classroom.student.first_name())
@@ -82,7 +82,7 @@ def student_class_approved_email(classroom):
 
 
 def student_class_declined_email(classroom):
-    email = classroom.student.user.email
+    email = classroom.student.parent.user.email
     class_name = classroom.name
     reason = classroom.decline_reason
     student_name = str(classroom.student.first_name())

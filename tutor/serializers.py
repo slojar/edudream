@@ -188,7 +188,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             tutor_email = instance.tutor.email
             tutor_name = instance.tutor.get_full_name()
             student_name = student.get_full_name()
-            student_email = student.email
+            student_email = parent.email
             link = ZoomAPI.create_meeting(
                 start_date=str(instance.start_date), duration=instance.expected_duration,
                 attending=[{"name": str(student_name), "email": str(student_email)},
@@ -574,7 +574,7 @@ class IntroCallSerializerIn(serializers.Serializer):
 
         tutor_email = tutor_user.email
         tutor_name = str("{} {}").format(tutor_user.first_name, tutor_user.last_name).upper()
-        sender_email = student.user.email
+        sender_email = student.parent.user.email
         sender_name = student.user.get_full_name()
         if parent_profile:
             sender_email = parent_profile.email()
@@ -645,7 +645,7 @@ class CustomClassSerializerIn(serializers.Serializer):
         tutor_email = user.email
         tutor_name = user.get_full_name()
         student_name = student.user.get_full_name()
-        student_email = student.user.email
+        student_email = student.parent.user.email
         link = ZoomAPI.create_meeting(
             start_date=str(start_date), duration=duration,
             attending=[{"name": str(student_name), "email": str(student_email)},

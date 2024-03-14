@@ -26,7 +26,7 @@ class StudentSerializerIn(serializers.Serializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     first_name = serializers.CharField()
     last_name = serializers.CharField()
-    email_address = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField()
     note = serializers.CharField(required=False)
     languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
@@ -39,20 +39,23 @@ class StudentSerializerIn(serializers.Serializer):
         password = validated_data.get("password")
         f_name = validated_data.get("first_name")
         l_name = validated_data.get("last_name")
-        email = validated_data.get("email_address")
+        username = validated_data.get("username")
         student_note = validated_data.get("note")
         languages = validated_data.get("languages")
         # d_o_b = validated_data.get("dob")
         grade = validated_data.get("grade")
         help_subjects = validated_data.get("help_subjects")
 
+        # When creating child as a parent it should be username not email
+
         # Check if user with email exists
-        if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
-            raise InvalidRequestException({"detail": "Email is taken"})
+        # if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
+        if User.objects.filter(username__iexact=username).exists():
+            raise InvalidRequestException({"detail": "Username is taken"})
 
         # Create student user
         student_user = User.objects.create(
-            first_name=f_name, last_name=l_name, email=email, username=email, password=make_password(password=password)
+            first_name=f_name, last_name=l_name, username=username, password=make_password(password=password)
         )
 
         if languages:
@@ -80,7 +83,6 @@ class StudentSerializerIn(serializers.Serializer):
     def update(self, instance, validated_data):
         instance.user.first_name = validated_data.get("first_name", instance.user.first_name)
         instance.user.last_name = validated_data.get("last_name", instance.user.last_name)
-        instance.user.email = validated_data.get("email_address", instance.user.email)
         # instance.dob = validated_data.get("dob", instance.dob)
         instance.grade = validated_data.get("grade", instance.grade)
         instance.user.save()
