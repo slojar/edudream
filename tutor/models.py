@@ -95,7 +95,7 @@ class Dispute(models.Model):
 
 class TutorCalendar(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    classroom = models.ForeignKey(Classroom, on_delete=models.SET_NULL, blank=True, null=True)
+    classroom = models.ManyToManyField(Classroom)
     day_of_the_week = models.CharField(max_length=200, choices=DAY_OF_THE_WEEK_CHOICES, default="mon")
     time_from = models.TimeField(blank=True, null=True)
     time_to = models.TimeField(blank=True, null=True)

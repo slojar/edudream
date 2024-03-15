@@ -67,6 +67,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
     book_now = serializers.BooleanField()
+    occurrence = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -80,6 +81,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         subject_id = validated_data.get("subject_id")
         tutor_calender_id = validated_data.get("calender_id")
         book_now = validated_data.get("book_now", False)
+        reoccur = validated_data.get("occurrence", 1)
         parent_profile = None
 
         try:
@@ -120,7 +122,7 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
-        class_amount = duration * subject_amount / 60
+        class_amount = reoccur * (duration * subject_amount / 60)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
@@ -129,15 +131,12 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
-        # Add grace period
-        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
-
         if not book_now:
             return {
                 "detail": "Classroom estimation complete",
                 "data": {"student_name": str(user.get_full_name()).upper(), "level": subject.grade,
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
-                         "duration": f"{duration} minutes", "total_coin": class_amount}
+                         "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
             }
 
         # Check parent balance is available for class amount
@@ -146,12 +145,15 @@ class CreateClassSerializerIn(serializers.Serializer):
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Create class for student
+        # Add grace period
+        single_class_amount = class_amount / reoccur
+        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
-            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration
+            end_date=new_end_time, amount=single_class_amount, subjects=subject, expected_duration=duration
         )
         avail.status = "not_available"
-        avail.classroom = classroom
+        avail.classroom.add(classroom)
         avail.save()
         # Notify Tutor of created class
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
@@ -161,6 +163,20 @@ class CreateClassSerializerIn(serializers.Serializer):
                args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
         Thread(target=create_notification,
                args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
+
+        initial_start_date = classroom.start_date
+        while reoccur > 1:
+            loop_start_date = initial_start_date + timezone.timedelta(days=7)
+            class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
+            loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+            # Create Classroom
+            loop_classroom = Classroom.objects.create(
+                name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
+                end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
+            )
+            avail.classroom.add(loop_classroom)
+            initial_start_date = loop_classroom.start_date
+            reoccur -= 1
 
         return {
             "detail": "Classroom request sent successfully",
@@ -300,16 +316,16 @@ class DisputeSerializerIn(serializers.Serializer):
 class TutorCalendarSerializerOut(serializers.ModelSerializer):
     classroom = serializers.SerializerMethodField()
 
-    def get_classroom(self, obj):
-        classroom = None
-        if obj.classroom:
-            classroom = dict()
-            classroom["id"] = obj.classroom_id
-            classroom["student_name"] = obj.classroom.student.get_full_name()
-            classroom["status"] = obj.classroom.status
-            classroom["class_type"] = obj.classroom.class_type
-            classroom["name"] = obj.classroom.name
-        return classroom
+    # def get_classroom(self, obj):
+    #     classroom = None
+    #     if obj.classroom:
+    #         classroom = dict()
+    #         classroom["id"] = obj.classroom_id
+    #         classroom["student_name"] = obj.classroom.student.get_full_name()
+    #         classroom["status"] = obj.classroom.status
+    #         classroom["class_type"] = obj.classroom.class_type
+    #         classroom["name"] = obj.classroom.name
+    #     return classroom
 
     class Meta:
         model = TutorCalendar

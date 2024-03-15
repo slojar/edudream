@@ -181,10 +181,10 @@ class VerifyPaymentAPIView(APIView):
         success, response = complete_payment(reference)
         if success is False:
             return HttpResponseRedirect(
-                redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
+                redirect_to=f"{frontend_base_url}/{language}/verify-checkout?&status={str(success).lower()}")
         #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
         return HttpResponseRedirect(
-            redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
+            redirect_to=f"{frontend_base_url}/{language}/verify-checkout?&status={str(success).lower()}")
 
 
 class TutorListAPIView(APIView, CustomPagination):
