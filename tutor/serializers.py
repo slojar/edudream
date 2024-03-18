@@ -106,8 +106,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         time_difference = end_date_convert - start_date_convert
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
-        if duration < 15 or duration > 120:
-            raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
+        if duration < 30 or duration > 120:
+            raise InvalidRequestException({"detail": "Duration cannot be less than 30minutes or greater than 2hours"})
 
         # Check if duration does not exceed tutor max hour
         # if duration > tutor_user.tutordetail.max_hour_class_hour:
