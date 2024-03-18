@@ -205,14 +205,17 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             tutor_name = instance.tutor.get_full_name()
             student_name = student.get_full_name()
             student_email = parent.email
-            link = ZoomAPI.create_meeting(
+            response = ZoomAPI.create_meeting(
                 start_date=str(instance.start_date), duration=instance.expected_duration,
                 attending=[{"name": str(student_name), "email": str(student_email)},
                            {"name": str(tutor_name), "email": str(tutor_email)}], narration=instance.description,
                 title=instance.name
             )
+            zoom_meeting_id = response["id"]
+            link = response["join_url"]
             instance.status = "accepted"
             instance.meeting_link = link
+            instance.meeting_id = zoom_meeting_id
             # Debit parent wallet
             parent_wallet.refresh_from_db()
             parent_wallet.balance -= amount
@@ -314,7 +317,7 @@ class DisputeSerializerIn(serializers.Serializer):
 
 
 class TutorCalendarSerializerOut(serializers.ModelSerializer):
-    classroom = serializers.SerializerMethodField()
+    # classroom = serializers.SerializerMethodField()
 
     # def get_classroom(self, obj):
     #     classroom = None
@@ -595,13 +598,13 @@ class IntroCallSerializerIn(serializers.Serializer):
         if parent_profile:
             sender_email = parent_profile.email()
             sender_name = parent_profile.get_full_name()
-        link = ZoomAPI.create_meeting(
+        response = ZoomAPI.create_meeting(
             start_date=str(start_date_convert), duration=call_duration,
             attending=[{"name": str(sender_name), "email": str(sender_email)},
                        {"name": str(tutor_name), "email": str(tutor_email)}], narration=f"Intro call {tutor_name}",
             title=f"Intro call with {tutor_name}"
         )
-
+        link = response["join_url"]
         # Send invitation link to tutor, parent and/or student and create in-app notification
         if link is not None:
             Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
@@ -662,12 +665,14 @@ class CustomClassSerializerIn(serializers.Serializer):
         tutor_name = user.get_full_name()
         student_name = student.user.get_full_name()
         student_email = student.parent.user.email
-        link = ZoomAPI.create_meeting(
+        response = ZoomAPI.create_meeting(
             start_date=str(start_date), duration=duration,
             attending=[{"name": str(student_name), "email": str(student_email)},
                        {"name": str(tutor_name), "email": str(tutor_email)}], narration=description,
             title=name
         )
+        zoom_meeting_id = response["id"]
+        link = response["join_url"]
 
         # Debit parent wallet
         parent_wallet.refresh_from_db()
@@ -693,7 +698,7 @@ class CustomClassSerializerIn(serializers.Serializer):
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
             end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted",
-            class_type="custom"
+            class_type="custom", meeting_id=zoom_meeting_id
         )
 
         # Create ChatMessage for CustomClass
