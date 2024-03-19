@@ -51,6 +51,37 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
 
 
 class ClassRoomSerializerOut(serializers.ModelSerializer):
+    tutor = serializers.SerializerMethodField()
+    student = serializers.SerializerMethodField()
+
+    def get_student(self, obj):
+        student = None
+        image = None
+        if obj.student.profile_picture:
+            image = obj.student.profile_picture.url
+        if obj.student:
+            request = self.context.get("request")
+            student = {
+                "user_id": obj.student.user_id,
+                "full_name": obj.student.get_full_name(),
+                "image": request.build_absolute_uri(image)
+            }
+        return student
+
+    def get_tutor(self, obj):
+        tutor = None
+        image = None
+        if obj.tutor.user.profile.profile_picture:
+            image = obj.tutor.user.profile.profile_picture.url
+        if obj.tutor:
+            request = self.context.get("request")
+            tutor = {
+                "user_id": obj.tutor.user_id,
+                "full_name": obj.tutor.user.get_full_name(),
+                "image": request.build_absolute_uri(image)
+            }
+        return tutor
+
     class Meta:
         model = Classroom
         exclude = []

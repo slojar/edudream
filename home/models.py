@@ -45,6 +45,7 @@ class Profile(models.Model):
     # referral_code = models.CharField(default=str(uuid.uuid4()).replace("-", "")[:8], unique=True, max_length=50)
     referral_code = models.CharField(default="", unique=True, max_length=50, blank=True, null=True)
     updated_on = models.DateTimeField(auto_now=True)
+    approved_on = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         indexes = [models.Index(fields=["user", "city", "state", "country", "referred_by"])]

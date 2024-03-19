@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
 from rest_framework import serializers
 
 from edudream.modules.choices import SEND_NOTIFICATION_TYPE_CHOICES, APPROVE_OR_DECLINE_CHOICES
@@ -21,10 +22,11 @@ class TutorStatusSerializerIn(serializers.Serializer):
 
     def update(self, instance, validated_data):
         instance.active = validated_data.get("active", instance.active)
-        instance.save()
         if instance.active:
             # Send Email
+            instance.approved_on = timezone.now()
             Thread(target=tutor_status_email, args=[instance.user]).start()
+        instance.save()
         return TutorListSerializerOut(instance, context={"request": self.context.get("request")}).data
 
 
