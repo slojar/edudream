@@ -7,14 +7,14 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
 
-from edudream.modules.choices import SEND_NOTIFICATION_TYPE_CHOICES, APPROVE_OR_DECLINE_CHOICES
+from edudream.modules.choices import SEND_NOTIFICATION_TYPE_CHOICES, APPROVE_OR_DECLINE_CHOICES, DISPUTE_STATUS_CHOICES
 from edudream.modules.email_template import tutor_status_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text
 from home.models import Notification, Transaction
 from home.serializers import TutorListSerializerOut, NotificationSerializerOut
-from tutor.serializers import PayoutSerializerOut
+from tutor.serializers import PayoutSerializerOut, DisputeSerializerOut
 
 
 class TutorStatusSerializerIn(serializers.Serializer):
@@ -138,6 +138,15 @@ class ApproveDeclinePayoutSerializerIn(serializers.Serializer):
         instance.status = action_status
         instance.save()
         return PayoutSerializerOut(instance, context={"request": self.context.get("request")})
+
+
+class DisputeStatusUpdateSerializerIn(serializers.Serializer):
+    status = serializers.ChoiceField(choices=DISPUTE_STATUS_CHOICES)
+
+    def update(self, instance, validated_data):
+        instance.status = validated_data.get("status", instance.status)
+        instance.save()
+        return DisputeSerializerOut(instance, context={"request": self.context.get("request")}).data
 
 
 

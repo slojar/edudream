@@ -1,9 +1,9 @@
 import ast
-import logging
 
 from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -23,7 +23,8 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
     SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
-    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn
+    FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn, \
+    EmailVerificationSerializerIn, RequestVerificationLinkSerializerIn
 from tutor.models import Classroom
 from tutor.serializers import ClassRoomSerializerOut
 
@@ -51,6 +52,28 @@ class LoginAPIView(APIView):
             "detail": "Login Successful", "data": UserSerializerOut(user, context={"request": request}).data,
             "access_token": f"{AccessToken.for_user(user)}"
         })
+
+
+class EmailVerificationLinkView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=EmailVerificationSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = EmailVerificationSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+class RequestEmailVerificationLinkView(APIView):
+    permission_classes = []
+
+    @extend_schema(request=RequestVerificationLinkSerializerIn, responses={status.HTTP_200_OK})
+    def post(self, request):
+        serializer = RequestVerificationLinkSerializerIn(data=request.data)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": response})
 
 
 class ProfileAPIView(APIView):

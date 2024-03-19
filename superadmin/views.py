@@ -18,9 +18,9 @@ from home.serializers import ProfileSerializerOut, TutorListSerializerOut, Class
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
-    AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn
-from tutor.models import Classroom, PayoutRequest
-from tutor.serializers import ClassRoomSerializerOut, PayoutSerializerOut
+    AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn, DisputeStatusUpdateSerializerIn
+from tutor.models import Classroom, PayoutRequest, Dispute
+from tutor.serializers import ClassRoomSerializerOut, PayoutSerializerOut, DisputeSerializerOut
 
 
 class DashboardAPIView(APIView):
@@ -300,6 +300,43 @@ class ApprovePayoutRequestAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": "Payout request updated", "data": response})
+
+
+class DisputeAPIView(APIView, CustomPagination):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        parameters=[OpenApiParameter(name="status", type=str), OpenApiParameter(name="search", type=str),
+                    OpenApiParameter(name="dispute_type", type=str)]
+    )
+    def get(self, request, pk=None):
+        if pk:
+            dispute = get_object_or_404(Dispute, id=pk)
+            response = DisputeSerializerOut(dispute, context={"request": request}).data
+        else:
+            d_status = request.GET.get("status")
+            search = request.GET.get("search")
+            d_type = request.GET.get("dispute_type")
+            query = Q()
+            if d_status:
+                query &= Q(status=d_status)
+            if search:
+                query &= Q(title__icontains=search) | Q(content__icontains=search)
+            if d_type:
+                query &= Q(dispute_type=d_type)
+            queryset = self.paginate_queryset(Dispute.objects.filter(query), request)
+            serializer = DisputeSerializerOut(queryset, many=True, context={"request": request}).data
+            response = self.get_paginated_response(serializer).data
+        return Response({"detail": "Dispute(s) Retrieved", "data": response})
+
+    @extend_schema(request=DisputeStatusUpdateSerializerIn, responses={status.HTTP_200_OK})
+    def put(self, request, pk):
+        instance = get_object_or_404(Dispute, id=pk)
+        serializer = DisputeStatusUpdateSerializerIn(instance=instance, data=request.data, context={'request': request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Dispute updated", "data": response})
+
 
 
 
