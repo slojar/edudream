@@ -236,8 +236,8 @@ class SignUpSerializerIn(serializers.Serializer):
         resume_file = validated_data.get("resume")
 
         required_for_tutor = [
-            bio, hobbies, funfact, education_status, university_name, discipline, diploma_type, diploma_file,
-            proficiency_test_file, diploma_grade, languages, proficiency_test_grade, resume_file
+            bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
+            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_subject
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": "Please submit all required details"})
@@ -352,16 +352,16 @@ class SignUpSerializerIn(serializers.Serializer):
 
 
 class LoginSerializerIn(serializers.Serializer):
-    email_address = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField()
 
     def create(self, validated_data):
-        email = validated_data.get("email_address")
+        username = validated_data.get("username")
         password = validated_data.get("password")
 
-        user = authenticate(username=email, password=password)
+        user = authenticate(username=username, password=password)
         if not user:
-            raise InvalidRequestException({"detail": "Invalid email or password"})
+            raise InvalidRequestException({"detail": "Invalid email/username or password"})
 
         if Student.objects.filter(user=user).exists():
             student = Student.objects.get(user=user)
@@ -448,22 +448,27 @@ class ProfileSerializerIn(serializers.Serializer):
 
 
 class ChangePasswordSerializerIn(serializers.Serializer):
-    student_password = serializers.CharField(required=False)
+    user_id = serializers.IntegerField(required=False)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    old_password = serializers.CharField()
+    old_password = serializers.CharField(required=False)
     new_password = serializers.CharField()
-    confirm_password = serializers.CharField()
+    confirm_password = serializers.CharField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("user")
-        student_pass = validated_data.get("student_password")
+        student_id = validated_data.get("user_id")
         old_password = validated_data.get("old_password")
         new_password = validated_data.get("new_password")
         confirm_password = validated_data.get("confirm_password")
 
-        # user_query = User.objects.filter(id=userId)
-        # if not user_query.exists():
-        #     raise InvalidRequestException({"detail": "'userId' does not match any user record"})
+        if student_id:
+            student = get_object_or_404(Student, user_id=student_id, parent__user=user)
+            student.user.password = make_password(password=new_password)
+            student.user.save()
+            return "Password Reset Successful"
+
+        if not all([old_password, new_password, confirm_password]):
+            raise InvalidRequestException({"detail": "All password fields are required"})
 
         if not check_password(password=old_password, encoded=user.password):
             raise InvalidRequestException({"detail": "Incorrect old password"})

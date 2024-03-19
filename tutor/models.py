@@ -38,7 +38,7 @@ class TutorDetail(models.Model):
 
 class Classroom(models.Model):
     name = models.CharField(max_length=200)
-    description = models.CharField(max_length=300)
+    description = models.CharField(max_length=300, blank=True, null=True)
     tutor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     # parent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="parent")
     student = models.ForeignKey(Student, related_name="class_student", on_delete=models.SET_NULL, blank=True, null=True)
@@ -49,6 +49,11 @@ class Classroom(models.Model):
     status = models.CharField(max_length=50, choices=CLASS_STATUS_CHOICES, default="new")
     class_type = models.CharField(max_length=50, choices=CLASS_TYPE_CHOICES, default="normal")
     meeting_link = models.CharField(max_length=300, blank=True, null=True)
+    meeting_id = models.CharField(max_length=300, blank=True, null=True)
+    tutor_joined_at = models.DateTimeField(blank=True, null=True)
+    tutor_left_at = models.DateTimeField(blank=True, null=True)
+    student_joined_at = models.DateTimeField(blank=True, null=True)
+    student_left_at = models.DateTimeField(blank=True, null=True)
     decline_reason = models.CharField(max_length=300, blank=True, null=True)
     subjects = models.ForeignKey("home.Subject", on_delete=models.SET_NULL, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
@@ -95,7 +100,7 @@ class Dispute(models.Model):
 
 class TutorCalendar(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    classroom = models.ForeignKey(Classroom, on_delete=models.SET_NULL, blank=True, null=True)
+    classroom = models.ManyToManyField(Classroom)
     day_of_the_week = models.CharField(max_length=200, choices=DAY_OF_THE_WEEK_CHOICES, default="mon")
     time_from = models.TimeField(blank=True, null=True)
     time_to = models.TimeField(blank=True, null=True)

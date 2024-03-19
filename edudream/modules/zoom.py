@@ -93,7 +93,21 @@ class ZoomAPI:
         response = requests.request("POST", url, data=payload, headers=header)
         cls.log_request(f"response: {response.text}")
         if response.status_code == 201:
-            response = response.json()
-            return response["join_url"]
+            # response = response.json()
+            # meeting_id = response["id"]
+            # return response["join_url"]
+            return response.json()
         else:
             return None
+
+    @classmethod
+    def end_meeting(cls, start_date, duration, meeting_id, **kwargs):
+        url = f"{base_url}/meetings/{meeting_id}/status"
+        header = cls.get_header()
+        payload = {"action": "end"}
+        cls.log_request(f"url: {url}\npayload: {payload}\n")
+        response = requests.request("PUT", url, data=payload, headers=header)
+        cls.log_request(f"response: {response.text}")
+        return True
+
+

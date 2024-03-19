@@ -48,8 +48,9 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
             if class_status:
                 query &= Q(status=class_status)
             if date_from and date_to:
-                query &= Q(start_date__range=[date_from, date_to])
-            queryset = self.paginate_queryset(Classroom.objects.filter(query), request)
+                # query &= Q(start_date__range=[date_from, date_to])
+                query &= Q(start_date__gte=date_from, start_date__lte=date_to)
+            queryset = self.paginate_queryset(Classroom.objects.filter(query).order_by("-id"), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
         return Response({"detail": "Success", "data": response})

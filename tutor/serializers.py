@@ -67,6 +67,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
     book_now = serializers.BooleanField()
+    occurrence = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -80,6 +81,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         subject_id = validated_data.get("subject_id")
         tutor_calender_id = validated_data.get("calender_id")
         book_now = validated_data.get("book_now", False)
+        reoccur = validated_data.get("occurrence", 1)
         parent_profile = None
 
         try:
@@ -104,8 +106,8 @@ class CreateClassSerializerIn(serializers.Serializer):
         time_difference = end_date_convert - start_date_convert
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
-        if duration < 15 or duration > 120:
-            raise InvalidRequestException({"detail": "Duration cannot be less than 15minutes or greater than 2hours"})
+        if duration < 30 or duration > 120:
+            raise InvalidRequestException({"detail": "Duration cannot be less than 30minutes or greater than 2hours"})
 
         # Check if duration does not exceed tutor max hour
         # if duration > tutor_user.tutordetail.max_hour_class_hour:
@@ -120,7 +122,7 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
-        class_amount = duration * subject_amount / 60
+        class_amount = reoccur * (duration * subject_amount / 60)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
@@ -129,15 +131,12 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
-        # Add grace period
-        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
-
         if not book_now:
             return {
                 "detail": "Classroom estimation complete",
                 "data": {"student_name": str(user.get_full_name()).upper(), "level": subject.grade,
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
-                         "duration": f"{duration} minutes", "total_coin": class_amount}
+                         "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
             }
 
         # Check parent balance is available for class amount
@@ -146,19 +145,38 @@ class CreateClassSerializerIn(serializers.Serializer):
             raise InvalidRequestException({"detail": "Insufficient balance, please top-up wallet"})
 
         # Create class for student
+        # Add grace period
+        single_class_amount = class_amount / reoccur
+        new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
-            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration
+            end_date=new_end_time, amount=single_class_amount, subjects=subject, expected_duration=duration
         )
         avail.status = "not_available"
-        avail.classroom = classroom
+        avail.classroom.add(classroom)
         avail.save()
         # Notify Tutor of created class
         Thread(target=tutor_class_creation_email, args=[classroom]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom]).start()
-        Thread(target=create_notification, args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
-        Thread(target=create_notification, args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification,
+               args=[parent_profile.user, f"New class created for student {student.user.get_full_name()}"]).start()
+        Thread(target=create_notification,
+               args=[tutor_user, f"You have a new class request from {student.user.get_full_name()}"]).start()
+
+        initial_start_date = classroom.start_date
+        while reoccur > 1:
+            loop_start_date = initial_start_date + timezone.timedelta(days=7)
+            class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
+            loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+            # Create Classroom
+            loop_classroom = Classroom.objects.create(
+                name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
+                end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
+            )
+            avail.classroom.add(loop_classroom)
+            initial_start_date = loop_classroom.start_date
+            reoccur -= 1
 
         return {
             "detail": "Classroom request sent successfully",
@@ -186,15 +204,18 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             tutor_email = instance.tutor.email
             tutor_name = instance.tutor.get_full_name()
             student_name = student.get_full_name()
-            student_email = student.email
-            link = ZoomAPI.create_meeting(
+            student_email = parent.email
+            response = ZoomAPI.create_meeting(
                 start_date=str(instance.start_date), duration=instance.expected_duration,
                 attending=[{"name": str(student_name), "email": str(student_email)},
                            {"name": str(tutor_name), "email": str(tutor_email)}], narration=instance.description,
                 title=instance.name
             )
+            zoom_meeting_id = response["id"]
+            link = response["join_url"]
             instance.status = "accepted"
             instance.meeting_link = link
+            instance.meeting_id = zoom_meeting_id
             # Debit parent wallet
             parent_wallet.refresh_from_db()
             parent_wallet.balance -= amount
@@ -219,8 +240,10 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send notification to parent
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance]).start()
-            Thread(target=create_notification, args=[student, f"Your class request has been approved by {tutor_name}"]).start()
-            Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
+            Thread(target=create_notification,
+                   args=[student, f"Your class request has been approved by {tutor_name}"]).start()
+            Thread(target=create_notification,
+                   args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
             if not instance.status == "accepted":
@@ -294,18 +317,18 @@ class DisputeSerializerIn(serializers.Serializer):
 
 
 class TutorCalendarSerializerOut(serializers.ModelSerializer):
-    classroom = serializers.SerializerMethodField()
+    # classroom = serializers.SerializerMethodField()
 
-    def get_classroom(self, obj):
-        classroom = None
-        if obj.classroom:
-            classroom = dict()
-            classroom["id"] = obj.classroom_id
-            classroom["student_name"] = obj.classroom.student.get_full_name()
-            classroom["status"] = obj.classroom.status
-            classroom["class_type"] = obj.classroom.class_type
-            classroom["name"] = obj.classroom.name
-        return classroom
+    # def get_classroom(self, obj):
+    #     classroom = None
+    #     if obj.classroom:
+    #         classroom = dict()
+    #         classroom["id"] = obj.classroom_id
+    #         classroom["student_name"] = obj.classroom.student.get_full_name()
+    #         classroom["status"] = obj.classroom.status
+    #         classroom["class_type"] = obj.classroom.class_type
+    #         classroom["name"] = obj.classroom.name
+    #     return classroom
 
     class Meta:
         model = TutorCalendar
@@ -335,8 +358,18 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
 
         # Check if time within a day already exists
-        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
-            raise InvalidRequestException({"detail": "Overlapping time frame"})
+        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
+            # Get the schedule and update
+            avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
+            avail.time_from = start_period
+            avail.time_to = end_period
+            avail.status = avail_status
+            avail.save()
+            return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+
+            # raise InvalidRequestException({"detail": "Overlapping time frame"})
 
         avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
         avail.time_to = end_period
@@ -455,7 +488,8 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user]).start()
-        return {"detail": "Success", "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
+        return {"detail": "Success",
+                "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
 
 
 class TutorSubjectDocumentSerializerIn(serializers.ModelSerializer):
@@ -546,11 +580,11 @@ class IntroCallSerializerIn(serializers.Serializer):
         start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
         end_date = start_date_convert + datetime.timedelta(minutes=call_duration)
         # Check Tutor Calendar
-        if not TutorCalendar.objects.filter(
-                user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
-                time_from__hour=start_date_convert.hour, status="available"
-        ):
-            raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
+        # if not TutorCalendar.objects.filter(
+        #         user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
+        #         time_from__hour=start_date_convert.hour, status="available"
+        # ):
+        #     raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
@@ -559,23 +593,25 @@ class IntroCallSerializerIn(serializers.Serializer):
 
         tutor_email = tutor_user.email
         tutor_name = str("{} {}").format(tutor_user.first_name, tutor_user.last_name).upper()
-        sender_email = student.user.email
+        sender_email = student.parent.user.email
         sender_name = student.user.get_full_name()
         if parent_profile:
             sender_email = parent_profile.email()
             sender_name = parent_profile.get_full_name()
-        link = ZoomAPI.create_meeting(
+        response = ZoomAPI.create_meeting(
             start_date=str(start_date_convert), duration=call_duration,
             attending=[{"name": str(sender_name), "email": str(sender_email)},
                        {"name": str(tutor_name), "email": str(tutor_email)}], narration=f"Intro call {tutor_name}",
             title=f"Intro call with {tutor_name}"
         )
-
-        # Send invitation link to tutor, parent and/or student
+        link = response["join_url"]
+        # Send invitation link to tutor, parent and/or student and create in-app notification
         if link is not None:
             Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link]).start()
             Thread(target=tutor_intro_call_email,
                    args=[tutor_user, user.get_full_name(), start_date, end_date, link]).start()
+            Thread(target=create_notification, args=[user, f"Intro call scheduled with {tutor_name}"]).start()
+            Thread(target=create_notification, args=[user, f"New Intro call request from {sender_name}"]).start()
 
         return "Intro call booked successfully. Detail will be sent to your email address"
     # except Exception as err:
@@ -586,7 +622,7 @@ class IntroCallSerializerIn(serializers.Serializer):
 class CustomClassSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Logged in tutor
     name = serializers.CharField()
-    note = serializers.CharField()
+    note = serializers.CharField(required=False)
     student_id = serializers.IntegerField()
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
@@ -628,13 +664,15 @@ class CustomClassSerializerIn(serializers.Serializer):
         tutor_email = user.email
         tutor_name = user.get_full_name()
         student_name = student.user.get_full_name()
-        student_email = student.user.email
-        link = ZoomAPI.create_meeting(
+        student_email = student.parent.user.email
+        response = ZoomAPI.create_meeting(
             start_date=str(start_date), duration=duration,
             attending=[{"name": str(student_name), "email": str(student_email)},
                        {"name": str(tutor_name), "email": str(tutor_email)}], narration=description,
             title=name
         )
+        zoom_meeting_id = response["id"]
+        link = response["join_url"]
 
         # Debit parent wallet
         parent_wallet.refresh_from_db()
@@ -659,14 +697,15 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Create class for student
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
-            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted"
+            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted",
+            class_type="custom", meeting_id=zoom_meeting_id
         )
 
         # Create ChatMessage for CustomClass
         # ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
-        chat_message = f"Hi {student.user.get_full_name()}, \nI have just created a custom classroom. " \
-                       f"Please see details below:\nStart Date: {start_date}\n" \
-                       f"End Date: {end_date}\nClassroom Link: {link}"
+        chat_message = f"<p>Hi {student.user.get_full_name()}, &nbsp;I have just created a custom classroom.</p>" \
+                       f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
+                       f"<p>Classroom Link: <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>&quot;</p>"
         ChatMessage.objects.create(sender=user, receiver=student.user, message=chat_message)
 
         # Send meeting link to student
@@ -678,6 +717,3 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Thread(target=create_notification, args=[instance.tutor, f"You accepted a new class request with {student_name}"]).start()
 
         return ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
-
-
-

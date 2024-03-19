@@ -181,10 +181,10 @@ class VerifyPaymentAPIView(APIView):
         success, response = complete_payment(reference)
         if success is False:
             return HttpResponseRedirect(
-                redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
+                redirect_to=f"{frontend_base_url}/{language}/verify-checkout?&status={str(success).lower()}")
         #     return Response({"detail": response}, status=status.HTTP_400_BAD_REQUEST)
         return HttpResponseRedirect(
-            redirect_to=f"{frontend_base_url}/verify-checkout?lang={language}&status={str(success).lower()}")
+            redirect_to=f"{frontend_base_url}/{language}/verify-checkout?&status={str(success).lower()}")
 
 
 class TutorListAPIView(APIView, CustomPagination):
@@ -413,6 +413,43 @@ class WebhookAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
+        data = {
+          "event": "meeting.participant_joined",
+          "event_ts": 1626230691572,
+          "payload": {
+            "account_id": "AAAAAABBBB",
+            "object": {
+              "id": "1234567890",
+              "uuid": "4444AAAiAAAAAiAiAiiAii==",
+              "host_id": "x1yCzABCDEfg23HiJKl4mN",
+              "topic": "My Meeting",
+              "type": 8,
+              "start_time": "2021-07-13T21:44:51Z",
+              "timezone": "America/Los_Angeles",
+              "duration": 60,
+              "participant": {
+                "user_id": "1234567890",
+                "user_name": "Jill Chill",
+                "id": "iFxeBPYun6SAiWUzBcEkX",
+                "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
+                "date_time": "2021-07-13T21:44:51Z",
+                "email": "jchill@example.com",
+                "registrant_id": "abcdefghij0-klmnopq23456",
+                "participant_user_id": "rstuvwxyza789-cde",
+                "customer_key": "349589LkJyeW",
+                "phone_number": "8615250064084"
+              }
+            }
+          }
+        }
+        event_type = request.data.get("event")
+        payload = request.data.get("payload")
+        meeting_id = payload["object"]["id"]
+        email = payload["object"]["participant"]["email"]
+        if Classroom.objects.filter(meeting_id=meeting_id).exists():
+            classroom = Classroom.objects.get(meeting_id=meeting_id)
+            if event_type == "meeting.participant_joined":
+                ...
         # reply = request.GET.get("input")
         # if reply == "1":
         #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
