@@ -331,9 +331,10 @@ def send_welcome_email(user_profile):
         first_name = "EduDream User"
     email = user_profile.user.email
 
-    message = f'<p class="letter-heading">Hello There, <span>{first_name}!</span> <br><br><br><br></p>' \
+    message = f'<p class="letter-heading">Hello <span>{first_name}!</span> <br><br><br><br></p>' \
               f'<div class="letter-body"><p>Welcome to EduDream.<br>' \
-              f'<br>Your one-stop online shop, where you can get all you are looking for with ease <br><br>'
+              f'<br>Our mission is to revolutionize online education by providing personalized, accessible, and ' \
+              f'affordable tutoring to foster academic excellence and personal growth in every student.<br><br>'
 
     subject = f"Welcome to EduDream"
     translated_content = translate_to_language(message, "fr")
