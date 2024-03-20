@@ -71,8 +71,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
     def get_tutor(self, obj):
         tutor = None
         image = None
-        if obj.tutor.user.profile.profile_picture:
-            image = obj.tutor.user.profile.profile_picture.url
+        if obj.tutor.profile.profile_picture:
+            image = obj.tutor.profile.profile_picture.url
         if obj.tutor:
             request = self.context.get("request")
             tutor = {
