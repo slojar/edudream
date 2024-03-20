@@ -236,7 +236,7 @@ class SignUpSerializerIn(serializers.Serializer):
 
         required_for_tutor = [
             bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
-            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_subject
+            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": "Please submit all required details"})
