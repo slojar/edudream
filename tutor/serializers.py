@@ -311,6 +311,14 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
 
 
 class DisputeSerializerOut(serializers.ModelSerializer):
+    submitted_by = serializers.SerializerMethodField()
+
+    def get_submitted_by(self, obj):
+        return {
+            "user_id": obj.submitted_by_id,
+            "full_name": obj.submitted_by.get_full_name()
+        }
+
     class Meta:
         model = Dispute
         exclude = []
@@ -368,46 +376,53 @@ class TutorCalendarSerializerOut(serializers.ModelSerializer):
 
 class TutorCalendarSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    week_day = serializers.ChoiceField(choices=DAY_OF_THE_WEEK_CHOICES)
-    start_time = serializers.TimeField()
-    end_time = serializers.TimeField()
-    status = serializers.ChoiceField(choices=AVAILABILITY_STATUS_CHOICES)
+    data = serializers.ListSerializer(child=serializers.DictField())
+    # week_day = serializers.ChoiceField(choices=DAY_OF_THE_WEEK_CHOICES)
+    # start_time = serializers.TimeField()
+    # end_time = serializers.TimeField()
+    # status = serializers.ChoiceField(choices=AVAILABILITY_STATUS_CHOICES)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
-        week_day = validated_data.get("week_day")
-        start_period = validated_data.get("start_time")
-        end_period = validated_data.get("end_time")
-        avail_status = validated_data.get("status")
+        data_list = validated_data.get("data")
 
-        # Check if duration is more than tutor available duration
-        # start_time = datetime.datetime.strptime(start_period, "%H:%M")
-        # end_time = datetime.datetime.strptime(end_period, "%H:%M")
-        # duration = (end_time - start_time).total_seconds() / 60
+        # Delete all user's availability
+        TutorCalendar.objects.filter(user=user).delete()
 
-        # if duration > user.tutordetail.max_hour_class_hour:
-        #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
+        # Create availability
+        try:
+            for item in data_list:
+                week_day = item.get("week_day")
+                start_period = item.get("start_time")
+                end_period = item.get("end_time")
+                avail_status = item.get("status")
+                TutorCalendar.objects.create(
+                    user=user, day_of_the_week=week_day, time_from=start_period, time_to=end_period, status=avail_status
+                )
+        except Exception as err:
+            log_request(f"Error while adding calendar: {err}")
 
         # Check if time within a day already exists
-        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
-                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
-            # Get the schedule and update
-            avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
-                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
-            avail.time_from = start_period
-            avail.time_to = end_period
-            avail.status = avail_status
-            avail.save()
-            return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
-
+        # if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+        #         Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
+        #     Get the schedule and update
+            # avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+            #     Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
+            # avail.time_from = start_period
+            # avail.time_to = end_period
+            # avail.status = avail_status
+            # avail.save()
+            # return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+            #
             # raise InvalidRequestException({"detail": "Overlapping time frame"})
+        #
+        # avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
+        # avail.time_to = end_period
+        # avail.status = avail_status
+        # avail.save()
 
-        avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
-        avail.time_to = end_period
-        avail.status = avail_status
-        avail.save()
-
-        return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+        # return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+        return {"detail": "Calendar updated"}
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):

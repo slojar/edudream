@@ -125,7 +125,7 @@ class TutorCalendarAPIView(APIView):
         serializer = TutorCalendarSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
-        return Response({"detail": "Calendar updated", "data": response})
+        return Response(response)
 
 
 @extend_schema(parameters=[OpenApiParameter(name="tutor_id", type=str)])
