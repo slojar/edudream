@@ -19,6 +19,7 @@ from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
     create_notification
 from home.models import Subject, Transaction, Profile, ChatMessage
+from home.serializers import SubjectSerializerOut
 from location.models import Country
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
@@ -53,6 +54,7 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
 class ClassRoomSerializerOut(serializers.ModelSerializer):
     tutor = serializers.SerializerMethodField()
     student = serializers.SerializerMethodField()
+    subjects = serializers.SerializerMethodField()
 
     def get_student(self, obj):
         student = None
@@ -67,6 +69,12 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
                 "image": request.build_absolute_uri(image)
             }
         return student
+
+    def get_subjects(self, obj):
+        subject = None
+        if obj.subjects:
+            subject = SubjectSerializerOut(obj.subjects).data
+        return subject
 
     def get_tutor(self, obj):
         tutor = None

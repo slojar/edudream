@@ -316,7 +316,7 @@ def send_verification_email(user_profile):
         first_name = "EduDream User"
     email = user_profile.user.email
 
-    message = f"Dear {first_name}, <br><br>Kindly click <a href='{frontend_base_url}/{user_profile.email_verified_code}' target='_blank'>here</a> to verify your email. "
+    message = f"Dear {first_name}, <br><br>Kindly click <a href='{frontend_base_url}/#/auth/sign-in?token={user_profile.email_verified_code}' target='_blank'>here</a> to verify your email. "
     subject = f"EduDream Email Verification"
     translated_content = translate_to_language(message, "fr")
     translated_subject = translate_to_language(subject, "fr")
