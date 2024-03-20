@@ -76,8 +76,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
         if obj.tutor:
             request = self.context.get("request")
             tutor = {
-                "user_id": obj.tutor.user_id,
-                "full_name": obj.tutor.user.get_full_name(),
+                "user_id": obj.tutor_id,
+                "full_name": obj.tutor.get_full_name(),
                 "image": request.build_absolute_uri(image)
             }
         return tutor
