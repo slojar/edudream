@@ -319,6 +319,14 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
 
 class DisputeSerializerOut(serializers.ModelSerializer):
     submitted_by = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, obj):
+        image = None
+        if obj.image:
+            request = self.context.get("request")
+            image = request.build_absolute_uri(obj.image.url)
+        return image
 
     def get_submitted_by(self, obj):
         return {
@@ -335,6 +343,7 @@ class DisputeSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     title = serializers.CharField(max_length=200, required=False)
     dispute_type = serializers.ChoiceField(choices=DISPUTE_TYPE_CHOICES)
+    image = serializers.ImageField(required=False)
     content = serializers.CharField()
 
     def create(self, validated_data):
@@ -342,6 +351,7 @@ class DisputeSerializerIn(serializers.Serializer):
         title = validated_data.get("title")
         d_type = validated_data.get("dispute_type")
         content = validated_data.get("content")
+        image = validated_data.get("image")
 
         if not title:
             raise InvalidRequestException({"detail": "Title is required"})
@@ -349,6 +359,7 @@ class DisputeSerializerIn(serializers.Serializer):
         # Create Dispute
         dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=title)
         dispute.dispute_type = d_type
+        dispute.image = image
         dispute.content = content
         dispute.save()
         return DisputeSerializerOut(dispute, context=self.context.get("request")).data

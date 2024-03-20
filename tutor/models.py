@@ -90,6 +90,7 @@ class Dispute(models.Model):
     title = models.CharField(max_length=200)
     dispute_type = models.CharField(max_length=100, choices=DISPUTE_TYPE_CHOICES, default="payment")
     content = models.TextField()
+    image = models.ImageField(upload_to="dispute-images", blank=True, null=True)
     status = models.CharField(max_length=100, choices=DISPUTE_STATUS_CHOICES, default="open")
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
