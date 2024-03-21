@@ -2,7 +2,6 @@ import datetime
 import decimal
 from threading import Thread
 
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -51,6 +50,45 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
 
 
 class ClassRoomSerializerOut(serializers.ModelSerializer):
+    tutor = serializers.SerializerMethodField()
+    student = serializers.SerializerMethodField()
+    subjects = serializers.SerializerMethodField()
+
+    def get_student(self, obj):
+        student = None
+        image = None
+        if obj.student.profile_picture:
+            image = obj.student.profile_picture.url
+        if obj.student:
+            request = self.context.get("request")
+            student = {
+                "user_id": obj.student.user_id,
+                "full_name": obj.student.get_full_name(),
+                "image": request.build_absolute_uri(image)
+            }
+        return student
+
+    def get_subjects(self, obj):
+        from home.serializers import SubjectSerializerOut
+        subject = None
+        if obj.subjects:
+            subject = SubjectSerializerOut(obj.subjects).data
+        return subject
+
+    def get_tutor(self, obj):
+        tutor = None
+        image = None
+        if obj.tutor.profile.profile_picture:
+            image = obj.tutor.profile.profile_picture.url
+        if obj.tutor:
+            request = self.context.get("request")
+            tutor = {
+                "user_id": obj.tutor_id,
+                "full_name": obj.tutor.get_full_name(),
+                "image": request.build_absolute_uri(image)
+            }
+        return tutor
+
     class Meta:
         model = Classroom
         exclude = []
@@ -280,6 +318,22 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
 
 
 class DisputeSerializerOut(serializers.ModelSerializer):
+    submitted_by = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, obj):
+        image = None
+        if obj.image:
+            request = self.context.get("request")
+            image = request.build_absolute_uri(obj.image.url)
+        return image
+
+    def get_submitted_by(self, obj):
+        return {
+            "user_id": obj.submitted_by_id,
+            "full_name": obj.submitted_by.get_full_name()
+        }
+
     class Meta:
         model = Dispute
         exclude = []
@@ -289,6 +343,7 @@ class DisputeSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     title = serializers.CharField(max_length=200, required=False)
     dispute_type = serializers.ChoiceField(choices=DISPUTE_TYPE_CHOICES)
+    image = serializers.ImageField(required=False)
     content = serializers.CharField()
 
     def create(self, validated_data):
@@ -296,6 +351,7 @@ class DisputeSerializerIn(serializers.Serializer):
         title = validated_data.get("title")
         d_type = validated_data.get("dispute_type")
         content = validated_data.get("content")
+        image = validated_data.get("image")
 
         if not title:
             raise InvalidRequestException({"detail": "Title is required"})
@@ -303,6 +359,7 @@ class DisputeSerializerIn(serializers.Serializer):
         # Create Dispute
         dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=title)
         dispute.dispute_type = d_type
+        dispute.image = image
         dispute.content = content
         dispute.save()
         return DisputeSerializerOut(dispute, context=self.context.get("request")).data
@@ -337,46 +394,53 @@ class TutorCalendarSerializerOut(serializers.ModelSerializer):
 
 class TutorCalendarSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    week_day = serializers.ChoiceField(choices=DAY_OF_THE_WEEK_CHOICES)
-    start_time = serializers.TimeField()
-    end_time = serializers.TimeField()
-    status = serializers.ChoiceField(choices=AVAILABILITY_STATUS_CHOICES)
+    data = serializers.ListSerializer(child=serializers.DictField())
+    # week_day = serializers.ChoiceField(choices=DAY_OF_THE_WEEK_CHOICES)
+    # start_time = serializers.TimeField()
+    # end_time = serializers.TimeField()
+    # status = serializers.ChoiceField(choices=AVAILABILITY_STATUS_CHOICES)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
-        week_day = validated_data.get("week_day")
-        start_period = validated_data.get("start_time")
-        end_period = validated_data.get("end_time")
-        avail_status = validated_data.get("status")
+        data_list = validated_data.get("data")
 
-        # Check if duration is more than tutor available duration
-        # start_time = datetime.datetime.strptime(start_period, "%H:%M")
-        # end_time = datetime.datetime.strptime(end_period, "%H:%M")
-        # duration = (end_time - start_time).total_seconds() / 60
+        # Delete all user's availability
+        TutorCalendar.objects.filter(user=user).delete()
 
-        # if duration > user.tutordetail.max_hour_class_hour:
-        #     raise InvalidRequestException({"detail": "Duration cannot be greater than your teaching period"})
+        # Create availability
+        try:
+            for item in data_list:
+                week_day = item.get("week_day")
+                start_period = item.get("start_time")
+                end_period = item.get("end_time")
+                avail_status = item.get("status")
+                TutorCalendar.objects.create(
+                    user=user, day_of_the_week=week_day, time_from=start_period, time_to=end_period, status=avail_status
+                )
+        except Exception as err:
+            log_request(f"Error while adding calendar: {err}")
 
         # Check if time within a day already exists
-        if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
-                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
-            # Get the schedule and update
-            avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
-                Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
-            avail.time_from = start_period
-            avail.time_to = end_period
-            avail.status = avail_status
-            avail.save()
-            return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
-
+        # if TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+        #         Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).exists():
+        #     Get the schedule and update
+            # avail = TutorCalendar.objects.filter(user=user, day_of_the_week=week_day).exclude(
+            #     Q(time_from__gte=end_period) | Q(time_to__lte=start_period)).last()
+            # avail.time_from = start_period
+            # avail.time_to = end_period
+            # avail.status = avail_status
+            # avail.save()
+            # return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+            #
             # raise InvalidRequestException({"detail": "Overlapping time frame"})
+        #
+        # avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
+        # avail.time_to = end_period
+        # avail.status = avail_status
+        # avail.save()
 
-        avail, _ = TutorCalendar.objects.get_or_create(user=user, day_of_the_week=week_day, time_from=start_period)
-        avail.time_to = end_period
-        avail.status = avail_status
-        avail.save()
-
-        return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+        # return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
+        return {"detail": "Calendar updated"}
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):

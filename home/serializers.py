@@ -9,12 +9,11 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
-from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, PROFICIENCY_TYPE_CHOICES, CONSULTATION_ACCOUNT_TYPE, \
-    CONSULTATION_TYPE_CHOICES
+from edudream.modules.choices import ACCOUNT_TYPE_CHOICES, CONSULTATION_ACCOUNT_TYPE, CONSULTATION_TYPE_CHOICES
 from edudream.modules.email_template import tutor_register_email, parent_register_email, feedback_email, \
-    consultation_email, send_otp_token_to_email
+    consultation_email, send_otp_token_to_email, send_verification_email, send_welcome_email
 from edudream.modules.exceptions import InvalidRequestException
-from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, password_checker, \
+from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, \
     decrypt_text, create_notification
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
@@ -237,7 +236,7 @@ class SignUpSerializerIn(serializers.Serializer):
 
         required_for_tutor = [
             bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
-            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_subject
+            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": "Please submit all required details"})
@@ -377,19 +376,60 @@ class LoginSerializerIn(serializers.Serializer):
                 {"detail": "Your tutor account is yet to be approved by the admin, please check back later"}
             )
 
-        # if not user_profile.email_verified:
-            # OTP Timeout
-            # random_otp = generate_random_otp()
-            # user_profile.email_verified_code = encrypt_text(random_otp)
-            # user_profile.code_expiry = get_next_minute(timezone.now(), 15)
-            # user_profile.save()
+        if not user_profile.email_verified:
+            user_profile.email_verified_code = uuid.uuid1()
+            user_profile.code_expiry = get_next_minute(timezone.now(), 15)
+            user_profile.save()
 
             # Send OTP to user
-            # Thread(target=send_token_to_email, args=[user_profile]).start()
-            # raise InvalidRequestException({
-            #     "detail": "Kindly verify account before login. Check email for OTP", "email_verified": False
-            # })
+            Thread(target=send_verification_email, args=[user_profile]).start()
+            raise InvalidRequestException({
+                "detail": "Kindly verify account to continue. Check email for verification link",
+            })
         return user
+
+
+class EmailVerificationSerializerIn(serializers.Serializer):
+    token = serializers.CharField()
+
+    def create(self, validated_data):
+        token = validated_data.get("token")
+        if not Profile.objects.filter(email_verified_code=token).exists():
+            raise InvalidRequestException({"detail": "Invalid Verification code"})
+
+        user_profile = Profile.objects.get(email_verified_code=token)
+        if timezone.now() > user_profile.code_expiry:
+            raise InvalidRequestException({"detail": "Verification code has expired"})
+
+        user_profile.email_verified = True
+        user_profile.email_verified_code = ""
+        user_profile.save()
+
+        # Send Email to user
+        Thread(target=send_welcome_email, args=[user_profile]).start()
+        return "Your email is successfully verified, please proceed to login"
+
+
+class RequestVerificationLinkSerializerIn(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def create(self, validated_data):
+        email = validated_data.get("email")
+        try:
+            user_profile = Profile.objects.get(user__email=email)
+        except Profile.DoesNotExist:
+            raise InvalidRequestException({"detail": "User with this email is not found"})
+
+        if user_profile.email_verified:
+            raise InvalidRequestException({"detail": "Account is already verified, please proceed to login"})
+
+        user_profile.email_verified_code = uuid.uuid1()
+        user_profile.code_expiry = get_next_minute(timezone.now(), 15)
+        user_profile.save()
+
+        # Send email verification link to user
+        Thread(target=send_verification_email, args=[user_profile]).start()
+        return "Verfication link sent to your email"
 
 
 class ProfileSerializerIn(serializers.Serializer):

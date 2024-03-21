@@ -1,5 +1,6 @@
+from django.conf import settings
 from django.shortcuts import render
-from edudream.modules.utils import send_email, translate_to_language
+from edudream.modules.utils import send_email, translate_to_language, decrypt_text, get_site_details
 
 
 def parent_class_creation_email(classroom):
@@ -282,9 +283,66 @@ def send_otp_token_to_email(user_profile, otp):
     message = f"Hello, <br><br>Kindly use the below One Time Token, to complete your action<br><br>" \
               f"OTP: <strong>{otp}</strong>"
     subject = "EduDream: One-Time-Passcode"
-    contents = render(None, 'default_template.html', context={'message': message}).content.decode('utf-8')
-    send_email(contents, email, subject)
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
     return True
+
+
+def send_token_to_email(user_profile):
+    first_name = user_profile.user.first_name
+    if not user_profile.user.first_name:
+        first_name = "EduDream User"
+    email = user_profile.user.email
+    decrypted_token = decrypt_text(user_profile.otp)
+
+    message = f"Dear {first_name}, <br><br>Kindly use the below One Time Token, to complete your action<br><br>" \
+              f"OTP: <strong>{decrypted_token}</strong>"
+    subject = "EduDream Verification"
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
+def send_verification_email(user_profile):
+    site_setting = get_site_details()
+    frontend_base_url = site_setting.frontend_url
+
+    first_name = user_profile.user.first_name
+    if not user_profile.user.first_name:
+        first_name = "EduDream User"
+    email = user_profile.user.email
+
+    message = f"Dear {first_name}, <br><br>Kindly click <a href='{frontend_base_url}/#/auth/sign-in?token={user_profile.email_verified_code}' target='_blank'>here</a> to verify your email. "
+    subject = f"EduDream Email Verification"
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
+def send_welcome_email(user_profile):
+    first_name = user_profile.user.first_name
+    if not user_profile.user.first_name:
+        first_name = "EduDream User"
+    email = user_profile.user.email
+
+    message = f'<p class="letter-heading">Hello <span>{first_name}!</span> <br><br><br><br></p>' \
+              f'<div class="letter-body"><p>Welcome to EduDream.<br>' \
+              f'<br>Our mission is to revolutionize online education by providing personalized, accessible, and ' \
+              f'affordable tutoring to foster academic excellence and personal growth in every student.<br><br>'
+
+    subject = f"Welcome to EduDream"
+    translated_content = translate_to_language(message, "fr")
+    translated_subject = translate_to_language(subject, "fr")
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
 
 
 
