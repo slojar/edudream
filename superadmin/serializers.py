@@ -12,7 +12,7 @@ from edudream.modules.email_template import tutor_status_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text
-from home.models import Notification, Transaction
+from home.models import Notification, Transaction, SiteSetting
 from home.serializers import TutorListSerializerOut, NotificationSerializerOut
 from tutor.serializers import PayoutSerializerOut, DisputeSerializerOut
 
@@ -148,5 +148,23 @@ class DisputeStatusUpdateSerializerIn(serializers.Serializer):
         instance.save()
         return DisputeSerializerOut(instance, context={"request": self.context.get("request")}).data
 
+
+class SiteSettingSerializerOut(serializers.ModelSerializer):
+    class Meta:
+        model = SiteSetting
+        exclude = ["site", "google_calendar_id", "google_redirect_url", "escrow_balance", "zoom_token"]
+
+
+class UpdateSiteSettingsSerializerIn(serializers.Serializer):
+    def update(self, instance, validated_data):
+        instance.site_name = validated_data.get("site_name", instance.site_name)
+        instance.coin_threshold = validated_data.get("coin_threshold", instance.coin_threshold)
+        instance.referral_coin = validated_data.get("referral_coin", instance.referral_coin)
+        instance.payout_coin_to_amount = validated_data.get("payout_coin_to_amount", instance.payout_coin_to_amount)
+        instance.class_grace_period = validated_data.get("class_grace_period", instance.class_grace_period)
+        instance.intro_call_duration = validated_data.get("intro_call_duration", instance.intro_call_duration)
+        instance.enquiry_email = validated_data.get("enquiry_email", instance.enquiry_email)
+        instance.save()
+        return SiteSettingSerializerOut(instance, context={"request": self.context.get("request")})
 
 

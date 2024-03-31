@@ -12,13 +12,14 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
-from home.models import Profile, ClassReview, PaymentPlan, Language, Notification
+from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
     PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
-    AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn, DisputeStatusUpdateSerializerIn
+    AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn, DisputeStatusUpdateSerializerIn, \
+    UpdateSiteSettingsSerializerIn, SiteSettingSerializerOut
 from tutor.models import Classroom, PayoutRequest, Dispute
 from tutor.serializers import ClassRoomSerializerOut, PayoutSerializerOut, DisputeSerializerOut
 
@@ -336,6 +337,20 @@ class DisputeAPIView(APIView, CustomPagination):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
         response = serializer.save()
         return Response({"detail": "Dispute updated", "data": response})
+
+
+class SiteSettingsAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        return SiteSettingSerializerOut(SiteSetting.objects.all().last(), context={"request": request}).data
+
+    def put(self, request):
+        site_settings = SiteSetting.objects.all().last()
+        serializer = UpdateSiteSettingsSerializerIn(instance=site_settings, data=request.data, context={'request': request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        response = serializer.save()
+        return Response({"detail": "Site Settings updated successfully", "data": response})
 
 
 
