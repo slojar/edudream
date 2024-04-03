@@ -18,15 +18,22 @@ from tutor.serializers import PayoutSerializerOut, DisputeSerializerOut
 
 
 class TutorStatusSerializerIn(serializers.Serializer):
-    active = serializers.BooleanField()
+    active = serializers.BooleanField(required=False)
+    declined = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
+        decline = validated_data.get("decline", False)
+        tutor_detail = instance.user.tutordetail
         instance.active = validated_data.get("active", instance.active)
+        if decline:
+            tutor_detail.status = "declined"
         if instance.active:
+            tutor_detail.status = "approved"
             # Send Email
             instance.approved_on = timezone.now()
             Thread(target=tutor_status_email, args=[instance.user]).start()
         instance.save()
+        tutor_detail.save()
         return TutorListSerializerOut(instance, context={"request": self.context.get("request")}).data
 
 
@@ -69,7 +76,9 @@ class NotificationSerializerIn(serializers.Serializer):
         else:
             users_list = users
 
-        notification, created = Notification.objects.get_or_create(message=message)
+        notification, created = Notification.objects.get_or_create(
+            message=message, users_type=send_type, admin_initiated=True
+        )
 
         if users_list:
             notification.user.clear()

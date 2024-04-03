@@ -16,6 +16,11 @@ class ParentStudentSerializerOut(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     email = serializers.CharField(source="user.email")
+    parent_name = serializers.CharField(source="parent.get_full_name")
+    help_subject_names = serializers.SerializerMethodField()
+
+    def get_help_subject_names(self, obj):
+        return [subject.name for subject in obj.help_subject.all()]
 
     class Meta:
         model = Student

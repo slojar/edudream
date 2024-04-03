@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from edudream.modules.choices import DISPUTE_TYPE_CHOICES, DISPUTE_STATUS_CHOICES, CLASS_STATUS_CHOICES, \
-    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES, CLASS_TYPE_CHOICES
+    AVAILABILITY_STATUS_CHOICES, DAY_OF_THE_WEEK_CHOICES, PAYOUT_STATUS_CHOICES, CLASS_TYPE_CHOICES, \
+    TUTOR_STATUS_CHOICES
 from location.models import Country
 from student.models import Student
 
@@ -25,6 +26,7 @@ class TutorDetail(models.Model):
     proficiency_test_type = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_file = models.FileField(upload_to="proficiency-test-files", blank=True, null=True)
     resume = models.FileField(upload_to="curriculum-vitaes", blank=True, null=True)
+    status = models.CharField(max_length=50, choices=TUTOR_STATUS_CHOICES, default="pending")
     rest_period = models.IntegerField(default=10)
     subjects = models.ManyToManyField("home.Subject")
     max_student_required = models.IntegerField(default=10)

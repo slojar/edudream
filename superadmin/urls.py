@@ -30,6 +30,8 @@ urlpatterns = [
     path('dispute', views.DisputeAPIView.as_view(), name="dispute"),
     path('dispute/<int:pk>', views.DisputeAPIView.as_view(), name="dispute-detail"),
     path('sitesettings', views.SiteSettingsAPIView.as_view(), name="site-settings"),
+    path('subject', views.AdminSubjectAPIView.as_view(), name="subjects"),
+    path('subject/<int:pk>', views.AdminSubjectDetailAPIView.as_view(), name="subject-detail"),
 
 ]
 

@@ -4,17 +4,17 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView, \
-    RetrieveAPIView
+    RetrieveAPIView, ListCreateAPIView
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
-from edudream.modules.paginations import CustomPagination
-from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting
+from edudream.modules.paginations import AdminPagination
+from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting, Subject
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
-    PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut
+    PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut, SubjectSerializerOut
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
@@ -45,12 +45,15 @@ class DashboardAPIView(APIView):
         return Response({"detail": "Success", "data": data})
 
 
-class TutorListAPIVIew(APIView, CustomPagination):
+class TutorListAPIVIew(APIView, AdminPagination):
     permission_classes = [IsAdminUser]
 
-    @extend_schema(parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="subject_id", type=str),
-                               OpenApiParameter(name="date_from", type=str), OpenApiParameter(name="diploma_grade", type=str),
-                               OpenApiParameter(name="date_to", type=str), OpenApiParameter(name="disploma_type", type=str)])
+    @extend_schema(
+        parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="subject_id", type=str),
+                    OpenApiParameter(name="date_from", type=str), OpenApiParameter(name="diploma_grade", type=str),
+                    OpenApiParameter(name="date_to", type=str), OpenApiParameter(name="disploma_type", type=str),
+                    OpenApiParameter(name="tutor_status", type=str)]
+    )
     def get(self, request, pk=None):
         search = request.GET.get("search")
         subject = request.GET.get("subject_id", list())
@@ -58,6 +61,7 @@ class TutorListAPIVIew(APIView, CustomPagination):
         diploma_type = request.GET.get("disploma_type")
         date_from = request.GET.get("date_from")
         date_to = request.GET.get("date_to")
+        tutor_status = request.GET.get("status")
 
         if pk:
             queryset = get_object_or_404(Profile, id=pk, account_type="tutor")
@@ -76,6 +80,8 @@ class TutorListAPIVIew(APIView, CustomPagination):
             query &= Q(user__tutordetail__diploma_type__iexact=diploma_type)
         if date_from and date_to:
             query &= Q(user__date_joined__range=[date_from, date_to])
+        if tutor_status:
+            query &= Q(user__tutordetail__status=tutor_status)
 
         queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("-id").distinct(), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
@@ -106,7 +112,7 @@ class AdminLoginAPIView(APIView):
         return Response({"detail": "Login Successful",  "access_token": f"{AccessToken.for_user(user)}"})
 
 
-class ParentListAPIView(APIView, CustomPagination):
+class ParentListAPIView(APIView, AdminPagination):
     permission_classes = [IsAdminUser]
 
     @extend_schema(parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="date_from", type=str),
@@ -134,7 +140,7 @@ class ParentListAPIView(APIView, CustomPagination):
         return Response({"detail": "Success", "data": response})
 
 
-class ClassRoomListAPIView(APIView, CustomPagination):
+class ClassRoomListAPIView(APIView, AdminPagination):
     permission_classes = [IsAdminUser]
 
     @extend_schema(parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="date_from", type=str),
@@ -177,7 +183,7 @@ class ClassRoomListAPIView(APIView, CustomPagination):
 
 class ClassReviewListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
-    pagination_class = CustomPagination
+    pagination_class = AdminPagination
     queryset = ClassReview.objects.all().order_by("-id")
     serializer_class = ClassReviewSerializerOut
     filter_backends = [SearchFilter]
@@ -208,7 +214,7 @@ class PaymentPlanListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
     queryset = PaymentPlan.objects.all().order_by("-id")
     serializer_class = PaymentPlanSerializerOut
-    pagination_class = CustomPagination
+    pagination_class = AdminPagination
 
 
 class LanguageCreateAPIView(CreateAPIView):
@@ -232,9 +238,9 @@ class LanguageDeleteAPIView(DestroyAPIView):
 
 class NotificationListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
-    queryset = Notification.objects.all().order_by("-id")
+    queryset = Notification.objects.filter(admin_initiated=True).order_by("-id")
     serializer_class = NotificationSerializerOut
-    pagination_class = CustomPagination
+    pagination_class = AdminPagination
 
 
 class SendNotificationAPIView(APIView):
@@ -259,7 +265,7 @@ class AdminChangePasswordAPIView(APIView):
         return Response({"detail": response})
 
 
-class PayoutListAPIView(APIView, CustomPagination):
+class PayoutListAPIView(APIView, AdminPagination):
     permission_classes = [IsAdminUser]
 
     @extend_schema(parameters=[OpenApiParameter(name="search", type=str), OpenApiParameter(name="date_from", type=str),
@@ -303,7 +309,7 @@ class ApprovePayoutRequestAPIView(APIView):
         return Response({"detail": "Payout request updated", "data": response})
 
 
-class DisputeAPIView(APIView, CustomPagination):
+class DisputeAPIView(APIView, AdminPagination):
     permission_classes = [IsAdminUser]
 
     @extend_schema(
@@ -353,6 +359,25 @@ class SiteSettingsAPIView(APIView):
         return Response({"detail": "Site Settings updated successfully", "data": response})
 
 
+@extend_schema(parameters=[OpenApiParameter(name="grade", type=str)])
+class AdminSubjectAPIView(ListCreateAPIView):
+    permission_classes = []
+    pagination_class = AdminPagination
+    serializer_class = SubjectSerializerOut
+
+    def get_queryset(self):
+        grade = self.request.GET.get("grade")
+        queryset = Subject.objects.all().order_by("name")
+        if grade:
+            queryset = Subject.objects.filter(grade=grade).order_by("name")
+        return queryset
+
+
+class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializerOut
+    lookup_field = "id"
 
 
 
