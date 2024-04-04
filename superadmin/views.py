@@ -367,10 +367,13 @@ class AdminSubjectAPIView(ListCreateAPIView):
 
     def get_queryset(self):
         grade = self.request.GET.get("grade")
-        queryset = Subject.objects.all().order_by("name")
+        search = self.request.GET.get("search")
+        query = Q()
         if grade:
-            queryset = Subject.objects.filter(grade=grade).order_by("name")
-        return queryset
+            query &= Q(grade=grade)
+        if search:
+            query &= Q(name__icontains=search)
+        return Subject.objects.filter(query).order_by("name")
 
 
 class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
