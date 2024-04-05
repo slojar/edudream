@@ -1,7 +1,7 @@
 import datetime
 import secrets
 from rest_framework.exceptions import APIException
-from edudream.modules.utils import log_request
+from edudream.modules.utils import log_request, translate_to_language
 
 
 class InvalidRequestException(APIException):
@@ -10,29 +10,36 @@ class InvalidRequestException(APIException):
     default_code = 'invalid_request'
 
 
-def raise_serializer_error_msg(errors: {}):
+def raise_serializer_error_msg(errors: {}, language="en"):
     data = dict()
     data["requestTime"] = str(datetime.datetime.now())
     data["requestType"] = "outbound"
     data["referenceId"] = secrets.token_hex(30)
     data["status"] = False
+    msg = ""
     for err_key, err_val in errors.items():
         if type(err_val) is list:
             err_msg = ', '.join(err_val)
             msg = f'Error occurred on \'{err_key.replace("_", " ")}\' field: {err_msg}'
-            data['message'] = msg
+            # data['message'] = msg
         else:
             for err_val_key, err_val_val in err_val.items():
                 err_msg = ', '.join(err_val_val)
                 msg = f'Error occurred on \'{err_val_key}\' field: {err_msg}'
                 # msg = f'Error occurred on \'{err_val_key.replace("_", " ")}\' field: {err_msg}'
-                data['message'] = msg
+                # data['message'] = msg
+        if language == "fr":
+            msg = translate_to_language(msg, "fr")
+        data["message"] = msg
         log_request(data)
         raise InvalidRequestException(data)
 
 
-def create_error_message(key, values):
+def create_error_message(key, values, language="en"):
+    msg = values
+    if language == "fr":
+        msg = translate_to_language(values, "fr")
     data = dict()
     data[key] = str(values).split('|')
-    raise InvalidRequestException({'message': values})
+    raise InvalidRequestException({'message': msg})
 

@@ -96,7 +96,7 @@ class UpdateTutorStatusAPIView(APIView):
     def put(self, request, pk):
         tutor = get_object_or_404(Profile, account_type="tutor", id=pk)
         serializer = TutorStatusSerializerIn(instance=tutor, data=request.data, context={'request': request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": "Tutor status updated", "data": response})
 
@@ -107,7 +107,7 @@ class AdminLoginAPIView(APIView):
     @extend_schema(request=AdminLoginSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = AdminLoginSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response({"detail": "Login Successful",  "access_token": f"{AccessToken.for_user(user)}"})
 
@@ -249,7 +249,7 @@ class SendNotificationAPIView(APIView):
     @extend_schema(request=NotificationSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = NotificationSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": "Notification created",  "data": response})
 
@@ -260,7 +260,7 @@ class AdminChangePasswordAPIView(APIView):
     @extend_schema(request=AdminChangePasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = AdminChangePasswordSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -304,7 +304,7 @@ class ApprovePayoutRequestAPIView(APIView):
     def put(self, request, pk):
         payout_request = get_object_or_404(PayoutRequest, id=pk, status="pending")
         serializer = ApproveDeclinePayoutSerializerIn(instance=payout_request, data=request.data, context={'request': request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": "Payout request updated", "data": response})
 
@@ -340,7 +340,7 @@ class DisputeAPIView(APIView, AdminPagination):
     def put(self, request, pk):
         instance = get_object_or_404(Dispute, id=pk)
         serializer = DisputeStatusUpdateSerializerIn(instance=instance, data=request.data, context={'request': request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": "Dispute updated", "data": response})
 
@@ -354,7 +354,7 @@ class SiteSettingsAPIView(APIView):
     def put(self, request):
         site_settings = SiteSetting.objects.all().last()
         serializer = UpdateSiteSettingsSerializerIn(instance=site_settings, data=request.data, context={'request': request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": "Site Settings updated successfully", "data": response})
 

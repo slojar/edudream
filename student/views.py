@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsStudent, IsParent
+from edudream.modules.utils import translate_to_language
 from tutor.models import Classroom
 from tutor.serializers import CreateClassSerializerIn, ClassRoomSerializerOut, IntroCallSerializerIn
 
@@ -21,6 +22,7 @@ class StudentClassRoomAPIView(APIView, CustomPagination):
                     OpenApiParameter(name="date_to", type=str)]
     )
     def get(self, request, pk=None):
+        lang = request.GET.get("lang", "en")
         if pk:
             item = get_object_or_404(Classroom, id=pk, student__user=request.user)
             response = ClassRoomSerializerOut(item, context={"request": request}).data
@@ -37,7 +39,7 @@ class StudentClassRoomAPIView(APIView, CustomPagination):
             queryset = self.paginate_queryset(Classroom.objects.filter(query).order_by("-id"), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
-        return Response({"detail": "Success", "data": response})
+        return Response({"detail": translate_to_language("Success", lang), "data": response})
 
 
 class CreateClassRoomAPIView(APIView):
@@ -46,7 +48,7 @@ class CreateClassRoomAPIView(APIView):
     @extend_schema(request=CreateClassSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = CreateClassSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response(response)
 
@@ -57,7 +59,7 @@ class IntroCallAPIView(APIView):
     @extend_schema(request=IntroCallSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = IntroCallSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response(response)
 

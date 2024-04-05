@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from edudream.modules.exceptions import InvalidRequestException
 from django.contrib.auth.hashers import make_password
 
-from edudream.modules.utils import decrypt_text, encrypt_text, log_request
+from edudream.modules.utils import decrypt_text, encrypt_text, log_request, translate_to_language
 from home.models import PaymentPlan, Transaction, UserLanguage
 from student.models import Student
 
@@ -34,6 +34,7 @@ class StudentSerializerIn(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField()
     note = serializers.CharField(required=False)
+    lang = serializers.CharField(required=False)
     languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
     # dob = serializers.DateTimeField()
     grade = serializers.CharField()
@@ -47,6 +48,7 @@ class StudentSerializerIn(serializers.Serializer):
         username = validated_data.get("username")
         student_note = validated_data.get("note")
         languages = validated_data.get("languages")
+        lang = validated_data.get("lang", "en")
         # d_o_b = validated_data.get("dob")
         grade = validated_data.get("grade")
         help_subjects = validated_data.get("help_subjects")
@@ -56,7 +58,7 @@ class StudentSerializerIn(serializers.Serializer):
         # Check if user with email exists
         # if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
         if User.objects.filter(username__iexact=username).exists():
-            raise InvalidRequestException({"detail": "Username is taken"})
+            raise InvalidRequestException({"detail": translate_to_language("Username is taken", lang)})
 
         # Create student user
         student_user = User.objects.create(
@@ -124,7 +126,7 @@ class FundWalletSerializerIn(serializers.Serializer):
             user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
             user.profile.save()
         stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
-        description = f'Wallet funding: {user.get_full_name()}'
+        description = translate_to_language(f'Wallet funding: {user.get_full_name()}', language)
         payment_reference = payment_link = None
 
         # Calculate tax
@@ -152,12 +154,12 @@ class FundWalletSerializerIn(serializers.Serializer):
                 text = str(response).lower()
                 start_index = text.index("converts to approximately")
                 approx = text[start_index:]
-                response = f"Amount must convert to at least 50 cents. {amount}EUR  {approx}"
+                response = translate_to_language(f"Amount must convert to at least 50 cents. {amount}EUR  {approx}", language)
 
             if not success:
                 raise InvalidRequestException({'detail': response})
             if not response.get('url'):
-                raise InvalidRequestException({'detail': 'Payment could not be completed at the moment'})
+                raise InvalidRequestException({'detail': translate_to_language('Payment could not be completed at the moment', language)})
 
             payment_reference = response.get('payment_intent')
             if not payment_reference:
