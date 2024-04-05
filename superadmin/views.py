@@ -61,7 +61,7 @@ class TutorListAPIVIew(APIView, AdminPagination):
         diploma_type = request.GET.get("disploma_type")
         date_from = request.GET.get("date_from")
         date_to = request.GET.get("date_to")
-        tutor_status = request.GET.get("status")
+        tutor_status = request.GET.get("tutor_status")
 
         if pk:
             queryset = get_object_or_404(Profile, id=pk, account_type="tutor")
