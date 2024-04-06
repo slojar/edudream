@@ -227,6 +227,7 @@ class LanguageListAPIView(ListAPIView):
     permission_classes = [IsAdminUser]
     queryset = Language.objects.all().order_by("-id")
     serializer_class = LanguageSerializerOut
+    pagination_class = AdminPagination
 
 
 class LanguageDeleteAPIView(DestroyAPIView):
