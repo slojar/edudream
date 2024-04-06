@@ -260,7 +260,7 @@ class AdminChangePasswordAPIView(APIView):
 
     @extend_schema(request=AdminChangePasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
-        serializer = AdminChangePasswordSerializerIn(data=request.data)
+        serializer = AdminChangePasswordSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
@@ -378,7 +378,7 @@ class AdminSubjectAPIView(ListCreateAPIView):
 
 
 class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = []
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializerOut
     lookup_field = "id"
