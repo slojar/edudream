@@ -161,7 +161,7 @@ class DisputeStatusUpdateSerializerIn(serializers.Serializer):
 class SiteSettingSerializerOut(serializers.ModelSerializer):
     class Meta:
         model = SiteSetting
-        exclude = ["site", "google_calendar_id", "google_redirect_url", "escrow_balance", "zoom_token"]
+        exclude = ["site", "google_calendar_id", "google_redirect_url", "zoom_token"]
 
 
 class UpdateSiteSettingsSerializerIn(serializers.Serializer):
