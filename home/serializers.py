@@ -607,6 +607,10 @@ class PaymentPlanSerializerOut(serializers.ModelSerializer):
 
 
 class ClassReviewSerializerOut(serializers.ModelSerializer):
+    submitted_by = serializers.CharField(source="submitted_by.get_full_name")
+    classroom_id = serializers.CharField(source="classroom.id")
+    classroom = serializers.CharField(source="classroom.name")
+
     class Meta:
         model = ClassReview
         exclude = []
