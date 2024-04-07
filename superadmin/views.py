@@ -350,7 +350,7 @@ class SiteSettingsAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        return SiteSettingSerializerOut(SiteSetting.objects.all().last(), context={"request": request}).data
+        return Response(SiteSettingSerializerOut(SiteSetting.objects.all().last(), context={"request": request}).data)
 
     def put(self, request):
         site_settings = SiteSetting.objects.all().last()
