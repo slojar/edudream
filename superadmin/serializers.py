@@ -7,11 +7,12 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import serializers
 
-from edudream.modules.choices import SEND_NOTIFICATION_TYPE_CHOICES, APPROVE_OR_DECLINE_CHOICES, DISPUTE_STATUS_CHOICES
+from edudream.modules.choices import SEND_NOTIFICATION_TYPE_CHOICES, APPROVE_OR_DECLINE_CHOICES, DISPUTE_STATUS_CHOICES, \
+    ADD_SUBTRACT_ACTION_CHOICES
 from edudream.modules.email_template import tutor_status_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import decrypt_text
+from edudream.modules.utils import decrypt_text, get_site_details
 from home.models import Notification, Transaction, SiteSetting
 from home.serializers import TutorListSerializerOut, NotificationSerializerOut
 from tutor.serializers import PayoutSerializerOut, DisputeSerializerOut
@@ -175,5 +176,35 @@ class UpdateSiteSettingsSerializerIn(serializers.Serializer):
         instance.enquiry_email = validated_data.get("enquiry_email", instance.enquiry_email)
         instance.save()
         return SiteSettingSerializerOut(instance, context={"request": self.context.get("request")})
+
+
+class WalletBalanceUpdateSerializerIn(serializers.Serializer):
+    amount = serializers.FloatField()
+    action = serializers.ChoiceField(choices=ADD_SUBTRACT_ACTION_CHOICES)
+
+    def update(self, instance, validated_data):
+        action = validated_data.get("action")
+        amount = validated_data.get("amount")
+
+        site_detail = get_site_details()
+        if action == "add":
+            # Subtract from escrow balance and credit user wallet
+            site_detail.escrow_balance -= amount
+            instance.balance += amount
+            # Create transaction
+            Transaction.objects.create(
+                user=instance.user, transaction_type="refund", amount=amount, status="completed",
+                narration="Dispute resolution from admin"
+            )
+            # Create Notification
+        else:
+            # Subtract from user wallet and credit escrow balance
+            instance.balance -= amount
+            site_detail.escrow_balance += amount
+            # Create Notification
+        instance.save()
+        site_detail.save()
+        return "Wallet balance updated"
+
 
 

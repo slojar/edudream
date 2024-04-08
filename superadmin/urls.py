@@ -32,6 +32,8 @@ urlpatterns = [
     path('sitesettings', views.SiteSettingsAPIView.as_view(), name="site-settings"),
     path('subject', views.AdminSubjectAPIView.as_view(), name="subjects"),
     path('subject/<int:id>', views.AdminSubjectDetailAPIView.as_view(), name="subject-detail"),
+    path('update-wallet/<int:pk>', views.UpdateWalletBalance.as_view(), name="wallet-update"),
+
 
 ]
 

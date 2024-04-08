@@ -12,14 +12,14 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import AdminPagination
-from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting, Subject
+from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting, Subject, Wallet
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
     PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut, SubjectSerializerOut
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
     AdminChangePasswordSerializerIn, ApproveDeclinePayoutSerializerIn, DisputeStatusUpdateSerializerIn, \
-    UpdateSiteSettingsSerializerIn, SiteSettingSerializerOut
+    UpdateSiteSettingsSerializerIn, SiteSettingSerializerOut, WalletBalanceUpdateSerializerIn
 from tutor.models import Classroom, PayoutRequest, Dispute
 from tutor.serializers import ClassRoomSerializerOut, PayoutSerializerOut, DisputeSerializerOut
 
@@ -382,6 +382,18 @@ class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializerOut
     lookup_field = "id"
+
+
+class UpdateWalletBalance(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(request=WalletBalanceUpdateSerializerIn, responses={status.HTTP_200_OK})
+    def put(self, request, pk):
+        wallet = get_object_or_404(Wallet, id=pk)
+        serializer = WalletBalanceUpdateSerializerIn(instance=wallet, data=request.data, context={'request': request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
+        response = serializer.save()
+        return Response(response)
 
 
 

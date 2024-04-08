@@ -78,3 +78,6 @@ TUTOR_STATUS_CHOICES = (
     ("pending", "Pending"), ("approved", "Approved"), ("declined", "Declined")
 )
 
+ADD_SUBTRACT_ACTION_CHOICES = (
+    ("add", "Addition"), ("subtract", "Subtraction")
+)

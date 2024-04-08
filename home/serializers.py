@@ -37,6 +37,7 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     email = serializers.CharField(source="user.email")
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
+    wallet = serializers.SerializerMethodField()
 
     def get_tutor_languages(self, obj):
         if UserLanguage.objects.filter(user__profile=obj).exists():
@@ -45,6 +46,10 @@ class TutorListSerializerOut(serializers.ModelSerializer):
 
     def get_detail(self, obj):
         return TutorDetailSerializerOut(TutorDetail.objects.get(user__profile=obj), context={"request": self.context.get("request")}).data
+
+    def get_wallet(self, obj):
+        wallet = Wallet.objects.filter(user=obj.user).last()
+        return {"id": wallet.id, "balance": wallet.balance, "approximate_hours": round(float(wallet.balance) / 7.5)}
 
     class Meta:
         model = Profile
@@ -68,8 +73,8 @@ class ProfileSerializerOut(serializers.ModelSerializer):
         return None
 
     def get_wallet(self, obj):
-        balance = Wallet.objects.filter(user=obj.user).last().balance
-        return {"balance": balance, "approximate_hours": round(float(balance) / 7.5)}
+        wallet = Wallet.objects.filter(user=obj.user).last()
+        return {"id": wallet.id, "balance": wallet.balance, "approximate_hours": round(float(wallet.balance) / 7.5)}
 
     class Meta:
         model = Profile
