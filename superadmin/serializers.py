@@ -1,3 +1,4 @@
+import decimal
 from threading import Thread
 
 from django.contrib.auth import authenticate
@@ -184,7 +185,7 @@ class WalletBalanceUpdateSerializerIn(serializers.Serializer):
 
     def update(self, instance, validated_data):
         action = validated_data.get("action")
-        amount = validated_data.get("amount")
+        amount = decimal.Decimal(validated_data.get("amount"))
 
         site_detail = get_site_details()
         if action == "add":
