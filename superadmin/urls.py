@@ -29,6 +29,11 @@ urlpatterns = [
     path('update-payout/<int:pk>', views.ApprovePayoutRequestAPIView.as_view(), name="approve-decline-payout"),
     path('dispute', views.DisputeAPIView.as_view(), name="dispute"),
     path('dispute/<int:pk>', views.DisputeAPIView.as_view(), name="dispute-detail"),
+    path('sitesettings', views.SiteSettingsAPIView.as_view(), name="site-settings"),
+    path('subject', views.AdminSubjectAPIView.as_view(), name="subjects"),
+    path('subject/<int:id>', views.AdminSubjectDetailAPIView.as_view(), name="subject-detail"),
+    path('update-wallet/<int:pk>', views.UpdateWalletBalance.as_view(), name="wallet-update"),
+
 
 ]
 

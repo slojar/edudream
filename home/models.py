@@ -107,6 +107,8 @@ class Notification(models.Model):
     message = models.CharField(max_length=500)
     read = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
+    admin_initiated = models.BooleanField(default=False)
+    users_type = models.CharField(max_length=50, null=True, default="all")
 
     def __str__(self):
         return f"{self.id}"
@@ -201,7 +203,6 @@ class ClassReview(models.Model):
 class Testimonial(models.Model):
     title = models.CharField(max_length=50)
     name = models.CharField(max_length=300)
-    language = models.CharField(max_length=100, default="english")
     content = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)

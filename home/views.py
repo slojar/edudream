@@ -3,7 +3,6 @@ import ast
 from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -17,7 +16,7 @@ from edudream.modules.cron import zoom_login_refresh, payout_cron_job
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details
+from edudream.modules.utils import complete_payment, get_site_details, translate_to_language
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -35,7 +34,7 @@ class SignUpAPIView(APIView):
     @extend_schema(request=SignUpSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = SignUpSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response(response)
 
@@ -46,10 +45,11 @@ class LoginAPIView(APIView):
     @extend_schema(request=LoginSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = LoginSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response({
-            "detail": "Login Successful", "data": UserSerializerOut(user, context={"request": request}).data,
+            "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
+            "data": UserSerializerOut(user, context={"request": request}).data,
             "access_token": f"{AccessToken.for_user(user)}"
         })
 
@@ -60,7 +60,7 @@ class EmailVerificationLinkView(APIView):
     @extend_schema(request=EmailVerificationSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = EmailVerificationSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -71,7 +71,7 @@ class RequestEmailVerificationLinkView(APIView):
     @extend_schema(request=RequestVerificationLinkSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = RequestVerificationLinkSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -87,10 +87,11 @@ class ProfileAPIView(APIView):
     def put(self, request):
         instance = get_object_or_404(Profile, user=request.user)
         serializer = ProfileSerializerIn(instance=instance, data=request.data, context={'request': request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response(
-            {"detail": "Profile updated", "data": UserSerializerOut(user, context={"request": request}).data})
+            {"detail": translate_to_language("Profile updated", request.data.get("lang", "en")),
+             "data": UserSerializerOut(user, context={"request": request}).data})
 
 
 class ChangePasswordAPIView(APIView):
@@ -99,7 +100,7 @@ class ChangePasswordAPIView(APIView):
     @extend_schema(request=ChangePasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = ChangePasswordSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -118,13 +119,14 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         date_from = request.GET.get("date_from")
         date_to = request.GET.get("date_to")
         trans_status = request.GET.get("status")
+        lang = request.GET.get("lang", "en")
 
         query = Q(user=request.user)
 
         if pk:
             queryset = get_object_or_404(Transaction, id=pk, user=request.user)
             serializer = TransactionSerializerOut(queryset).data
-            return Response({"detail": "Success", "data": serializer})
+            return Response({"detail": translate_to_language("Success", lang), "data": serializer})
 
         if amount_to and amount_from:
             query &= Q(amount__range=[amount_from, amount_to])
@@ -141,7 +143,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Transaction.objects.filter(query).exclude(status="pending"), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": "Success", "data": response})
+        return Response({"detail": translate_to_language("Success", lang), "data": response})
 
 
 # @extend_schema_view(get=extend_schema(parameters=[
@@ -152,7 +154,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
     @extend_schema(request=ChatMessageSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = ChatMessageSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -162,6 +164,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
     def get(self, request):
         receiver_id = request.GET.get("receiver_id")
         search = request.GET.get("search")
+        lang = request.GET.get("lang", "en")
         sender = request.user
         # Fetch messages
         query = Q(sender_id__in=[sender.id, receiver_id], receiver_id__in=[receiver_id, sender.id])
@@ -172,7 +175,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": "Chat retrieved", "data": response})
+        return Response({"detail": translate_to_language("Chat retrieved", lang), "data": response})
 
 
 class PaymentPlanListAPIView(ListAPIView):
@@ -187,7 +190,7 @@ class SubmitReviewAPIView(APIView):
     @extend_schema(request=ClassReviewSerializerIn, responses={status.HTTP_201_CREATED})
     def post(self, request):
         serializer = ClassReviewSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -200,7 +203,7 @@ class VerifyPaymentAPIView(APIView):
         site_setting = get_site_details()
         frontend_base_url = site_setting.frontend_url
         reference = request.GET.get("reference")
-        language = request.GET.get("lang")
+        language = request.GET.get("lang", "en")
         success, response = complete_payment(reference)
         if success is False:
             return HttpResponseRedirect(
@@ -224,6 +227,7 @@ class TutorListAPIView(APIView, CustomPagination):
         grade = request.GET.get("grade")  # Subject grades
         diploma_type = request.GET.get("diploma_type")  # diploma_type
         university_name = request.GET.get("university_name")  # university_name
+        lang = request.GET.get("lang", "en")
 
         query = Q(account_type="tutor", active=True)
 
@@ -245,7 +249,7 @@ class TutorListAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": "Tutor retrieved", "data": response})
+        return Response({"detail": translate_to_language("Tutor retrieved", lang), "data": response})
 
 
 class LanguageListAPIView(ListAPIView):
@@ -269,6 +273,7 @@ class NotificationAPIView(APIView, CustomPagination):
     @extend_schema(parameters=[OpenApiParameter(name="readall", type=str)])
     def get(self, request, pk=None):
         readall = request.GET.get("readall")
+        lang = request.GET.get("lang", "en")
         query = Notification.objects.filter(user__in=[request.user])
         if pk:
             query = Notification.objects.filter(id=pk, user__in=[request.user])
@@ -279,7 +284,7 @@ class NotificationAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]).order_by("-id"), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": "Success", "data": response})
+        return Response({"detail": translate_to_language("Success", lang), "data": response})
 
 
 class UploadProfilePictureAPIView(APIView):
@@ -288,7 +293,7 @@ class UploadProfilePictureAPIView(APIView):
     @extend_schema(request=UploadProfilePictureSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = UploadProfilePictureSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
@@ -299,19 +304,16 @@ class FeedBackAndConsultationAPIView(APIView):
     @extend_schema(request=FeedbackAndConsultationSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = FeedbackAndConsultationSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 
 
-@extend_schema(parameters=[OpenApiParameter(name="language", type=str)])
+@extend_schema(parameters=[OpenApiParameter(name="lang", type=str)])
 class TestimonialListAPIView(ListAPIView):
     permission_classes = []
+    queryset = Testimonial.objects.all().order_by("?")
     serializer_class = TestimonialSerializerOut
-
-    def get_queryset(self):
-        lang = self.request.GET.get("language", "french")
-        return Testimonial.objects.filter(language=lang).order_by("?")
 
 
 @extend_schema(parameters=[OpenApiParameter(name="tutor_id", type=str)])
@@ -330,7 +332,7 @@ class RequestOTPView(APIView):
     @extend_schema(request=RequestOTPSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = RequestOTPSerializerIn(data=request.data, context={"request": request})
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         # return Response({"detail": response})
         return Response(response)
@@ -342,7 +344,7 @@ class ForgotPasswordView(APIView):
     @extend_schema(request=ForgotPasswordSerializerIn, responses={status.HTTP_200_OK})
     def post(self, request):
         serializer = ForgotPasswordSerializerIn(data=request.data)
-        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors)
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
         return Response({"detail": response})
 

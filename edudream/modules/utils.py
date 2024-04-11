@@ -394,7 +394,7 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
         return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
 
 
-def translate_to_language(content, language):
+def translate_to_language(content, language="en"):
     translator = Translator(to_lang=language)
     translated_content = translator.translate(content)
     return translated_content
