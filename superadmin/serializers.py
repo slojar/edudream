@@ -24,13 +24,15 @@ class TutorStatusSerializerIn(serializers.Serializer):
     declined = serializers.BooleanField(required=False)
 
     def update(self, instance, validated_data):
-        decline = validated_data.get("decline", False)
+        decline = validated_data.get("declined", False)
         tutor_detail = instance.user.tutordetail
         instance.active = validated_data.get("active", instance.active)
         if decline:
             tutor_detail.status = "declined"
+            instance.active = False
         if instance.active:
             tutor_detail.status = "approved"
+            instance.active = True
             # Send Email
             instance.approved_on = timezone.now()
             Thread(target=tutor_status_email, args=[instance.user]).start()
