@@ -395,9 +395,10 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
 
 
 def translate_to_language(content, language="en"):
-    translator = Translator(to_lang=language)
-    translated_content = translator.translate(content)
-    return translated_content
+    # translator = Translator(to_lang=language)
+    # translated_content = translator.translate(content)
+    # return translated_content
+    return content
 
 
 def create_notification(user, text):
