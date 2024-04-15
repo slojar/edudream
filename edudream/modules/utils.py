@@ -14,11 +14,9 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
-from translate import Translator
-
 from home.models import SiteSetting, Transaction, Notification
 from location.models import City, State, Country
-
+from edudream.modules.translator import Translate
 from edudream.modules.stripe_api import StripeAPI
 
 email_from = settings.EMAIL_FROM
@@ -395,10 +393,10 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
 
 
 def translate_to_language(content, language="en"):
-    # translator = Translator(to_lang=language)
-    # translated_content = translator.translate(content)
-    # return translated_content
-    return content
+    response = content
+    if language != "en":
+        response = Translate.perform_translate(to_lang=language, content=content)
+    return response
 
 
 def create_notification(user, text):
