@@ -58,6 +58,9 @@ class Classroom(models.Model):
     student_left_at = models.DateTimeField(blank=True, null=True)
     decline_reason = models.CharField(max_length=300, blank=True, null=True)
     subjects = models.ForeignKey("home.Subject", on_delete=models.SET_NULL, null=True, blank=True)
+    pending_balance_paid = models.BooleanField(default=False)
+    tutor_payment_expected = models.DateTimeField(blank=True, null=True)
+    tutor_paid = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 

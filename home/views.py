@@ -12,7 +12,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.filters import SearchFilter
 
-from edudream.modules.cron import zoom_login_refresh, payout_cron_job
+from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_reminder_job, \
+    class_fee_to_tutor_pending_balance_job, process_pending_balance_to_main_job
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
@@ -431,6 +432,30 @@ class PayoutProcessingCronAPIView(APIView):
 
     def get(self, request):
         payout_cron_job()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class ClassEventReminderCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        class_reminder_job()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class UpdateTutorPendingBalanceCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        class_fee_to_tutor_pending_balance_job()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class UpdateTutorMainBalanceCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        process_pending_balance_to_main_job()
         return JsonResponse({"detail": "Cron Ran Successfully"})
 
 
