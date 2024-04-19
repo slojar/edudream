@@ -344,5 +344,59 @@ def send_welcome_email(user_profile, lang):
     return True
 
 
+def send_class_reminder_email(user, classroom, minu, lang):
+    first_name = user.first_name
+    if not user.first_name:
+        first_name = "EduDream User"
+    email = user.email
 
+    message = f"Dear {first_name}, <br><br>A classroom will start in the next {minu} minute(s)" \
+              f"<br>Class Name: <strong>{classroom.name}</strong>" \
+              f"<br>Tutor Name: <strong>{classroom.tutor.get_full_name()}</strong>"
+    if minu == 0:
+        message = f"Dear {first_name}, <br><br>A classroom {classroom.name} with {classroom.tutor.get_full_name()} " \
+                  f"is starting now." \
+
+    subject = f"Class Reminder"
+    translated_content = translate_to_language(message, lang)
+    translated_subject = translate_to_language(subject, lang)
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
+def send_fund_pending_balance_email(user, classroom, lang):
+    first_name = user.first_name
+    if not user.first_name:
+        first_name = "EduDream Tutor"
+    email = user.email
+
+    message = f"Dear {first_name}, <br><br>Congratulations! Your fund for completed class is now pending, " \
+              f"and will reflect in your main balance after 7 days" \
+              f"<br>Class Name: <strong>{classroom.name}</strong>" \
+
+    subject = f"Fund on the way"
+    translated_content = translate_to_language(message, lang)
+    translated_subject = translate_to_language(subject, lang)
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
+def send_fund_main_balance_email(user, classroom, lang):
+    first_name = user.first_name
+    if not user.first_name:
+        first_name = "EduDream Tutor"
+    email = user.email
+
+    message = f"Dear {first_name}, <br><br>Congratulations! Your fund for completed class is now moved to " \
+              f"your main balance, " \
+              f"<br>Class Name: <strong>{classroom.name}</strong>" \
+
+    subject = f"Payment to wallet"
+    translated_content = translate_to_language(message, lang)
+    translated_subject = translate_to_language(subject, lang)
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
 

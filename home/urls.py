@@ -38,6 +38,9 @@ urlpatterns = [
     # CRON-JOBS
     path('refresh-zoom', views.RefreshZoomTokenCronAPIView.as_view(), name="zoom-refresh"),
     path('payout', views.PayoutProcessingCronAPIView.as_view(), name="payout"),
+    path('reminder', views.ClassEventReminderCronAPIView.as_view(), name="reminder"),
+    path('pending-balance', views.UpdateTutorPendingBalanceCronAPIView.as_view(), name="pending-balance"),
+    path('main-balance', views.UpdateTutorMainBalanceCronAPIView.as_view(), name="main-balance"),
     # path('payout', views.PayoutProcessingCronAPIView.as_view(), name="payout"),
 
     # WEBHOOK

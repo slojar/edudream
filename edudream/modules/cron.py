@@ -1,13 +1,16 @@
-import datetime
+from threading import Thread
 
 import requests
 from django.conf import settings
+from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
+from edudream.modules.email_template import send_class_reminder_email, send_fund_pending_balance_email, \
+    send_fund_main_balance_email
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import decrypt_text
+from edudream.modules.utils import decrypt_text, log_request, get_site_details
 from home.models import Transaction
-from tutor.models import PayoutRequest
+from tutor.models import PayoutRequest, Classroom
 
 zoom_auth_url = settings.ZOOM_AUTH_URL
 zoom_client_id = settings.ZOOM_CLIENT_ID
@@ -21,37 +24,132 @@ def zoom_login_refresh():
 
 
 def payout_cron_job():
-    last_7_days = datetime.datetime.now() - datetime.timedelta(days=7)
-    payouts = PayoutRequest.objects.filter(status="pending", created_on__gte=last_7_days)
-    for instance in payouts:
-        amount = float(instance.amount)
-        # Check stripe balance
-        # balance = StripeAPI.get_account_balance()
-        # new_balance = float(balance / 100)
-        # if amount > new_balance:
-        #     break
-            # raise InvalidRequestException({"detail": "Cannot process payout at the moment, please try again later"})
-        stripe_connect_account_id = decrypt_text(instance.user.profile.stripe_connect_account_id)
-        narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
+    # This cron to run every 60 minute
+    payouts = PayoutRequest.objects.filter(status="pending")
+    try:
+        for instance in payouts:
+            user_wallet = instance.user.wallet
+            coin = instance.coin
+            amount = float(instance.amount)
+            # Check stripe balance
+            balance = StripeAPI.get_account_balance()
+            new_balance = float(balance / 100)
+            if amount > new_balance:
+                log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
+                break
+            stripe_connect_account_id = decrypt_text(instance.user.profile.stripe_connect_account_id)
+            narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
 
-        # Process Transfer
-        response = StripeAPI.transfer_to_connect_account(amount=amount, acct=stripe_connect_account_id, desc=narration)
-        payout_trx_ref = response.get("id")
-        instance.reference = payout_trx_ref
-        # Create Transaction
-        transaction = Transaction.objects.create(
-            user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
-        )
-        stripe_external_account_id = decrypt_text(instance.bank_account.stripe_external_account_id)
-        payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
-        if payout_response.get("failure_message") is None and payout_response.get("id"):
-            instance.status = "processed"
-            transaction.status = "completed"
-            transaction.reference = str(payout_response.get("id"))
-            # Send payout email
-        # Update transaction/payout status
-        instance.save()
-        transaction.save()
+            # Process Transfer
+            response = StripeAPI.transfer_to_connect_account(amount=amount, acct=stripe_connect_account_id, desc=narration)
+            payout_trx_ref = response.get("id")
+            instance.reference = payout_trx_ref
+            # Create Transaction
+            transaction = Transaction.objects.create(
+                user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
+            )
+            stripe_external_account_id = decrypt_text(instance.bank_account.stripe_external_account_id)
+            payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
+            if payout_response.get("failure_message") is None and payout_response.get("id"):
+                instance.status = "processed"
+                transaction.status = "completed"
+                transaction.reference = str(payout_response.get("id"))
+                user_wallet.refresh_from_db()
+                # Subtract Coin
+                user_wallet.balance -= coin
+                user_wallet.save()
+                # Send payout email
+            # Update transaction/payout status
+            instance.save()
+            transaction.save()
+    except Exception as err:
+        log_request(f"Error processing payouts: {err}")
 
     return True
+
+
+def class_reminder_job():
+    # This cron to run every minute
+    now = timezone.now()
+    notification_60min_time = now + timezone.timedelta(minutes=60)
+    notification_15min_time = now + timezone.timedelta(minutes=15)
+    notification_0min_time = now
+
+    classrooms_60min = Classroom.objects.filter(status="accepted", start_date=notification_60min_time)
+    classrooms_15min = Classroom.objects.filter(status="accepted", start_date=notification_15min_time)
+    classrooms_0min = Classroom.objects.filter(status="accepted", start_date=notification_0min_time)
+
+    if classrooms_60min:
+        # Send 60 minute reminder
+        for class_room in classrooms_60min:
+            student_user = class_room.student.user
+            Thread(target=send_class_reminder_email, args=[student_user, class_room, 60, "fr"]).start()
+    if classrooms_15min:
+        # Send 15 minute reminder
+        for class_room in classrooms_15min:
+            student_user = class_room.student.user
+            Thread(target=send_class_reminder_email, args=[student_user, class_room, 15, "fr"]).start()
+    if classrooms_0min:
+        # Send 0 minute reminder
+        for class_room in classrooms_0min:
+            student_user = class_room.student.user
+            Thread(target=send_class_reminder_email, args=[student_user, class_room, 0, "fr"]).start()
+
+    return True
+
+
+def class_fee_to_tutor_pending_balance_job():
+    # This cron to run every 60 minute
+    classrooms = Classroom.objects.filter(status="completed", pending_balance_paid=False)
+    # Update tutor wallet with class coin/amount
+    try:
+        now = timezone.now()
+        next_7_days = now + timezone.timedelta(days=7)
+        d_site = get_site_details()
+        for classroom in classrooms:
+            amount = classroom.amount
+            user_wallet = classroom.tutor.wallet
+            esrow_balance = d_site.escrow_balance
+            # Subtract from escrow balance
+            esrow_balance -= amount
+            user_wallet.refresh_from_db()
+            # Add to tutor's pending balance
+            user_wallet.pending += amount
+            user_wallet.save()
+            classroom.pending_balance_paid = True
+            classroom.tutor_payment_expected = next_7_days
+            classroom.save()
+            # Send fund on the way email to tutor
+            Thread(target=send_fund_pending_balance_email, args=[classroom.tutor, classroom, "fr"]).start()
+    except Exception as err:
+        log_request(f"Error processining pending fund {err}")
+
+    return True
+
+
+def process_pending_balance_to_main_job():
+    # This cron to run every 4 hrs
+    now = timezone.now()
+    classrooms = Classroom.objects.filter(
+        status="completed", pending_balance_paid=True, tutor_payment_expected__lte=now, tutor_paid=False
+    )
+    try:
+        for classroom in classrooms:
+            amount = classroom.amount
+            user_wallet = classroom.tutor.wallet
+            user_wallet.refresh_from_db()
+            # Subtract amount from pending balance
+            user_wallet.pending -= amount
+            # Add amount to main balance
+            user_wallet.balance += amount
+            user_wallet.save()
+            classroom.tutor_paid = True
+            classroom.save()
+            # Send classroom payment email to tutor
+            Thread(target=send_fund_main_balance_email, args=[classroom.tutor, classroom, "fr"]).start()
+    except Exception as err:
+        log_request(f"Error occurred while processing pending balance to main: {err}")
+    return True
+
+
 
