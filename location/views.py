@@ -7,7 +7,7 @@ from edudream.modules.paginations import CustomPagination
 from .models import *
 from rest_framework.views import APIView
 from .serializers import CountrySerializer, StateSerializer
-from rest_framework import generics
+from rest_framework import generics, filters
 
 from edudream.modules.utils import create_country_state_city
 
@@ -17,6 +17,8 @@ class CountryListAPIView(generics.ListAPIView):
     serializer_class = CountrySerializer
     # queryset = Country.objects.filter(active=True)
     queryset = Country.objects.all()
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name"]
 
 
 @extend_schema_view(
