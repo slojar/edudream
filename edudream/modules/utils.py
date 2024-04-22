@@ -395,7 +395,7 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
 def translate_to_language(content, language="en"):
     response = content
     if language != "en":
-        response = Translate.perform_translate(to_lang=language, content=content)
+        response = Translate.perform_translate_deepl(to_lang=language, content=content)
     return response
 
 
