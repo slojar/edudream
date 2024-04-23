@@ -9,7 +9,7 @@ from edudream.modules.email_template import send_class_reminder_email, send_fund
     send_fund_main_balance_email
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text, log_request, get_site_details
-from home.consumers import ClassroomConsumer
+# from home.consumers import ClassroomConsumer
 from home.models import Transaction
 from tutor.models import PayoutRequest, Classroom
 
@@ -158,10 +158,12 @@ def check_ended_classrooms():
     ended_classrooms = Classroom.objects.filter(end_time__lte=now)
     for classroom in ended_classrooms:
         # Push notification to connected WebSocket clients
-        ClassroomConsumer().send_notification({
-            'type': 'classroom.ended',
-            'classroom_id': classroom.id,
-            'message': f'Classroom {classroom.name} has ended.'
-        })
+        # ClassroomConsumer().send_notification({
+        #     'type': 'classroom.ended',
+        #     'classroom_id': classroom.id,
+        #     'message': f'Classroom {classroom.name} has ended.'
+        # })
+        ...
+    return True
 
 
