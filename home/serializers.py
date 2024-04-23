@@ -490,6 +490,10 @@ class ProfileSerializerIn(serializers.Serializer):
 
         if instance.account_type == "tutor":
             tutor_detail = TutorDetail.objects.get(user=user)
+            tutor_detail.high_school_attended = validated_data.get("high_school_attended", tutor_detail.high_school_attended)
+            tutor_detail.high_school_subject = validated_data.get("high_school_subject", tutor_detail.high_school_subject)
+            tutor_detail.diploma_type = validated_data.get("diploma_type", tutor_detail.diploma_type)
+            tutor_detail.proficiency_test_type = validated_data.get("proficiency_test_type", tutor_detail.proficiency_test_type)
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
             tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
