@@ -466,6 +466,16 @@ class ProfileSerializerIn(serializers.Serializer):
     allow_intro_call = serializers.BooleanField(required=False)
     max_hour_class_hour = serializers.IntegerField(required=False)
 
+    high_school_attended = serializers.CharField(required=False)
+    high_school_subject = serializers.CharField(required=False)
+    diploma_type = serializers.CharField(required=False)
+    proficiency_test_type = serializers.CharField(required=False)
+    university_name = serializers.CharField(required=False)
+    education_status = serializers.CharField(required=False)
+    discipline = serializers.CharField(required=False)
+    diploma_grade = serializers.CharField(required=False)
+    proficiency_test_grade = serializers.CharField(required=False)
+
     def update(self, instance, validated_data):
         user = validated_data.get("user")
         lang = validated_data.get("lang", "en")
