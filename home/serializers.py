@@ -491,11 +491,9 @@ class ProfileSerializerIn(serializers.Serializer):
         if city_id:
             city = get_object_or_404(City, id=city_id)
             instance.city = city
-        user.save()
-        instance.save()
 
         if instance.account_type == "tutor":
-            tutor_detail = TutorDetail.objects.get(user=user)
+            tutor_detail = TutorDetail.objects.filter(user=user).last()
             tutor_detail.high_school_attended = validated_data.get("high_school_attended", tutor_detail.high_school_attended)
             tutor_detail.high_school_subject = validated_data.get("high_school_subject", tutor_detail.high_school_subject)
             tutor_detail.diploma_type = validated_data.get("diploma_type", tutor_detail.diploma_type)
@@ -532,6 +530,8 @@ class ProfileSerializerIn(serializers.Serializer):
                     except Exception as err:
                         log_request(f"Error on User Language Creation: {err}")
                         pass
+        user.save()
+        instance.save()
 
         return user
 
