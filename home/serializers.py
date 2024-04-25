@@ -450,6 +450,8 @@ class ProfileSerializerIn(serializers.Serializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     address = serializers.CharField(max_length=300, required=False)
     mobile_number = serializers.CharField(max_length=20, required=False)
+    diploma_file = serializers.FileField(required=False)
+    proficiency_test_file = serializers.FileField(required=False)
     first_name = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     last_name = serializers.CharField(required=False)
@@ -458,10 +460,21 @@ class ProfileSerializerIn(serializers.Serializer):
     state_id = serializers.IntegerField(required=False)
     country_id = serializers.IntegerField(required=False)
     bio = serializers.CharField(required=False)
+    languages = serializers.CharField(required=False)
     max_student = serializers.IntegerField(required=False)
     subject = serializers.ListSerializer(required=False, child=serializers.IntegerField())
     allow_intro_call = serializers.BooleanField(required=False)
     max_hour_class_hour = serializers.IntegerField(required=False)
+
+    high_school_attended = serializers.CharField(required=False)
+    high_school_subject = serializers.CharField(required=False)
+    diploma_type = serializers.CharField(required=False)
+    proficiency_test_type = serializers.CharField(required=False)
+    university_name = serializers.CharField(required=False)
+    education_status = serializers.CharField(required=False)
+    discipline = serializers.CharField(required=False)
+    diploma_grade = serializers.CharField(required=False)
+    proficiency_test_grade = serializers.CharField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -470,6 +483,9 @@ class ProfileSerializerIn(serializers.Serializer):
         state_id = validated_data.get("state_id")
         city_id = validated_data.get("city_id")
         subjects = validated_data.get("subject")
+        languages = validated_data.get("languages")
+        diploma_file = validated_data.get("diploma_file")
+        proficiency_test_file = validated_data.get("proficiency_test_file")
 
         instance.address = validated_data.get('address', instance.address)
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
@@ -485,20 +501,47 @@ class ProfileSerializerIn(serializers.Serializer):
         if city_id:
             city = get_object_or_404(City, id=city_id)
             instance.city = city
-        user.save()
-        instance.save()
 
         if instance.account_type == "tutor":
-            tutor_detail = TutorDetail.objects.get(user=user)
+            tutor_detail = TutorDetail.objects.filter(user=user).last()
+            tutor_detail.high_school_attended = validated_data.get("high_school_attended", tutor_detail.high_school_attended)
+            tutor_detail.high_school_subject = validated_data.get("high_school_subject", tutor_detail.high_school_subject)
+            tutor_detail.diploma_type = validated_data.get("diploma_type", tutor_detail.diploma_type)
+            tutor_detail.proficiency_test_type = validated_data.get("proficiency_test_type", tutor_detail.proficiency_test_type)
             tutor_detail.bio = validated_data.get("bio", tutor_detail.bio)
             tutor_detail.max_student_required = validated_data.get("max_student", tutor_detail.max_student_required)
             tutor_detail.allow_intro_call = validated_data.get("allow_intro_call", tutor_detail.allow_intro_call)
+            tutor_detail.university_name = validated_data.get("university_name", tutor_detail.university_name)
+            tutor_detail.education_status = validated_data.get("education_status", tutor_detail.education_status)
+            tutor_detail.discipline = validated_data.get("discipline", tutor_detail.discipline)
+            tutor_detail.diploma_grade = validated_data.get("diploma_grade", tutor_detail.diploma_grade)
+            tutor_detail.proficiency_test_grade = validated_data.get("proficiency_test_grade", tutor_detail.proficiency_test_grade)
+            if diploma_file:
+                tutor_detail.diploma_file = diploma_file
+            if proficiency_test_file:
+                tutor_detail.proficiency_test_file = proficiency_test_file
+
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
                     tutor_detail.subjects.add(subject)
             tutor_detail.save()
+
+            if languages:
+                for language in eval(languages):
+                    language_id = language["language_id"]
+                    language_proficiency = language["proficiency"]
+
+                    try:
+                        lang, _ = UserLanguage.objects.get_or_create(user=user, language_id=language_id)
+                        lang.proficiency = language_proficiency
+                        lang.save()
+                    except Exception as err:
+                        log_request(f"Error on User Language Creation: {err}")
+                        pass
+        user.save()
+        instance.save()
 
         return user
 
