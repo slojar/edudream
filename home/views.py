@@ -365,11 +365,38 @@ class RefreshZoomTokenCronAPIView(APIView):
 
 
 class ChatListAPIView(APIView):
-    permission_classes = [IsAuthenticated & (IsStudent | IsTutor)]
+    permission_classes = [IsAuthenticated & (IsStudent | IsTutor | IsParent)]
 
     def get(self, request):
         # Get all users logged in user can chat with
         result = list()
+        if IsParent:
+            all_classroom = Classroom.objects.filter(status__in=["accepted", "completed", "cancelled"],
+                                                     student__parent__user=request.user)
+            for tut in all_classroom:
+                message = None
+                date_created = None
+                if ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
+                                              receiver_id__in=[request.user.id, tut.tutor_id]).exists():
+                    chat = ChatMessage.objects.filter(sender_id__in=[request.user.id, tut.tutor_id],
+                                                      receiver_id__in=[request.user.id, tut.tutor_id]).last()
+                    message = str(chat.message)
+                    date_created = chat.created_on
+                image = None
+                if tut.tutor.profile.profile_picture:
+                    image = request.build_absolute_uri(tut.tutor.profile.profile_picture.url)
+                user_data = {
+                    "user_id": tut.tutor_id,
+                    "name": tut.tutor.get_full_name(),
+                    "image": image,
+                    "last_message": message,
+                    "date": date_created
+                }
+                user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
+
+                if not user_id_exists:
+                    result.append(user_data)
+
         if IsStudent:
             all_classroom = Classroom.objects.filter(status__in=["accepted", "completed", "cancelled"],
                                                      student__user=request.user)
