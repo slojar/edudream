@@ -389,7 +389,7 @@ class ChatListAPIView(APIView):
                     "user_id": tut.tutor_id,
                     "name": tut.tutor.get_full_name(),
                     "image": image,
-                    "last_message": message,
+                    "last_message": message or "",
                     "date": date_created
                 }
                 user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
@@ -416,7 +416,7 @@ class ChatListAPIView(APIView):
                     "user_id": tut.tutor_id,
                     "name": tut.tutor.get_full_name(),
                     "image": image,
-                    "last_message": message,
+                    "last_message": message or "",
                     "date": date_created
                 }
                 user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
@@ -443,7 +443,7 @@ class ChatListAPIView(APIView):
                     "user_id": stu.student.user_id,
                     "name": stu.student.user.get_full_name(),
                     "image": image,
-                    "last_message": message,
+                    "last_message": message or "",
                     "date": date_created
                 }
                 user_id_exists = any(d["user_id"] == user_data["user_id"] for d in result)
