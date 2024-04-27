@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.filters import SearchFilter
 
 from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_reminder_job, \
-    class_fee_to_tutor_pending_balance_job, process_pending_balance_to_main_job
+    class_fee_to_tutor_pending_balance_job, process_pending_balance_to_main_job, update_ended_classroom_jobs
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
@@ -24,7 +24,7 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
     PaymentPlanSerializerOut, ClassReviewSerializerIn, TutorListSerializerOut, LanguageSerializerOut, \
     SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
     FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn, \
-    EmailVerificationSerializerIn, RequestVerificationLinkSerializerIn
+    EmailVerificationSerializerIn, RequestVerificationLinkSerializerIn, UpdateEndedClassroomSerializerIn
 from tutor.models import Classroom
 from tutor.serializers import ClassRoomSerializerOut
 
@@ -350,20 +350,6 @@ class ForgotPasswordView(APIView):
         return Response({"detail": response})
 
 
-# CRON
-class RefreshZoomTokenCronAPIView(APIView):
-    permission_classes = []
-
-    def get(self, request):
-        from edudream.modules.utils import get_site_details, encrypt_text
-        d_site = get_site_details()
-        response = zoom_login_refresh()
-        access_token = response["access_token"]
-        d_site.zoom_token = encrypt_text(access_token)
-        d_site.save()
-        return JsonResponse({"detail": "Cron Ran Successfully"})
-
-
 class ChatListAPIView(APIView):
     permission_classes = [IsAuthenticated & (IsStudent | IsTutor | IsParent)]
 
@@ -454,6 +440,32 @@ class ChatListAPIView(APIView):
         return Response({"detail": "Success", "data": result})
 
 
+class UpdateEndedClassroomAPIView(APIView):
+    permission_classes = [IsAuthenticated & (IsParent | IsStudent | IsTutor)]
+
+    @extend_schema(request=UpdateEndedClassroomSerializerIn, responses={status.HTTP_200_OK})
+    def put(self, request, pk):
+        instance = get_object_or_404(Classroom, id=pk)
+        serializer = UpdateEndedClassroomSerializerIn(instance=instance, data=request.data, context={'request': request})
+        serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
+        response = serializer.save()
+        return Response({"detail": response})
+
+
+# CRON API VIEWS
+class RefreshZoomTokenCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        from edudream.modules.utils import get_site_details, encrypt_text
+        d_site = get_site_details()
+        response = zoom_login_refresh()
+        access_token = response["access_token"]
+        d_site.zoom_token = encrypt_text(access_token)
+        d_site.save()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
 class PayoutProcessingCronAPIView(APIView):
     permission_classes = []
 
@@ -483,6 +495,14 @@ class UpdateTutorMainBalanceCronAPIView(APIView):
 
     def get(self, request):
         process_pending_balance_to_main_job()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class UpdateEndedClassroomCronAPIView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        update_ended_classroom_jobs()
         return JsonResponse({"detail": "Cron Ran Successfully"})
 
 
