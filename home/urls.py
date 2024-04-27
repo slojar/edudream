@@ -31,6 +31,7 @@ urlpatterns = [
     path('feedback', views.FeedBackAndConsultationAPIView.as_view(), name="feedback"),
     path('testimonials', views.TestimonialListAPIView.as_view(), name="testimonial"),
     path('classroom', views.TutorClassroomListAPIView.as_view(), name="classroom"),
+    path('classroom/<int:pk>', views.UpdateEndedClassroomAPIView.as_view(), name="classroom-update"),
     path('request-otp', views.RequestOTPView.as_view(), name="request-otp"),
     path('reset-password', views.ForgotPasswordView.as_view(), name="reset-password"),
     path('chat-list', views.ChatListAPIView.as_view(), name="chat-list"),
@@ -41,6 +42,7 @@ urlpatterns = [
     path('reminder', views.ClassEventReminderCronAPIView.as_view(), name="reminder"),
     path('pending-balance', views.UpdateTutorPendingBalanceCronAPIView.as_view(), name="pending-balance"),
     path('main-balance', views.UpdateTutorMainBalanceCronAPIView.as_view(), name="main-balance"),
+    path('ended-classroom', views.UpdateEndedClassroomCronAPIView.as_view(), name="ended-classroom"),
     # path('payout', views.PayoutProcessingCronAPIView.as_view(), name="payout"),
 
     # WEBHOOK

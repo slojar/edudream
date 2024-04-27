@@ -2,6 +2,7 @@ from threading import Thread
 
 import requests
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
@@ -153,17 +154,14 @@ def process_pending_balance_to_main_job():
     return True
 
 
-def check_ended_classrooms():
+def update_ended_classroom_jobs():
+    # This cron to run every 1 hrs
+    query = Q(tutor_complete_check=True) | Q(student_complete_check=True)
     now = timezone.now()
-    ended_classrooms = Classroom.objects.filter(end_time__lte=now)
-    for classroom in ended_classrooms:
-        # Push notification to connected WebSocket clients
-        # ClassroomConsumer().send_notification({
-        #     'type': 'classroom.ended',
-        #     'classroom_id': classroom.id,
-        #     'message': f'Classroom {classroom.name} has ended.'
-        # })
-        ...
+    ended_classrooms = Classroom.objects.filter(query, status="accepted", end_time__lte=now)
+    # Mark classes as completed
+    if ended_classrooms:
+        ended_classrooms.update(status="completed")
     return True
 
 
