@@ -158,7 +158,7 @@ def update_ended_classroom_jobs():
     # This cron to run every 1 hrs
     query = Q(tutor_complete_check=True) | Q(student_complete_check=True)
     now = timezone.now()
-    ended_classrooms = Classroom.objects.filter(query, status="accepted", end_time__lte=now)
+    ended_classrooms = Classroom.objects.filter(query, status="accepted", end_date__lte=now)
     # Mark classes as completed
     if ended_classrooms:
         ended_classrooms.update(status="completed")
