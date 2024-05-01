@@ -96,7 +96,6 @@ class UserSerializerOut(serializers.ModelSerializer):
             tutor_list = list(dict.fromkeys(tutors))
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False)
-            # unresolved = [{"id": c_room.id, "name": c_room.name, "end_date": c_room.end_date} for c_room in ended_class]
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
@@ -111,7 +110,6 @@ class UserSerializerOut(serializers.ModelSerializer):
             students = Student.objects.filter(parent__user=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False)
-            # unresolved = [{"id": c_room.id, "name": c_room.name, "end_date": c_room.end_date} for c_room in ended_class]
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
@@ -124,7 +122,6 @@ class UserSerializerOut(serializers.ModelSerializer):
             classroom = Classroom.objects.filter(tutor=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, tutor_complete_check=False)
-            # unresolved = [{"id": c_room.id, "name": c_room.name, "end_date": c_room.end_date} for c_room in ended_class]
             return {
                 "total_subject": Subject.objects.filter(classroom__tutor__in=[obj]).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
