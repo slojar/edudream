@@ -3,8 +3,8 @@ import uuid
 import stripe
 from django.conf import settings
 
-# stripe.api_key = settings.STRIPE_API_KEY
-stripe.api_key = settings.STRIPE_PUBLISHABLE_KEY
+stripe.api_key = settings.STRIPE_API_KEY
+pk_key = settings.STRIPE_PUBLISHABLE_KEY
 
 
 class StripeAPI:
@@ -222,7 +222,7 @@ class StripeAPI:
         account_token = stripe.Token.create(
             account={
                 "individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
-                                    "email": str(user.email)}, "tos_shown_and_accepted": True, "business_type": "individual"},
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True, "business_type": "individual"}, api_key=pk_key
         )
         log_request(f'Account creation token response: {account_token}')
 
