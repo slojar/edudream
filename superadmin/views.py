@@ -4,7 +4,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView, \
-    RetrieveAPIView, ListCreateAPIView
+    RetrieveAPIView, ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -362,7 +362,7 @@ class SiteSettingsAPIView(APIView):
 
 @extend_schema(parameters=[OpenApiParameter(name="grade", type=str)])
 class AdminSubjectAPIView(ListCreateAPIView):
-    permission_classes = []
+    permission_classes = [IsAdminUser]
     pagination_class = AdminPagination
     serializer_class = SubjectSerializerOut
 
@@ -377,8 +377,8 @@ class AdminSubjectAPIView(ListCreateAPIView):
         return Subject.objects.filter(query).order_by("name")
 
 
-class AdminSubjectDetailAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = []
+class AdminSubjectDetailAPIView(RetrieveUpdateAPIView):
+    permission_classes = [IsAdminUser]
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializerOut
     lookup_field = "id"
