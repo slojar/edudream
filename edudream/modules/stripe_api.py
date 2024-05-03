@@ -3,7 +3,8 @@ import uuid
 import stripe
 from django.conf import settings
 
-stripe.api_key = settings.STRIPE_API_KEY
+# stripe.api_key = settings.STRIPE_API_KEY
+stripe.api_key = settings.STRIPE_PUBLISHABLE_KEY
 
 
 class StripeAPI:
