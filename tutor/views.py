@@ -64,8 +64,6 @@ class UpdateClassroomStatusAPIView(APIView):
     @extend_schema(request=ApproveDeclineClassroomSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
         instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
-        classroom = Classroom.objects.get(id=pk, tutor=request.user)
-        TutorCalendar.objects.filter(classroom=)
         serializer = ApproveDeclineClassroomSerializerIn(
             instance=instance, data=request.data, context={'request': request}
         )

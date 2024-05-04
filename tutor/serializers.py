@@ -300,7 +300,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.balance += amount
             parent_wallet.save()
             # Set Tutor Availability
-            TutorCalendar.objects.filter(classroom=instance).update(status="available")
+            instance.tutorcalendar_set.all().update(status="available")
+            # TutorCalendar.objects.filter(classroom=instance).update(status="available")
             # Create refund transaction
             Transaction.objects.create(
                 user=parent, transaction_type="refund", amount=amount, narration=f"Refund, {instance.description}",
