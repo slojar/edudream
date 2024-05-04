@@ -164,7 +164,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         class_amount = reoccur * (duration * subject_amount / 60)
 
         # Check Tutor availability
-        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
                                     status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": translate_to_language("Period booked by another user, please select another period", lang)})
 
@@ -299,6 +299,8 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.refresh_from_db()
             parent_wallet.balance += amount
             parent_wallet.save()
+            # Set Tutor Availability
+            TutorCalendar.objects.filter(classroom__in=[instance]).update(status="available")
             # Create refund transaction
             Transaction.objects.create(
                 user=parent, transaction_type="refund", amount=amount, narration=f"Refund, {instance.description}",
@@ -664,7 +666,7 @@ class IntroCallSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Tutor is not available at the selected period"})
 
         # Check Tutor availability
-        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date,
+        if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
                                     status__in=["new", "accepted"]).exists():
             raise InvalidRequestException({"detail": translate_to_language("Period booked by another user, please select another period", lang)})
 
