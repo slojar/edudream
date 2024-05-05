@@ -96,7 +96,7 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
 class CreateClassSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Logged in student
     name = serializers.CharField()
-    description = serializers.CharField()
+    description = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     tutor_id = serializers.IntegerField()
     calender_id = serializers.IntegerField()
