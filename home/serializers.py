@@ -351,8 +351,7 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.rest_period = rest_period
             if subjects:
                 tutor_detail.subjects.clear()
-                for subject_id in subjects:
-                    subject = Subject.objects.get(id=subject_id)
+                for subject in subjects:
                     tutor_detail.subjects.add(subject)
 
             tutor_detail.save()
@@ -534,8 +533,7 @@ class ProfileSerializerIn(serializers.Serializer):
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
-                for subject_id in subjects:
-                    subject = Subject.objects.get(id=subject_id)
+                for subject in subjects:
                     tutor_detail.subjects.add(subject)
             tutor_detail.save()
 
