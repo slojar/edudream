@@ -20,7 +20,7 @@ from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, 
 from location.models import Country, State, City
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
-from tutor.models import TutorDetail, Classroom, Dispute, TutorSubject
+from tutor.models import TutorDetail, Classroom, Dispute
 from tutor.serializers import TutorDetailSerializerOut, ClassRoomSerializerOut
 
 
@@ -350,10 +350,9 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
             if subjects:
-                # tutor_detail.subjects.clear()
+                tutor_detail.subjects.clear()
                 for subject in subjects:
-                    tutor_subject, _ = TutorSubject.objects.get_or_create(user=user, subject_id=subject)
-                    # tutor_detail.subjects.add(subject)
+                    tutor_detail.subjects.add(subject)
 
             tutor_detail.save()
             # Send Register Email to Tutor
@@ -533,10 +532,9 @@ class ProfileSerializerIn(serializers.Serializer):
 
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
-                # tutor_detail.subjects.clear()
+                tutor_detail.subjects.clear()
                 for subject in subjects:
-                    tutor_subject, _ = TutorSubject.objects.get_or_create(user=user, subject_id=subject)
-                    # tutor_detail.subjects.add(subject)
+                    tutor_detail.subjects.add(subject)
             tutor_detail.save()
 
             if languages:

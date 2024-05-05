@@ -28,6 +28,7 @@ class TutorDetail(models.Model):
     resume = models.FileField(upload_to="curriculum-vitaes", blank=True, null=True)
     status = models.CharField(max_length=50, choices=TUTOR_STATUS_CHOICES, default="pending")
     rest_period = models.IntegerField(default=10)
+    subjects = models.ManyToManyField("home.Subject")
     max_student_required = models.IntegerField(default=10)
     updated_on = models.DateTimeField(auto_now=True)
     allow_intro_call = models.BooleanField(default=True)
