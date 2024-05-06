@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
-from edudream.modules.permissions import IsTutor
+from edudream.modules.permissions import IsTutor, IsStudent, IsParent
 from edudream.modules.utils import translate_to_language
 from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
     TutorBankAccount
@@ -59,11 +59,20 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
 
 
 class UpdateClassroomStatusAPIView(APIView):
-    permission_classes = [IsAuthenticated & IsTutor]
+    permission_classes = [IsAuthenticated & (IsTutor | IsStudent | IsParent)]
 
     @extend_schema(request=ApproveDeclineClassroomSerializerIn, responses={status.HTTP_200_OK})
     def put(self, request, pk):
-        instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
+        action = request.data.get("action")
+        lang = request.GET.get("lang", "en")
+        if IsParent:
+            instance = get_object_or_404(Classroom, id=pk, student__parent__user=request.user)
+        elif IsStudent:
+            instance = get_object_or_404(Classroom, id=pk, student__user=request.user)
+        else:
+            instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
+        if action == "cancel" and (IsStudent or IsParent):
+            return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = ApproveDeclineClassroomSerializerIn(
             instance=instance, data=request.data, context={'request': request}
         )

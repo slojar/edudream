@@ -51,7 +51,7 @@ def tutor_class_approved_email(classroom, lang):
     if not tutor_name:
         tutor_name = "EduDream Tutor"
 
-    message = f"Dear {tutor_name}, <br><br>You have accepted to take the following class with " \
+    message = f"Dear {tutor_name}, <br><br>Classroom request accepted with " \
               f"<strong>{student_name}</strong><br>Class Name: <strong>{class_name}</strong><br>Class Link: " \
               f"<strong>{link}</strong><br>Class Fee: <strong>{amount}</strong>"
     subject = "Classroom Request Approved"
@@ -71,7 +71,7 @@ def student_class_approved_email(classroom, lang):
     if not student_name:
         student_name = "EduDream Student"
 
-    message = f"Dear {student_name}, <br><br>Your request to start the following class was approved by your tutor" \
+    message = f"Dear {student_name}, <br><br>Your request to start the following class was approved." \
               f"<br>Class Name: <strong>{class_name}</strong><br>Class Link: " \
               f"<strong>{link}</strong><br>Tutor Name: <strong>{tutor_name}</strong>"
     subject = "Classroom Request Approved"
@@ -90,7 +90,7 @@ def student_class_declined_email(classroom, lang):
     if not student_name:
         student_name = "EduDream Student"
 
-    message = f"Dear {student_name}, <br><br>Your request to start the following class was declined by the tutor" \
+    message = f"Dear {student_name}, <br><br>Your request to start the following class was declined" \
               f"<br>Class Name: <strong>{class_name}</strong>" \
               f"<br>Status: <strong>DECLINED</strong>" \
               f"<br>Decline Reason: <strong>{reason}</strong>"

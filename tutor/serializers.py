@@ -725,7 +725,6 @@ class CustomClassSerializerIn(serializers.Serializer):
         student = get_object_or_404(Student, user_id=student_id)
         subject = get_object_or_404(Subject, id=subject_id)
         d_site = get_site_details()
-        parent_wallet = student.parent.user.wallet
 
         # Get Duration
         start_date_convert = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S%z")
@@ -740,57 +739,18 @@ class CustomClassSerializerIn(serializers.Serializer):
         # Add grace period
         new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
 
-        # Check parent balance is available for class amount
-        balance = student.parent.user.wallet.balance
-        if class_amount > balance:
-            raise InvalidRequestException({"detail": translate_to_language("Student's wallet balance is too low for this action", lang)})
-
-        # Generate meeting link
-        tutor_email = user.email
-        tutor_name = user.get_full_name()
-        student_name = student.user.get_full_name()
-        student_email = student.parent.user.email
-        response = ZoomAPI.create_meeting(
-            start_date=str(start_date), duration=duration,
-            attending=[{"name": str(student_name), "email": str(student_email)},
-                       {"name": str(tutor_name), "email": str(tutor_email)}], narration=description,
-            title=name
-        )
-        zoom_meeting_id = response["id"]
-        link = response["join_url"]
-
-        # Debit parent wallet
-        parent_wallet.refresh_from_db()
-        parent_wallet.balance -= class_amount
-        parent_wallet.save()
-        # Check parent new wallet balance and compare coin threshold
-        parent_wallet.refresh_from_db()
-        if parent_wallet.balance < d_site.coin_threshold:
-            # Send low coin threshold email to parent
-            Thread(target=parent_low_threshold_email, args=[student.parent.user, parent_wallet.balance, lang]).start()
-
-        # Add amount to Escrow Balance
-        d_site.refresh_from_db()
-        d_site.escrow_balance += class_amount
-        d_site.save()
-        # Create transaction
-        Transaction.objects.create(
-            user=student.parent.user, transaction_type="course_payment", amount=class_amount, narration=description,
-            status="completed"
-        )
-
         # Create class for student
         classroom = Classroom.objects.create(
-            name=name, description=description, tutor=user, student=student, start_date=start_date, meeting_link=link,
-            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="accepted",
-            class_type="custom", meeting_id=zoom_meeting_id
+            name=name, description=description, tutor=user, student=student, start_date=start_date,
+            end_date=new_end_time, amount=class_amount, subjects=subject, expected_duration=duration, status="new",
+            class_type="custom"
         )
 
         # Create ChatMessage for CustomClass
         # ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
         chat_message = f"<p>Hi {student.user.get_full_name()}, &nbsp;I have just created a custom classroom.</p>" \
                        f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
-                       f"<p>Classroom Link: <a href='{link}' target='_blank' rel='noopener noreferrer'>{link}</a>&quot;</p>"
+                       f"<p>You can accept or reject this request from your classrooms on dashboard</p>"
         ChatMessage.objects.create(sender=user, receiver=student.user, message=translate_to_language(chat_message, lang))
 
         # Send meeting link to student
