@@ -74,7 +74,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     def get_wallet(self, obj):
         wallet = Wallet.objects.filter(user=obj.user).last()
-        return {"id": wallet.id, "balance": wallet.balance, "approximate_hours": round(float(wallet.balance) / 7.5)}
+        return {"id": wallet.id, "balance": wallet.balance, "expected_balance": wallet.pending, "approximate_hours": round(float(wallet.balance) / 7.5)}
 
     class Meta:
         model = Profile
