@@ -263,7 +263,7 @@ class SubjectListAPIView(ListAPIView):
     permission_classes = []
     queryset = Subject.objects.filter(active=True).order_by("name")
     serializer_class = SubjectSerializerOut
-    pagination_class = CustomPagination
+    # pagination_class = CustomPagination
     filter_backends = [SearchFilter]
     search_fields = ["name", "grade"]
 
