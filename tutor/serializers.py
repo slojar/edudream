@@ -15,12 +15,13 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
-    create_notification, translate_to_language
+    create_notification
 from home.models import Subject, Transaction, Profile, ChatMessage
 from location.models import Country
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute, TutorCalendar, TutorBankAccount, PayoutRequest, TutorSubject, \
     TutorSubjectDocument
+from django.utils.translation import gettext
 
 
 class TutorDetailSerializerOut(serializers.ModelSerializer):
@@ -42,6 +43,12 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
 
     def get_bank_accounts(self, obj):
         return TutorBankAccountSerializerOut(TutorBankAccount.objects.filter(user=obj.user), many=True).data
+
+    def get_subjects(self, obj):
+        if TutorSubject.objects.filter(user=obj.user).exists():
+            subject = TutorSubject.objects.filter(user=obj.user)
+            return TutorSubjectSerializerOut(subject, many=True, context={"request": self.context.get("request")}).data
+        return None
 
     class Meta:
         model = TutorDetail
@@ -146,7 +153,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         duration = (time_difference.days * 24 * 60) + (time_difference.seconds / 60).__round__()
 
         if duration < 30 or duration > 120:
-            raise InvalidRequestException({"detail": translate_to_language("Duration cannot be less than 30minutes or greater than 2hours", lang)})
+            raise InvalidRequestException({"detail": gettext("Duration cannot be less than 30minutes or greater than 2hours")})
 
         # Check if duration does not exceed tutor max hour
         # if duration > tutor_user.tutordetail.max_hour_class_hour:
@@ -157,7 +164,7 @@ class CreateClassSerializerIn(serializers.Serializer):
                 user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
                 time_from__hour=start_date_convert.hour, status="available"
         ):
-            raise InvalidRequestException({"detail": translate_to_language("Tutor is not available at the selected period", lang)})
+            raise InvalidRequestException({"detail": gettext("Tutor is not available at the selected period")})
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
@@ -166,7 +173,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
                                     status__in=["new", "accepted"]).exists():
-            raise InvalidRequestException({"detail": translate_to_language("Period booked by another user, please select another period", lang)})
+            raise InvalidRequestException({"detail": gettext("Period booked by another user, please select another period")})
 
         # Check if call occurred earlier. If yes, then add tutor rest period to start time
 
@@ -181,7 +188,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Check parent balance is available for class amount
         balance = student.parent.user.wallet.balance
         if class_amount > balance:
-            raise InvalidRequestException({"detail": translate_to_language("Insufficient balance, please top-up wallet", lang)})
+            raise InvalidRequestException({"detail": gettext("Insufficient balance, please top-up wallet")})
 
         # Create class for student
         # Add grace period
@@ -199,9 +206,9 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom, lang]).start()
         Thread(target=create_notification,
-               args=[parent_profile.user, translate_to_language(f"New class created for student {student.user.get_full_name()}", lang)]).start()
+               args=[parent_profile.user, gettext(f"New class created for student {student.user.get_full_name()}")]).start()
         Thread(target=create_notification,
-               args=[tutor_user, translate_to_language(f"You have a new class request from {student.user.get_full_name()}", lang)]).start()
+               args=[tutor_user, gettext(f"You have a new class request from {student.user.get_full_name()}")]).start()
 
         initial_start_date = classroom.start_date
         while reoccur > 1:
@@ -218,7 +225,7 @@ class CreateClassSerializerIn(serializers.Serializer):
             reoccur -= 1
 
         return {
-            "detail": translate_to_language("Classroom request sent successfully", lang),
+            "detail": gettext("Classroom request sent successfully"),
             "data": ClassRoomSerializerOut(classroom, context={"request": self.context.get("request")}).data
         }
 
@@ -282,13 +289,13 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Send meeting link to tutor
             Thread(target=tutor_class_approved_email, args=[instance, lang]).start()
             Thread(target=create_notification,
-                   args=[student, translate_to_language(f"Your class request has been approved by {tutor_name}", lang)]).start()
+                   args=[student, gettext(f"Your class request has been approved by {tutor_name}")]).start()
             Thread(target=create_notification,
-                   args=[instance.tutor, translate_to_language(f"You accepted a new class request with {student_name}", lang)]).start()
+                   args=[instance.tutor, gettext(f"You accepted a new class request with {student_name}")]).start()
         elif action == "cancel":
             # Check if instance was initially in accepted state
             if not instance.status == "accepted":
-                raise InvalidRequestException({"detail": translate_to_language("You can only cancel class request you recently accepted", lang)})
+                raise InvalidRequestException({"detail": gettext("You can only cancel class request you recently accepted")})
             # Cancel class
             instance.status = "cancelled"
             # Subtract amount from Escrow Balance
@@ -312,7 +319,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             Thread(target=student_class_cancel_email, args=[student, lang]).start()
         else:
             if not decline_reason:
-                raise InvalidRequestException({"detail": translate_to_language("Kindly specify reason why you are declining this request", lang)})
+                raise InvalidRequestException({"detail": gettext("Kindly specify reason why you are declining this request")})
             # Update instance state
             instance.decline_reason = decline_reason
             instance.status = "declined"
@@ -363,7 +370,7 @@ class DisputeSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
 
         if not title:
-            raise InvalidRequestException({"detail": translate_to_language("Title is required", lang)})
+            raise InvalidRequestException({"detail": gettext("Title is required")})
 
         # Create Dispute
         dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=title)
@@ -453,7 +460,7 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         # avail.save()
 
         # return TutorCalendarSerializerOut(avail, context={"request": self.context.get("request")}).data
-        return {"detail": translate_to_language("Calendar updated", lang)}
+        return {"detail": gettext("Calendar updated")}
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):
@@ -482,7 +489,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
-    routing_number = serializers.CharField()
+    routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
@@ -525,10 +532,10 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
                 acct.save()
 
                 return TutorBankAccountSerializerOut(acct, context={"request": self.context.get("request")}).data
-            raise InvalidRequestException({"detail": translate_to_language("Could not validate account number, please try again later", lang)})
+            raise InvalidRequestException({"detail": gettext("Could not validate account number, please try again later")})
         except Exception as err:
             log_request(f"Error while adding external bank account:\n{err}")
-            raise InvalidRequestException({"detail": translate_to_language("An error has occurred, please try again later", lang)})
+            raise InvalidRequestException({"detail": gettext("An error has occurred, please try again later")})
 
 
 class PayoutSerializerOut(serializers.ModelSerializer):
@@ -561,7 +568,7 @@ class RequestPayoutSerializerIn(serializers.Serializer):
 
         if not request_now:
             return {
-                "detail": translate_to_language("Payout estimation complete", lang),
+                "detail": gettext("Payout estimation complete"),
                 "data": {"name": str(user.get_full_name()).upper(), "wallet_balance": user_wallet.balance,
                          "coin_to_withdraw": coin, "amount_equivalent": f"EUR{amount}"}
             }
@@ -569,7 +576,7 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user, lang]).start()
-        return {"detail": translate_to_language("Success", lang),
+        return {"detail": gettext("Success"),
                 "data": PayoutSerializerOut(payout, context={"request": self.context.get("request")}).data}
 
 
@@ -653,7 +660,7 @@ class IntroCallSerializerIn(serializers.Serializer):
 
         tutor = get_object_or_404(TutorDetail, user_id=tutor_id)
         if not tutor.allow_intro_call:
-            raise InvalidRequestException({"detail": translate_to_language("Tutor is not accepting intro call at the moment", lang)})
+            raise InvalidRequestException({"detail": gettext("Tutor is not accepting intro call at the moment")})
 
         tutor_user = tutor.user
         d_site = get_site_details()
@@ -672,7 +679,7 @@ class IntroCallSerializerIn(serializers.Serializer):
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
                                     status__in=["new", "accepted"]).exists():
-            raise InvalidRequestException({"detail": translate_to_language("Period booked by another user, please select another period", lang)})
+            raise InvalidRequestException({"detail": gettext("Period booked by another user, please select another period")})
 
         tutor_email = tutor_user.email
         tutor_name = str("{} {}").format(tutor_user.first_name, tutor_user.last_name).upper()
@@ -693,10 +700,10 @@ class IntroCallSerializerIn(serializers.Serializer):
             Thread(target=parent_intro_call_email, args=[user, tutor_name, start_date, end_date, link, lang]).start()
             Thread(target=tutor_intro_call_email,
                    args=[tutor_user, user.get_full_name(), start_date, end_date, link, lang]).start()
-            Thread(target=create_notification, args=[user, translate_to_language(f"Intro call scheduled with {tutor_name}", lang)]).start()
-            Thread(target=create_notification, args=[user, translate_to_language(f"New Intro call request from {sender_name}", lang)]).start()
+            Thread(target=create_notification, args=[user, gettext(f"Intro call scheduled with {tutor_name}")]).start()
+            Thread(target=create_notification, args=[user, gettext(f"New Intro call request from {sender_name}")]).start()
 
-        return translate_to_language("Intro call booked successfully. Detail will be sent to your email address", lang)
+        return gettext("Intro call booked successfully. Detail will be sent to your email address")
     # except Exception as err:
     #     log_request(f"Error while booking intro call\nError: {err}")
     #     raise InvalidRequestException({"detail": "Cannot process request at the moment. Please try again later"})
@@ -751,7 +758,7 @@ class CustomClassSerializerIn(serializers.Serializer):
         chat_message = f"<p>Hi {student.user.get_full_name()}, &nbsp;I have just created a custom classroom.</p>" \
                        f"<p>Please see details below:</p><p>Start Date: {start_date}</p><p>End Date: {end_date}</p>" \
                        f"<p>You can accept or reject this request from your classrooms on dashboard</p>"
-        ChatMessage.objects.create(sender=user, receiver=student.user, message=translate_to_language(chat_message, lang))
+        ChatMessage.objects.create(sender=user, receiver=student.user, message=gettext(chat_message))
 
         # Send meeting link to student
         # Thread(target=student_class_approved_email, args=[instance]).start()

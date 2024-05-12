@@ -169,6 +169,14 @@ class SiteSettingSerializerOut(serializers.ModelSerializer):
 
 
 class UpdateSiteSettingsSerializerIn(serializers.Serializer):
+    site_name = serializers.CharField(required=False)
+    coin_threshold = serializers.FloatField(required=False)
+    referral_coin = serializers.FloatField(required=False)
+    payout_coin_to_amount = serializers.FloatField(required=False)
+    class_grace_period = serializers.IntegerField(required=False)
+    intro_call_duration = serializers.IntegerField(required=False)
+    enquiry_email = serializers.EmailField(required=False)
+
     def update(self, instance, validated_data):
         instance.site_name = validated_data.get("site_name", instance.site_name)
         instance.coin_threshold = validated_data.get("coin_threshold", instance.coin_threshold)

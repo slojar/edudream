@@ -1,7 +1,8 @@
 import datetime
 import secrets
 from rest_framework.exceptions import APIException
-from edudream.modules.utils import log_request, translate_to_language
+from edudream.modules.utils import log_request
+from django.utils.translation import gettext
 
 
 class InvalidRequestException(APIException):
@@ -20,16 +21,16 @@ def raise_serializer_error_msg(errors: {}, language="en"):
     for err_key, err_val in errors.items():
         if type(err_val) is list:
             err_msg = ', '.join(err_val)
-            msg = f'Error occurred on \'{err_key.replace("_", " ")}\' field: {err_msg}'
+            msg = gettext(f'Error occurred on \'{err_key.replace("_", " ")}\' field: {err_msg}')
             # data['message'] = msg
         else:
             for err_val_key, err_val_val in err_val.items():
                 err_msg = ', '.join(err_val_val)
-                msg = f'Error occurred on \'{err_val_key}\' field: {err_msg}'
+                msg = gettext(f'Error occurred on \'{err_val_key}\' field: {err_msg}')
                 # msg = f'Error occurred on \'{err_val_key.replace("_", " ")}\' field: {err_msg}'
                 # data['message'] = msg
         if language == "fr":
-            msg = translate_to_language(msg, "fr")
+            msg = gettext(msg, "fr")
         data["message"] = msg
         log_request(data)
         raise InvalidRequestException(data)
@@ -38,7 +39,7 @@ def raise_serializer_error_msg(errors: {}, language="en"):
 def create_error_message(key, values, language="en"):
     msg = values
     if language == "fr":
-        msg = translate_to_language(values, "fr")
+        msg = gettext(values, "fr")
     data = dict()
     data[key] = str(values).split('|')
     raise InvalidRequestException({'message': msg})
