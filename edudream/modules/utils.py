@@ -392,11 +392,11 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
         return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
 
 
-def translate_to_language(content, language="en"):
-    response = content
-    if language != "en":
-        response = Translate.perform_translate_deepl(to_lang=language, content=content)
-    return response
+# def gettext(content, language="en"):
+#     response = content
+#     if language != "en":
+#         response = Translate.perform_translate_deepl(to_lang=language, content=content)
+#     return response
 
 
 def create_notification(user, text):
