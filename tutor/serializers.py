@@ -43,6 +43,12 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     def get_bank_accounts(self, obj):
         return TutorBankAccountSerializerOut(TutorBankAccount.objects.filter(user=obj.user), many=True).data
 
+    def get_subjects(self, obj):
+        if TutorSubject.objects.filter(user=obj.user).exists():
+            subject = TutorSubject.objects.filter(user=obj.user)
+            return TutorSubjectSerializerOut(subject, many=True, context={"request": self.context.get("request")}).data
+        return None
+
     class Meta:
         model = TutorDetail
         exclude = ["user"]
