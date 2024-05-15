@@ -69,8 +69,10 @@ class UpdateClassroomStatusAPIView(APIView):
             instance = get_object_or_404(Classroom, id=pk, student__parent__user=request.user)
         elif IsStudent:
             instance = get_object_or_404(Classroom, id=pk, student__user=request.user)
-        else:
+        elif IsTutor:
             instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
+        else:
+            return Response({"detail": translate_to_language("Classroom not found", lang)}, status=status.HTTP_400_BAD_REQUEST)
         if action == "cancel" and (IsStudent or IsParent):
             return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = ApproveDeclineClassroomSerializerIn(

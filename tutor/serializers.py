@@ -2,6 +2,7 @@ import datetime
 import decimal
 from threading import Thread
 
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -28,6 +29,18 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     diploma_file = serializers.SerializerMethodField()
     proficiency_test_file = serializers.SerializerMethodField()
     subjects = serializers.SerializerMethodField()
+    total_withdrawals = serializers.SerializerMethodField()
+
+    def get_total_withdrawals(self, obj):
+        data = dict()
+        if PayoutRequest.objects.filter(user=obj.user).exists():
+            payout = PayoutRequest.objects.filter(user=obj.user, status="processed")
+            data["amount"] = payout.aggregate(Sum("amount"))["amount__sum"] or 0
+            data["count"] = payout.count()
+        else:
+            data["amount"] = 0
+            data["count"] = 0
+        return data
 
     def get_proficiency_test_file(self, obj):
         request = self.context.get("request")

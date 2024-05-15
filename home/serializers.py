@@ -1,3 +1,4 @@
+import decimal
 import uuid
 from threading import Thread
 
@@ -14,7 +15,7 @@ from edudream.modules.email_template import tutor_register_email, parent_registe
     consultation_email, send_otp_token_to_email, send_verification_email, send_welcome_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, \
-    decrypt_text, create_notification, translate_to_language
+    decrypt_text, create_notification, translate_to_language, get_site_details
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
 from location.models import Country, State, City
@@ -74,7 +75,10 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     def get_wallet(self, obj):
         wallet = Wallet.objects.filter(user=obj.user).last()
-        return {"id": wallet.id, "balance": wallet.balance, "expected_balance": wallet.pending, "approximate_hours": round(float(wallet.balance) / 7.5)}
+        payout_ratio = get_site_details().payout_coin_to_amount
+        wallet_amount = decimal.Decimal(wallet.balance) * payout_ratio
+
+        return {"id": wallet.id, "balance": wallet.balance, "wallet_amount": wallet_amount, "expected_balance": wallet.pending, "approximate_hours": round(float(wallet.balance) / 7.5)}
 
     class Meta:
         model = Profile
