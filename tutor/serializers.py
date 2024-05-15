@@ -27,6 +27,7 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     bank_accounts = serializers.SerializerMethodField()
     diploma_file = serializers.SerializerMethodField()
     proficiency_test_file = serializers.SerializerMethodField()
+    subjects = serializers.SerializerMethodField()
 
     def get_proficiency_test_file(self, obj):
         request = self.context.get("request")
