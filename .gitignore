@@ -132,6 +132,7 @@ dmypy.json
 .idea/
 static/
 media/
+locale/
 .DS_Store
 *.DS_Store
 

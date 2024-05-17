@@ -393,9 +393,13 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
 
 
 def translate_to_language(content, language="en"):
+    from location.translation import translate
     response = content
-    if language != "en":
-        response = Translate.perform_translate_deepl(to_lang=language, content=content)
+    if language == "fr":
+        # Get value for content
+        for item in translate:
+            if item["msgid"] == content:
+                response = item["fr"]
     return response
 
 
