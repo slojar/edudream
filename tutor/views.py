@@ -68,15 +68,21 @@ class UpdateClassroomStatusAPIView(APIView):
         action = request.data.get("action")
         lang = request.GET.get("lang", "en")
         if Profile.objects.filter(user=request.user, account_type="parent").exists():
+            if action == "cancel":
+                return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)},
+                                status=status.HTTP_400_BAD_REQUEST)
             instance = get_object_or_404(Classroom, id=pk, student__parent__user=request.user)
         elif Student.objects.filter(user=request.user).exists():
+            if action == "cancel":
+                return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)},
+                                status=status.HTTP_400_BAD_REQUEST)
             instance = get_object_or_404(Classroom, id=pk, student__user=request.user)
         elif Profile.objects.filter(user=request.user, account_type="tutor").exists():
             instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
         else:
             return Response({"detail": translate_to_language("Classroom not found", lang)}, status=status.HTTP_400_BAD_REQUEST)
-        if action == "cancel" and (IsStudent or IsParent):
-            return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)}, status=status.HTTP_400_BAD_REQUEST)
+        # if action == "cancel" and (IsStudent or IsParent):
+        #     return Response({"detail": translate_to_language("You are not permitted to perform this action", lang)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = ApproveDeclineClassroomSerializerIn(
             instance=instance, data=request.data, context={'request': request}
         )
