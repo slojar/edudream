@@ -30,6 +30,16 @@ class TutorDetailSerializerOut(serializers.ModelSerializer):
     proficiency_test_file = serializers.SerializerMethodField()
     subjects = serializers.SerializerMethodField()
     total_withdrawals = serializers.SerializerMethodField()
+    future_payments = serializers.SerializerMethodField()
+
+    def get_future_payments(self, obj):
+        uncleared = Classroom.objects.filter(
+            tutor=obj.user, status="completed", pending_balance_paid=False
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        active = Classroom.objects.filter(
+            tutor=obj.user, status="accepted"
+        ).aggregate(Sum("amount"))["amount__sum"] or 0
+        return {"uncleared": uncleared, "active_orders": active}
 
     def get_total_withdrawals(self, obj):
         data = dict()
