@@ -11,6 +11,8 @@ from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsStudent, IsParent
 from edudream.modules.utils import translate_to_language
+from home.models import Profile
+from student.models import Student
 from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
     TutorBankAccount
 from tutor.serializers import ApproveDeclineClassroomSerializerIn, ClassRoomSerializerOut, DisputeSerializerIn, \
@@ -65,11 +67,11 @@ class UpdateClassroomStatusAPIView(APIView):
     def put(self, request, pk):
         action = request.data.get("action")
         lang = request.GET.get("lang", "en")
-        if IsParent:
+        if Profile.objects.filter(user=request.user, account_type="parent").exists():
             instance = get_object_or_404(Classroom, id=pk, student__parent__user=request.user)
-        elif IsStudent:
+        elif Student.objects.filter(user=request.user).exists():
             instance = get_object_or_404(Classroom, id=pk, student__user=request.user)
-        elif IsTutor:
+        elif Profile.objects.filter(user=request.user, account_type="tutor").exists():
             instance = get_object_or_404(Classroom, id=pk, tutor=request.user)
         else:
             return Response({"detail": translate_to_language("Classroom not found", lang)}, status=status.HTTP_400_BAD_REQUEST)
