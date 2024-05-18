@@ -403,6 +403,13 @@ def translate_to_language(content, language="en"):
     return response
 
 
+def translate_email(content, language="en"):
+    response = content
+    if language == "fr":
+        response = Translate.perform_translate_deepl("fr", content)
+    return response
+
+
 def create_notification(user, text):
     notify = Notification.objects.create(message=text)
     notify.user.add(user)

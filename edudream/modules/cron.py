@@ -7,7 +7,7 @@ from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
 from edudream.modules.email_template import send_class_reminder_email, send_fund_pending_balance_email, \
-    send_fund_main_balance_email
+    send_fund_main_balance_email, send_class_ended_reminder_email
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text, log_request, get_site_details
 # from home.consumers import ClassroomConsumer
@@ -81,6 +81,9 @@ def class_reminder_job():
     classrooms_15min = Classroom.objects.filter(status="accepted", start_date=notification_15min_time)
     classrooms_0min = Classroom.objects.filter(status="accepted", start_date=notification_0min_time)
 
+    # Just ended classes
+    ended_classes = Classroom.objects.filter(status="accepted", end_date__minute=now.minute, end_date__hour=now.hour)
+
     if classrooms_60min:
         # Send 60 minute reminder
         for class_room in classrooms_60min:
@@ -96,6 +99,16 @@ def class_reminder_job():
         for class_room in classrooms_0min:
             student_user = class_room.student.user
             Thread(target=send_class_reminder_email, args=[student_user, class_room, 0, "fr"]).start()
+
+    if ended_classes:
+        # Send ended class reminder
+        for class_room in ended_classes:
+            student_email = class_room.student.user.email
+            parent_email = class_room.student.parent.user.email
+            tutor_email = class_room.tutor.email
+            Thread(target=send_class_ended_reminder_email, args=[student_email, class_room, "fr"]).start()
+            Thread(target=send_class_ended_reminder_email, args=[tutor_email, class_room, "fr"]).start()
+            Thread(target=send_class_ended_reminder_email, args=[parent_email, class_room, "fr"]).start()
 
     return True
 
