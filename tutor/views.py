@@ -7,10 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from edudream.modules.exceptions import raise_serializer_error_msg
+from edudream.modules.exceptions import raise_serializer_error_msg, InvalidRequestException
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsStudent, IsParent
-from edudream.modules.utils import translate_to_language
+from edudream.modules.stripe_api import StripeAPI
+from edudream.modules.utils import translate_to_language, encrypt_text, decrypt_text, log_request
 from home.models import Profile
 from student.models import Student
 from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
@@ -234,5 +235,30 @@ class DeleteBankAccountAPIView(DestroyAPIView):
     def get_queryset(self):
         # bank_id = self.kwargs.get("id")
         return TutorBankAccount.objects.filter(user=self.request.user)
+
+
+class GetOnboardingLinkView(APIView):
+    permission_classes = [IsTutor]
+
+    def get(self, request):
+        lang = request.GET.get("lang", "en")
+        tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
+        try:
+            if not tutor.stripe_connect_account_id:
+                # Create Connect Account for Tutor
+                connect_account = StripeAPI.create_connect_account(request.user)
+                connect_account_id = connect_account.get("id")
+                tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
+                tutor.save()
+
+            stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+            # Generate Onboarding Link
+            response = StripeAPI.create_account_link(acct=stripe_connected_acct)
+            url = response.get("url")
+            return Response({"detail": "Link generated", "onboarding_link": url})
+        except Exception as err:
+            log_request(f"Error while performing Connect Onboarding:\n{err}")
+            raise InvalidRequestException({"detail": translate_to_language("An error has occurred, please try again later", lang)})
+
 
 

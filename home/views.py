@@ -509,47 +509,76 @@ class UpdateEndedClassroomCronAPIView(APIView):
 class WebhookAPIView(APIView):
     permission_classes = []
 
-    def post(self, request):
-        data = {
-          "event": "meeting.participant_joined",
-          "event_ts": 1626230691572,
-          "payload": {
-            "account_id": "AAAAAABBBB",
-            "object": {
-              "id": "1234567890",
-              "uuid": "4444AAAiAAAAAiAiAiiAii==",
-              "host_id": "x1yCzABCDEfg23HiJKl4mN",
-              "topic": "My Meeting",
-              "type": 8,
-              "start_time": "2021-07-13T21:44:51Z",
-              "timezone": "America/Los_Angeles",
-              "duration": 60,
-              "participant": {
-                "user_id": "1234567890",
-                "user_name": "Jill Chill",
-                "id": "iFxeBPYun6SAiWUzBcEkX",
-                "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
-                "date_time": "2021-07-13T21:44:51Z",
-                "email": "jchill@example.com",
-                "registrant_id": "abcdefghij0-klmnopq23456",
-                "participant_user_id": "rstuvwxyza789-cde",
-                "customer_key": "349589LkJyeW",
-                "phone_number": "8615250064084"
-              }
-            }
-          }
-        }
-        event_type = request.data.get("event")
-        payload = request.data.get("payload")
-        meeting_id = payload["object"]["id"]
-        email = payload["object"]["participant"]["email"]
-        if Classroom.objects.filter(meeting_id=meeting_id).exists():
-            classroom = Classroom.objects.get(meeting_id=meeting_id)
-            if event_type == "meeting.participant_joined":
-                ...
-        # reply = request.GET.get("input")
-        # if reply == "1":
-        #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
-        # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
+    def get(self, request):
 
-        return JsonResponse({"detail": "Webhook successful"})
+        import stripe
+        from django.conf import settings
+        from edudream.modules.utils import log_request
+
+        stripe.api_key = settings.STRIPE_API_KEY
+        signature = request.headers.get("stripe-signature")
+        endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+
+        # Verify webhook signature and extract the event.
+        # See https://stripe.com/docs/webhooks#verify-events for more information.
+        try:
+            event = stripe.Webhook.construct_event(
+                payload=request.data, sig_header=signature, secret=endpoint_secret
+            )
+        except ValueError as e:
+            # Invalid payload.
+            return Response(status=400)
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid Signature.
+            return Response(status=400)
+
+        if event["type"] == "account.updated":
+            account = event["data"]["object"]
+            log_request("STRIPE WEBHOOK RECEIVED: \n", account)
+
+        return JsonResponse({"detail": "Webhook recieved"})
+
+    # def post(self, request):
+        # data = {
+        #   "event": "meeting.participant_joined",
+        #   "event_ts": 1626230691572,
+        #   "payload": {
+        #     "account_id": "AAAAAABBBB",
+        #     "object": {
+        #       "id": "1234567890",
+        #       "uuid": "4444AAAiAAAAAiAiAiiAii==",
+        #       "host_id": "x1yCzABCDEfg23HiJKl4mN",
+        #       "topic": "My Meeting",
+        #       "type": 8,
+        #       "start_time": "2021-07-13T21:44:51Z",
+        #       "timezone": "America/Los_Angeles",
+        #       "duration": 60,
+        #       "participant": {
+        #         "user_id": "1234567890",
+        #         "user_name": "Jill Chill",
+        #         "id": "iFxeBPYun6SAiWUzBcEkX",
+        #         "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
+        #         "date_time": "2021-07-13T21:44:51Z",
+        #         "email": "jchill@example.com",
+        #         "registrant_id": "abcdefghij0-klmnopq23456",
+        #         "participant_user_id": "rstuvwxyza789-cde",
+        #         "customer_key": "349589LkJyeW",
+        #         "phone_number": "8615250064084"
+        #       }
+        #     }
+        #   }
+        # }
+        # event_type = request.data.get("event")
+        # payload = request.data.get("payload")
+        # meeting_id = payload["object"]["id"]
+        # email = payload["object"]["participant"]["email"]
+        # if Classroom.objects.filter(meeting_id=meeting_id).exists():
+        #     classroom = Classroom.objects.get(meeting_id=meeting_id)
+        #     if event_type == "meeting.participant_joined":
+        #         ...
+        # # reply = request.GET.get("input")
+        # # if reply == "1":
+        # #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
+        # # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
+
+        # return JsonResponse({"detail": "Webhook recieved"})

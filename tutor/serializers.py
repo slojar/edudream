@@ -512,7 +512,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
-    routing_number = serializers.CharField()
+    routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
@@ -528,14 +528,10 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
         country = get_object_or_404(Country, id=country_id)
         tutor = get_object_or_404(Profile, user=user, account_type="tutor")
 
-        try:
+        if not tutor.stripe_verified and tutor.stripe_connect_account_id:
+            raise InvalidRequestException({"detail": translate_to_language("You need to complete your Stripe Connect onboarding process to continue", lang)})
 
-            if not tutor.stripe_connect_account_id:
-                # Create Connect Account for Tutor
-                connect_account = StripeAPI.create_connect_account(user)
-                connect_account_id = connect_account.get("id")
-                tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
-                tutor.save()
+        try:
 
             stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
 
