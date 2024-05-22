@@ -527,9 +527,11 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
 
         country = get_object_or_404(Country, id=country_id)
         tutor = get_object_or_404(Profile, user=user, account_type="tutor")
-
         if not tutor.stripe_verified and tutor.stripe_connect_account_id:
-            raise InvalidRequestException({"detail": translate_to_language("You need to complete your Stripe Connect onboarding process to continue", lang)})
+            raise InvalidRequestException(
+                {"success": False, "detail": translate_to_language(
+                    "You need to complete your Stripe Connect onboarding process to continue", lang)}
+            )
 
         try:
 
@@ -550,11 +552,20 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
                 acct.stripe_external_account_id = encrypt_text(external_account_id)
                 acct.save()
 
-                return TutorBankAccountSerializerOut(acct, context={"request": self.context.get("request")}).data
-            raise InvalidRequestException({"detail": translate_to_language("Could not validate account number, please try again later", lang)})
+                return {
+                    "success": True,
+                    "detail": TutorBankAccountSerializerOut(acct, context={"request": self.context.get("request")}).data
+                }
+            raise InvalidRequestException(
+                {"success": False,
+                 "detail": translate_to_language("Could not validate account number, please try again later", lang)}
+            )
         except Exception as err:
             log_request(f"Error while adding external bank account:\n{err}")
-            raise InvalidRequestException({"detail": translate_to_language("An error has occurred, please try again later", lang)})
+            raise InvalidRequestException(
+                {"success": False,
+                 "detail": translate_to_language("An error has occurred, please try again later", lang)}
+            )
 
 
 class PayoutSerializerOut(serializers.ModelSerializer):

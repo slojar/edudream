@@ -535,6 +535,7 @@ class WebhookAPIView(APIView):
         if event["type"] == "account.updated":
             account = event["data"]["object"]
             log_request("STRIPE WEBHOOK RECEIVED: \n", account)
+            # PROCEED TO UPDATE ACCOUNT HERE
 
         return JsonResponse({"detail": "Webhook recieved"})
 

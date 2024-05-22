@@ -169,7 +169,7 @@ class CreateBankAccountAPIView(APIView):
         serializer = TutorBankAccountSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
-        return Response({"detail": translate_to_language("Success", request.data.get("lang", "en")), "data": response})
+        return Response(response)
 
 
 class TutorPayoutAPIView(APIView, CustomPagination):
