@@ -228,8 +228,9 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=tutor_class_creation_email, args=[classroom, lang]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom, lang]).start()
-        Thread(target=create_notification,
-               args=[parent_profile.user, translate_to_language(f"New class created for student {student.user.get_full_name()}", lang)]).start()
+        if parent_profile:
+            Thread(target=create_notification,
+                   args=[parent_profile.user, translate_to_language(f"New class created for student {student.user.get_full_name()}", lang)]).start()
         Thread(target=create_notification,
                args=[tutor_user, translate_to_language(f"You have a new class request from {student.user.get_full_name()}", lang)]).start()
 
