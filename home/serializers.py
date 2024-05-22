@@ -39,6 +39,18 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
     wallet = serializers.SerializerMethodField()
+    can_start_conversation = serializers.SerializerMethodField()
+
+    def get_can_start_conversation(self, obj):
+        can_start_conversation = False
+        request = self.context.get("request")
+        auth_user = request.user
+        if auth_user is not None:
+            query = Q(tutor_id__in=[auth_user.id, obj.user.id], student__user_id__in=[auth_user.id, obj.user.id]) | Q(
+                tutor_id__in=[auth_user.id, obj.user.id], student__parent__user_id__in=[auth_user.id, obj.user.id])
+            if Classroom.objects.filter(query).exists():
+                can_start_conversation = True
+        return can_start_conversation
 
     def get_tutor_languages(self, obj):
         if UserLanguage.objects.filter(user__profile=obj).exists():
