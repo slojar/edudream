@@ -18,6 +18,10 @@ translate = [
     "fr": "Veuillez soumettre tous les détails requis"
   },
   {
+    "msgid": "Required fields: First Name, Last Name, Username, Password",
+    "fr": "Champs obligatoires : Prénom, Nom, Nom d'utilisateur, Mot de passe"
+  },
+  {
     "msgid": "Email is taken",
     "fr": "L'e-mail est pris"
   },
