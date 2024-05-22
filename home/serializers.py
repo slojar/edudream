@@ -91,6 +91,18 @@ class UserSerializerOut(serializers.ModelSerializer):
     is_student = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
     stat = serializers.SerializerMethodField()
+    can_start_conversation = serializers.SerializerMethodField()
+
+    def get_can_start_conversation(self, obj):
+        can_start_conversation = False
+        request = self.context.get("request")
+        auth_user = request.user
+        if auth_user is not None:
+            query = Q(tutor__in=[auth_user, obj], student__user__in=[auth_user, obj]) | Q(
+                tutor__in=[auth_user, obj], student__parent__user__in=[auth_user, obj])
+            if Classroom.objects.filter(query).exists():
+                can_start_conversation = True
+        return can_start_conversation
 
     def get_stat(self, obj):
         if Student.objects.filter(user=obj).exists():
