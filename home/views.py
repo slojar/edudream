@@ -511,7 +511,7 @@ class UpdateEndedClassroomCronAPIView(APIView):
 class WebhookAPIView(APIView):
     permission_classes = []
 
-    def get(self, request):
+    def post(self, request):
 
         import stripe
         from django.conf import settings
