@@ -242,13 +242,14 @@ class TutorListAPIView(APIView, CustomPagination):
             query &= Q(country_id__in=country_ids)
         if grade:
             school_grade_subject = [item for item in Subject.objects.filter(grade__exact=grade)]
-            query &= Q(user__tutordetail__subjects__in=school_grade_subject)
+            # query &= Q(user__tutordetail__subjects__in=school_grade_subject)
+            query &= Q(user__tutorsubject__subject__in=school_grade_subject)
         if diploma_type:
             query &= Q(user__tutordetail__diploma_type__iexact=diploma_type)
         if university_name:
             query &= Q(user__tutordetail__university_name__icontains=university_name)
 
-        queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?").distinct(), request)
+        queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": translate_to_language("Tutor retrieved", lang), "data": response})
