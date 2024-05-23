@@ -46,8 +46,8 @@ class TutorListSerializerOut(serializers.ModelSerializer):
         request = self.context.get("request")
         auth_user = request.user
         if auth_user is not None:
-            query = Q(tutor_id__in=[auth_user.id, obj.user.id], student__user_id__in=[auth_user.id, obj.user.id]) | Q(
-                tutor_id__in=[auth_user.id, obj.user.id], student__parent__user_id__in=[auth_user.id, obj.user.id])
+            users = [auth_user.id, obj.user.id]
+            query = Q(tutor_id__in=users) | Q(student__user_id__in=users) | Q(student__parent__user_id__in=users)
             if Classroom.objects.filter(query).exists():
                 can_start_conversation = True
         return can_start_conversation
@@ -110,8 +110,8 @@ class UserSerializerOut(serializers.ModelSerializer):
         request = self.context.get("request")
         auth_user = request.user
         if auth_user is not None:
-            query = Q(tutor_id__in=[auth_user.id, obj.id], student__user_id__in=[auth_user.id, obj.id]) | Q(
-                tutor_id__in=[auth_user.id, obj.id], student__parent__user_id__in=[auth_user.id, obj.id])
+            users = [auth_user.id, obj.user.id]
+            query = Q(tutor_id__in=users) | Q(student__user_id__in=users) | Q(student__parent__user_id__in=users)
             if Classroom.objects.filter(query).exists():
                 can_start_conversation = True
         return can_start_conversation
