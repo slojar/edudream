@@ -228,8 +228,9 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=tutor_class_creation_email, args=[classroom, lang]).start()
         # Notify Parent of created class
         Thread(target=parent_class_creation_email, args=[classroom, lang]).start()
-        Thread(target=create_notification,
-               args=[parent_profile.user, translate_to_language(f"New class created for student {student.user.get_full_name()}", lang)]).start()
+        if parent_profile:
+            Thread(target=create_notification,
+                   args=[parent_profile.user, translate_to_language(f"New class created for student {student.user.get_full_name()}", lang)]).start()
         Thread(target=create_notification,
                args=[tutor_user, translate_to_language(f"You have a new class request from {student.user.get_full_name()}", lang)]).start()
 
@@ -512,7 +513,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
-    routing_number = serializers.CharField()
+    routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
@@ -527,15 +528,13 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
 
         country = get_object_or_404(Country, id=country_id)
         tutor = get_object_or_404(Profile, user=user, account_type="tutor")
+        if not tutor.stripe_verified and tutor.stripe_connect_account_id:
+            raise InvalidRequestException(
+                {"success": False, "detail": translate_to_language(
+                    "You need to complete your Stripe Connect onboarding process to continue", lang)}
+            )
 
         try:
-
-            if not tutor.stripe_connect_account_id:
-                # Create Connect Account for Tutor
-                connect_account = StripeAPI.create_connect_account(user)
-                connect_account_id = connect_account.get("id")
-                tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
-                tutor.save()
 
             stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
 
@@ -554,11 +553,20 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
                 acct.stripe_external_account_id = encrypt_text(external_account_id)
                 acct.save()
 
-                return TutorBankAccountSerializerOut(acct, context={"request": self.context.get("request")}).data
-            raise InvalidRequestException({"detail": translate_to_language("Could not validate account number, please try again later", lang)})
+                return {
+                    "success": True,
+                    "detail": TutorBankAccountSerializerOut(acct, context={"request": self.context.get("request")}).data
+                }
+            raise InvalidRequestException(
+                {"success": False,
+                 "detail": translate_to_language("Could not validate account number, please try again later", lang)}
+            )
         except Exception as err:
             log_request(f"Error while adding external bank account:\n{err}")
-            raise InvalidRequestException({"detail": translate_to_language("An error has occurred, please try again later", lang)})
+            raise InvalidRequestException(
+                {"success": False,
+                 "detail": translate_to_language("An error has occurred, please try again later", lang)}
+            )
 
 
 class PayoutSerializerOut(serializers.ModelSerializer):

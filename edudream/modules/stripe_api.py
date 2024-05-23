@@ -236,6 +236,21 @@ class StripeAPI:
         return result
 
     @classmethod
+    def create_account_link(cls, acct):
+        from edudream.modules.utils import log_request, get_site_details
+        site_setting = get_site_details()
+        frontend_base_url = site_setting.frontend_url
+
+        result = stripe.AccountLink.create(
+            account=acct,
+            refresh_url=f"{frontend_base_url}/complete-onboarding?status={str(False).lower()}",
+            return_url=f"{frontend_base_url}/complete-onboarding?status={str(True).lower()}",
+            type="account_onboarding",
+        )
+        log_request(f'Account link response: {result}')
+        return result
+
+    @classmethod
     def create_connect_account_token(cls, user):
         from edudream.modules.utils import log_request
         result = stripe.Token.create(

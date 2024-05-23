@@ -29,10 +29,10 @@ class ParentStudentSerializerOut(serializers.ModelSerializer):
 
 class StudentSerializerIn(serializers.Serializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    username = serializers.CharField()
-    password = serializers.CharField()
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
     note = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
@@ -57,6 +57,10 @@ class StudentSerializerIn(serializers.Serializer):
 
         # Check if user with email exists
         # if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
+
+        if not all([password, f_name, l_name, username]):
+            raise InvalidRequestException({"detail": translate_to_language("Required fields: First Name, Last Name, Username, Password", lang)})
+
         if User.objects.filter(username__iexact=username).exists():
             raise InvalidRequestException({"detail": translate_to_language("Username is taken", lang)})
 

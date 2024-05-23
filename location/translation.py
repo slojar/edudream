@@ -10,10 +10,17 @@ translate = [
   },
 
   {
+    "msgid": "You need to complete your Stripe Connect onboarding process to continue",
+    "fr": "Vous devez terminer votre processus d'intégration de Stripe Connect pour continuer"
+  },
+  {
     "msgid": "Please submit all required details",
     "fr": "Veuillez soumettre tous les détails requis"
   },
-
+  {
+    "msgid": "Required fields: First Name, Last Name, Username, Password",
+    "fr": "Champs obligatoires : Prénom, Nom, Nom d'utilisateur, Mot de passe"
+  },
   {
     "msgid": "Email is taken",
     "fr": "L'e-mail est pris"

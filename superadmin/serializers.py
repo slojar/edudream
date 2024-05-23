@@ -186,7 +186,7 @@ class UpdateSiteSettingsSerializerIn(serializers.Serializer):
         instance.intro_call_duration = validated_data.get("intro_call_duration", instance.intro_call_duration)
         instance.enquiry_email = validated_data.get("enquiry_email", instance.enquiry_email)
         instance.save()
-        return SiteSettingSerializerOut(instance, context={"request": self.context.get("request")})
+        return SiteSettingSerializerOut(instance, context={"request": self.context.get("request")}).data
 
 
 class WalletBalanceUpdateSerializerIn(serializers.Serializer):
