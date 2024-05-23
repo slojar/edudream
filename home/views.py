@@ -235,7 +235,8 @@ class TutorListAPIView(APIView, CustomPagination):
         if search:
             school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
             query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
-                user__tutordetail__subjects__in=school_subject_name)
+                # user__tutordetail__subjects__in=school_subject_name)
+                user__tutorsubject__subject__in=school_subject_name)
         if country:
             country_ids = ast.literal_eval(str(country))
             query &= Q(country_id__in=country_ids)
