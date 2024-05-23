@@ -513,7 +513,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     account_number = serializers.CharField()
     account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
-    routing_number = serializers.CharField(required=False)
+    # routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
@@ -522,7 +522,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
         acct_name = validated_data.get("account_name")
         acct_no = validated_data.get("account_number")
         acct_type = validated_data.get("account_type")
-        routing_no = validated_data.get("routing_number")
+        # routing_no = validated_data.get("routing_number")
         country_id = validated_data.get("country_id")
         lang = validated_data.get("lang", "en")
 
@@ -541,14 +541,13 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
             # Add Bank Details to Connected Stripe Account
             external_account = StripeAPI.create_external_account(
                 acct=stripe_connected_acct, account_no=acct_no, country_code=str(country.alpha2code).upper(),
-                currency_code=str(country.currency_code).lower(), routing_no=routing_no
+                currency_code=str(country.currency_code).lower()
             )
             external_account_id = external_account.get("id")
             if external_account_id:
                 acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank, account_number=acct_no)
                 acct.account_name = acct_name
                 acct.account_type = acct_type
-                acct.routing_number = routing_no
                 acct.country = country
                 acct.stripe_external_account_id = encrypt_text(external_account_id)
                 acct.save()
