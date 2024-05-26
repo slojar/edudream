@@ -135,7 +135,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
     book_now = serializers.BooleanField()
-    occurrence = serializers.IntegerField(required=False)
+    # occurrence = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -150,7 +150,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
         tutor_calender_id = validated_data.get("calender_id")
         book_now = validated_data.get("book_now", False)
-        reoccur = validated_data.get("occurrence", 1)
+        # reoccur = validated_data.get("occurrence", 1)
         parent_profile = None
 
         try:
@@ -191,7 +191,8 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
-        class_amount = reoccur * (duration * subject_amount / 60)
+        # class_amount = reoccur * (duration * subject_amount / 60)
+        class_amount = duration * subject_amount / 60
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
@@ -205,7 +206,8 @@ class CreateClassSerializerIn(serializers.Serializer):
                 "detail": "Classroom estimation complete",
                 "data": {"student_name": str(user.get_full_name()).upper(), "level": subject.grade,
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
-                         "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
+                         # "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
+                         "duration": f"{duration} minutes", "total_coin": class_amount}
             }
 
         # Check parent balance is available for class amount
@@ -331,7 +333,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.balance += amount
             parent_wallet.save()
             # Set Tutor Availability
-            instance.tutorcalendar_set.all().update(status="available")
+            instance.tutorcalendar_set.all().update(status="available", classroom=None)
             # TutorCalendar.objects.filter(classroom=instance).update(status="available")
             # Create refund transaction
             Transaction.objects.create(
@@ -347,7 +349,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Update instance state
             instance.decline_reason = decline_reason
             instance.status = "declined"
-            instance.tutorcalendar_set.all().update(status="available")
+            instance.tutorcalendar_set.all().update(status="available", classroom=None)
             # Send notification to student
             Thread(target=student_class_declined_email, args=[instance, lang]).start()
             # Send notification to parent

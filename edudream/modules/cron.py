@@ -7,12 +7,12 @@ from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
 from edudream.modules.email_template import send_class_reminder_email, send_fund_pending_balance_email, \
-    send_fund_main_balance_email, send_class_ended_reminder_email
+    send_fund_main_balance_email, send_class_ended_reminder_email, student_class_declined_email
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text, log_request, get_site_details
 # from home.consumers import ClassroomConsumer
 from home.models import Transaction
-from tutor.models import PayoutRequest, Classroom
+from tutor.models import PayoutRequest, Classroom, TutorCalendar
 
 zoom_auth_url = settings.ZOOM_AUTH_URL
 zoom_client_id = settings.ZOOM_CLIENT_ID
@@ -83,6 +83,10 @@ def class_reminder_job():
 
     # Just ended classes
     ended_classes = Classroom.objects.filter(status="accepted", end_date__minute=now.minute, end_date__hour=now.hour)
+    # Unattended classes
+    unattended_classes = Classroom.objects.filter(status="new", start_date__minute=now.minute, start_date__hour=now.hour)
+    # All Ended Classes
+    all_ended_classes = Classroom.objects.filter(end_date__lte=now)
 
     if classrooms_60min:
         # Send 60 minute reminder
@@ -103,12 +107,27 @@ def class_reminder_job():
     if ended_classes:
         # Send ended class reminder
         for class_room in ended_classes:
+            # Remove classroom from all schedules
+            class_room.tutorcalendar_set.all().update(status="available", classroom=None)
             student_email = class_room.student.user.email
             parent_email = class_room.student.parent.user.email
             tutor_email = class_room.tutor.email
             Thread(target=send_class_ended_reminder_email, args=[student_email, class_room, "fr"]).start()
             Thread(target=send_class_ended_reminder_email, args=[tutor_email, class_room, "fr"]).start()
             Thread(target=send_class_ended_reminder_email, args=[parent_email, class_room, "fr"]).start()
+
+    if unattended_classes:
+        for class_room in unattended_classes:
+            # Set classroom status as declined
+            class_room.status = "declined"
+            class_room.save()
+            class_room.tutorcalendar_set.all().update(status="available", classroom=None)
+            Thread(target=student_class_declined_email, args=[class_room, "fr"]).start()
+
+    if all_ended_classes:
+        # Remove ended classroom from calendar
+        for class_room in all_ended_classes:
+            class_room.tutorcalendar_set.all().update(status="available", classroom=None)
 
     return True
 

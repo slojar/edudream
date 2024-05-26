@@ -112,12 +112,14 @@ class UserSerializerOut(serializers.ModelSerializer):
             tutor_list = list(dict.fromkeys(tutors))
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="parent").exists():
             classroom = Classroom.objects.filter(student__parent__user=obj)
@@ -126,6 +128,7 @@ class UserSerializerOut(serializers.ModelSerializer):
             students = Student.objects.filter(parent__user=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
@@ -133,17 +136,20 @@ class UserSerializerOut(serializers.ModelSerializer):
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="tutor").exists():
             classroom = Classroom.objects.filter(tutor=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
             return {
                 "total_subject": Subject.objects.filter(classroom__tutor__in=[obj]).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "cancelled_classes": classroom.filter(status="cancelled").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
 
         else:
