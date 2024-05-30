@@ -9,7 +9,7 @@ from rest_framework import generics, status
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsParent
-from django.utils.translation import gettext
+from edudream.modules.utils import translate_to_language
 from student.models import Student
 from parent.serializers import ParentStudentSerializerOut, StudentSerializerIn, FundWalletSerializerIn
 from tutor.models import Classroom
@@ -24,7 +24,7 @@ class CreateStudentAPIView(APIView):
         serializer = StudentSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
-        return Response({"detail": gettext("Student account created", request.data.get("lang", "en")), "data": response})
+        return Response({"detail": translate_to_language("Student account created", request.data.get("lang", "en")), "data": response})
 
 
 class EditStudentAPIView(APIView):
@@ -36,7 +36,7 @@ class EditStudentAPIView(APIView):
         serializer = StudentSerializerIn(instance=instance, data=request.data, context={'request': request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
-        return Response({"detail": gettext("Student updated", request.data.get("lang", "en")), "data": response})
+        return Response({"detail": translate_to_language("Student updated", request.data.get("lang", "en")), "data": response})
 
 
 class RetrieveDeleteStudent(generics.RetrieveDestroyAPIView):
@@ -66,7 +66,7 @@ class FundWalletAPIView(APIView):
         serializer = FundWalletSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         response = serializer.save()
-        return Response({"detail": gettext("Payment link generated", request.data.get("lang", "en")), "data": response})
+        return Response({"detail": translate_to_language("Payment link generated", request.data.get("lang", "en")), "data": response})
 
 
 class ParentStudentClassRoomAPIView(APIView, CustomPagination):
@@ -106,6 +106,6 @@ class ParentStudentClassRoomAPIView(APIView, CustomPagination):
                 queryset = self.paginate_queryset(Classroom.objects.filter(query).exclude(student_complete_check=True).order_by("-id"), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Success"), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
