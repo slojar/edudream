@@ -250,10 +250,10 @@ class GetOnboardingLinkView(APIView):
                 # Create Connect Account for Tutor
                 connect_account = StripeAPI.create_connect_account(request.user)
                 connect_account_id = connect_account.get("id")
-                tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
+                tutor.stripe_connect_account_id = connect_account_id
                 tutor.save()
 
-            stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+            stripe_connected_acct = tutor.stripe_connect_account_id
             # Generate Onboarding Link
             response = StripeAPI.create_account_link(acct=stripe_connected_acct)
             url = response.get("url")

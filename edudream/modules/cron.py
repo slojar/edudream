@@ -39,7 +39,7 @@ def payout_cron_job():
             if amount > new_balance:
                 log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
                 break
-            stripe_connect_account_id = decrypt_text(instance.user.profile.stripe_connect_account_id)
+            stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
             narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
 
             # Process Transfer
@@ -50,7 +50,7 @@ def payout_cron_job():
             transaction = Transaction.objects.create(
                 user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
             )
-            stripe_external_account_id = decrypt_text(instance.bank_account.stripe_external_account_id)
+            stripe_external_account_id = instance.bank_account.stripe_external_account_id
             payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
             if payout_response.get("failure_message") is None and payout_response.get("id"):
                 instance.status = "processed"

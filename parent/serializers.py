@@ -127,9 +127,9 @@ class FundWalletSerializerIn(serializers.Serializer):
                 phone=user.profile.mobile_number
             )
             new_stripe_customer_id = customer.get('id')
-            user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
+            user.profile.stripe_customer_id = new_stripe_customer_id
             user.profile.save()
-        stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
+        stripe_customer_id = user.profile.stripe_customer_id
         description = translate_to_language(f'Wallet funding: {user.get_full_name()}', language)
         payment_reference = payment_link = None
 
@@ -150,7 +150,7 @@ class FundWalletSerializerIn(serializers.Serializer):
                     phone=user.profile.mobile_number
                 )
                 new_stripe_customer_id = customer.get('id')
-                user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
+                user.profile.stripe_customer_id = new_stripe_customer_id
                 user.profile.save()
                 continue
 

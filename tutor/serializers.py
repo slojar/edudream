@@ -490,7 +490,6 @@ class TutorCalendarSerializerIn(serializers.Serializer):
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):
-    account_number = serializers.SerializerMethodField()
     routing_number = serializers.SerializerMethodField()
 
     def get_routing_number(self, obj):
@@ -498,14 +497,9 @@ class TutorBankAccountSerializerOut(serializers.ModelSerializer):
             return mask_number(obj.routing_number, 5)
         return None
 
-    def get_account_number(self, obj):
-        if obj.account_number:
-            return mask_number(obj.account_number, 5)
-        return None
-
     class Meta:
         model = TutorBankAccount
-        exclude = ["stripe_external_account_id"]
+        exclude = []
 
 
 class TutorBankAccountSerializerIn(serializers.Serializer):
@@ -521,9 +515,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         bank = validated_data.get("bank_name")
-        acct_name = validated_data.get("account_name")
         acct_no = validated_data.get("account_number")
-        acct_type = validated_data.get("account_type")
         # routing_no = validated_data.get("routing_number")
         country_id = validated_data.get("country_id")
         lang = validated_data.get("lang", "en")
@@ -538,7 +530,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
 
         try:
 
-            stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+            stripe_connected_acct = tutor.stripe_connect_account_id
 
             # Add Bank Details to Connected Stripe Account
             external_account = StripeAPI.create_external_account(
@@ -547,11 +539,9 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
             )
             external_account_id = external_account.get("id")
             if external_account_id:
-                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank, account_number=acct_no)
-                acct.account_name = acct_name
-                acct.account_type = acct_type
+                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank)
                 acct.country = country
-                acct.stripe_external_account_id = encrypt_text(external_account_id)
+                acct.stripe_external_account_id = external_account_id
                 acct.save()
 
                 return {
