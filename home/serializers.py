@@ -73,6 +73,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
     wallet = serializers.SerializerMethodField()
     children = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    full_name = serializers.CharField(source="user.get_full_name")
 
     def get_profile_picture(self, obj):
         request = self.context.get("request")
