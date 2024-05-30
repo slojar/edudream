@@ -18,7 +18,7 @@ from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_rem
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details, translate_to_language
+from edudream.modules.utils import complete_payment, get_site_details
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -29,6 +29,7 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
 from location.models import Country
 from tutor.models import Classroom, TutorBankAccount
 from tutor.serializers import ClassRoomSerializerOut
+from django.utils.translation import gettext
 
 
 class SignUpAPIView(APIView):
@@ -51,7 +52,7 @@ class LoginAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response({
-            "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
+            "detail": gettext("Login Successful", request.data.get("lang", "en")),
             "data": UserSerializerOut(user, context={"request": request}).data,
             "access_token": f"{AccessToken.for_user(user)}"
         })
@@ -93,7 +94,7 @@ class ProfileAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response(
-            {"detail": translate_to_language("Profile updated", request.data.get("lang", "en")),
+            {"detail": gettext("Profile updated", request.data.get("lang", "en")),
              "data": UserSerializerOut(user, context={"request": request}).data})
 
 
@@ -129,7 +130,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         if pk:
             queryset = get_object_or_404(Transaction, id=pk, user=request.user)
             serializer = TransactionSerializerOut(queryset).data
-            return Response({"detail": translate_to_language("Success", lang), "data": serializer})
+            return Response({"detail": gettext("Success"), "data": serializer})
 
         if amount_to and amount_from:
             query &= Q(amount__range=[amount_from, amount_to])
@@ -146,7 +147,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Transaction.objects.filter(query).exclude(status="pending"), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Success", lang), "data": response})
+        return Response({"detail": gettext("Success"), "data": response})
 
 
 # @extend_schema_view(get=extend_schema(parameters=[
@@ -178,7 +179,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Chat retrieved", lang), "data": response})
+        return Response({"detail": gettext("Chat retrieved"), "data": response})
 
 
 class PaymentPlanListAPIView(ListAPIView):
@@ -254,7 +255,7 @@ class TutorListAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Tutor retrieved", lang), "data": response})
+        return Response({"detail": gettext("Tutor retrieved"), "data": response})
 
 
 class LanguageListAPIView(ListAPIView):
@@ -289,7 +290,7 @@ class NotificationAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]).order_by("-id"), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Success", lang), "data": response})
+        return Response({"detail": gettext("Success"), "data": response})
 
 
 class UploadProfilePictureAPIView(APIView):

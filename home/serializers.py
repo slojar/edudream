@@ -887,11 +887,13 @@ class ForgotPasswordSerializerIn(serializers.Serializer):
 class UpdateEndedClassroomSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     completed = serializers.BooleanField(default=False)
+    reason = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("auth_user")
         completed = validated_data.get("completed")
+        reason = validated_data.get("reason")
         lang = validated_data.get("lang")
 
         if (instance.student_complete_check and instance.tutor_complete_check) or instance.status == "completed":
@@ -908,9 +910,12 @@ class UpdateEndedClassroomSerializerIn(serializers.Serializer):
             instance.save()
         else:
             # Create Dispute
+            if not reason:
+                raise InvalidRequestException({"detail": translate_to_language("Reason is required", lang)})
+
             dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=f"Classroom: {instance.name}, marked as uncompleted")
             dispute.dispute_type = "others"
-            dispute.content = "This is an auto-generated dispute, because the user has marked an ended classroom incomplete"
+            dispute.content = reason
             dispute.save()
         # Check if both student and tutor complete checks are marked. Then change classroom status to completed
         if instance.tutor_complete_check and instance.student_complete_check:

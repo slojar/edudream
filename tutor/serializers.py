@@ -217,7 +217,7 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Create class for student
         # Add grace period
-        single_class_amount = class_amount / reoccur
+        single_class_amount = class_amount
         new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
@@ -236,19 +236,19 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=create_notification,
                args=[tutor_user, translate_to_language(f"You have a new class request from {student.user.get_full_name()}", lang)]).start()
 
-        initial_start_date = classroom.start_date
-        while reoccur > 1:
-            loop_start_date = initial_start_date + timezone.timedelta(days=7)
-            class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
-            loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
-            # Create Classroom
-            loop_classroom = Classroom.objects.create(
-                name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
-                end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
-            )
-            avail.classroom.add(loop_classroom)
-            initial_start_date = loop_classroom.start_date
-            reoccur -= 1
+        # initial_start_date = classroom.start_date
+        # while reoccur > 1:
+        #     loop_start_date = initial_start_date + timezone.timedelta(days=7)
+        #     class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
+        #     loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+        #     # Create Classroom
+        #     loop_classroom = Classroom.objects.create(
+        #         name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
+        #         end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
+        #     )
+        #     avail.classroom.add(loop_classroom)
+        #     initial_start_date = loop_classroom.start_date
+        #     reoccur -= 1
 
         return {
             "detail": translate_to_language("Classroom request sent successfully", lang),
@@ -505,17 +505,14 @@ class TutorBankAccountSerializerOut(serializers.ModelSerializer):
 class TutorBankAccountSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     bank_name = serializers.CharField()
-    account_name = serializers.CharField()
-    account_number = serializers.CharField()
-    account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     # routing_number = serializers.CharField(required=False)
+    routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         bank = validated_data.get("bank_name")
-        acct_no = validated_data.get("account_number")
         # routing_no = validated_data.get("routing_number")
         country_id = validated_data.get("country_id")
         lang = validated_data.get("lang", "en")
@@ -531,6 +528,7 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
         try:
 
             stripe_connected_acct = tutor.stripe_connect_account_id
+            acct_no = ""
 
             # Add Bank Details to Connected Stripe Account
             external_account = StripeAPI.create_external_account(

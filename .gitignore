@@ -131,6 +131,7 @@ dmypy.json
 .push.py
 .idea/
 static/
+locale/
 media/
 locale/
 .DS_Store
