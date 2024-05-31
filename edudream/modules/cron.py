@@ -34,11 +34,11 @@ def payout_cron_job():
             coin = instance.coin
             amount = float(instance.amount)
             # Check stripe balance
-            balance = StripeAPI.get_account_balance()
-            new_balance = float(balance / 100)
-            if amount > new_balance:
-                log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
-                break
+            # balance = StripeAPI.get_account_balance()
+            # new_balance = float(balance / 100)
+            # if amount > new_balance:
+            #     log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
+            #     break
             stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
             narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
 
