@@ -280,9 +280,11 @@ class StripeAPI:
         return result
 
     @classmethod
-    def payout_to_external_account(cls, amount, acct):
+    def payout_to_external_account(cls, amount, acct, stripe_acct):
         from edudream.modules.utils import log_request
-        result = stripe.Payout.create(amount=int(amount * 100), currency="eur", destination=acct)
+        result = stripe.Payout.create(
+            amount=int(amount * 100), currency="eur", destination=acct, method="instant", stripe_account=stripe_acct
+        )
         log_request(f'Payout to external account response: {result}')
         return result
 

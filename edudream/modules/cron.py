@@ -53,13 +53,10 @@ def payout_cron_job():
             transaction = Transaction.objects.create(
                 user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
             )
-            ##########
-            customer_balance = StripeAPI.get_connect_account_balance(acct=stripe_connect_account_id)
-            # accounts = data["instant_available"]
-            # for accnt in accounts:
-            #     net_avail = accnt["net_available"]
 
-            payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
+            payout_response = StripeAPI.payout_to_external_account(
+                amount=amount, acct=stripe_external_account_id, stripe_acct=stripe_connect_account_id
+            )
             if payout_response.get("failure_message") is None and payout_response.get("id"):
                 instance.status = "processed"
                 transaction.status = "completed"
