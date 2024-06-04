@@ -125,21 +125,21 @@ def class_reminder_job():
             # Set classroom status as declined
             class_room.status = "declined"
             class_room.save()
-            class_list = [class_room]
-            t_calendar = TutorCalendar.objects.filter(classroom__in=class_list).last()
-            t_calendar.classroom.clear()
-            t_calendar.status = "available"
-            t_calendar.save()
+            if TutorCalendar.objects.filter(classroom=class_room).exists():
+                t_calendar = TutorCalendar.objects.filter(classroom=class_room).last()
+                t_calendar.classroom.clear()
+                t_calendar.status = "available"
+                t_calendar.save()
             Thread(target=student_class_declined_email, args=[class_room, "fr"]).start()
 
     if all_ended_classes:
         # Remove ended classroom from calendar
         for class_room in all_ended_classes:
-            class_list = [class_room]
-            t_calendar = TutorCalendar.objects.filter(classroom__in=class_list).last()
-            t_calendar.classroom.clear()
-            t_calendar.status = "available"
-            t_calendar.save()
+            if TutorCalendar.objects.filter(classroom=class_room).exists():
+                t_calendar = TutorCalendar.objects.filter(classroom=class_room).last()
+                t_calendar.classroom.clear()
+                t_calendar.status = "available"
+                t_calendar.save()
 
     return True
 
