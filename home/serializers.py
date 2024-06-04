@@ -73,6 +73,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
     wallet = serializers.SerializerMethodField()
     children = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    full_name = serializers.CharField(source="user.get_full_name")
 
     def get_profile_picture(self, obj):
         request = self.context.get("request")
@@ -112,12 +113,14 @@ class UserSerializerOut(serializers.ModelSerializer):
             tutor_list = list(dict.fromkeys(tutors))
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="parent").exists():
             classroom = Classroom.objects.filter(student__parent__user=obj)
@@ -126,6 +129,7 @@ class UserSerializerOut(serializers.ModelSerializer):
             students = Student.objects.filter(parent__user=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
@@ -133,17 +137,20 @@ class UserSerializerOut(serializers.ModelSerializer):
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="tutor").exists():
             classroom = Classroom.objects.filter(tutor=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
             return {
                 "total_subject": Subject.objects.filter(classroom__tutor__in=[obj]).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "cancelled_classes": classroom.filter(status="cancelled").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
 
         else:
@@ -881,11 +888,13 @@ class ForgotPasswordSerializerIn(serializers.Serializer):
 class UpdateEndedClassroomSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     completed = serializers.BooleanField(default=False)
+    reason = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
 
     def update(self, instance, validated_data):
         user = validated_data.get("auth_user")
         completed = validated_data.get("completed")
+        reason = validated_data.get("reason")
         lang = validated_data.get("lang")
 
         if (instance.student_complete_check and instance.tutor_complete_check) or instance.status == "completed":
@@ -902,9 +911,12 @@ class UpdateEndedClassroomSerializerIn(serializers.Serializer):
             instance.save()
         else:
             # Create Dispute
+            if not reason:
+                raise InvalidRequestException({"detail": translate_to_language("Reason is required", lang)})
+
             dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=f"Classroom: {instance.name}, marked as uncompleted")
             dispute.dispute_type = "others"
-            dispute.content = "This is an auto-generated dispute, because the user has marked an ended classroom incomplete"
+            dispute.content = reason
             dispute.save()
         # Check if both student and tutor complete checks are marked. Then change classroom status to completed
         if instance.tutor_complete_check and instance.student_complete_check:

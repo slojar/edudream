@@ -56,6 +56,8 @@ class TutorClassRoomAPIView(APIView, CustomPagination):
                 # query &= Q(start_date__range=[date_from, date_to])
                 query &= Q(start_date__gte=date_from, start_date__lte=date_to)
             queryset = self.paginate_queryset(Classroom.objects.filter(query).order_by("-id"), request)
+            if class_status == "accepted":
+                queryset = self.paginate_queryset(Classroom.objects.filter(query).exclude(tutor_complete_check=True).order_by("-id"), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
         return Response({"detail": translate_to_language("Success", lang), "data": response})
@@ -248,10 +250,10 @@ class GetOnboardingLinkView(APIView):
                 # Create Connect Account for Tutor
                 connect_account = StripeAPI.create_connect_account(request.user)
                 connect_account_id = connect_account.get("id")
-                tutor.stripe_connect_account_id = encrypt_text(connect_account_id)
+                tutor.stripe_connect_account_id = connect_account_id
                 tutor.save()
 
-            stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+            stripe_connected_acct = tutor.stripe_connect_account_id
             # Generate Onboarding Link
             response = StripeAPI.create_account_link(acct=stripe_connected_acct)
             url = response.get("url")

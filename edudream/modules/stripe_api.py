@@ -227,7 +227,7 @@ class StripeAPI:
         log_request(f'Account creation token response: {account_token}')
 
         result = stripe.Account.create(
-            type="express", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
+            type="custom", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
 
@@ -280,9 +280,11 @@ class StripeAPI:
         return result
 
     @classmethod
-    def payout_to_external_account(cls, amount, acct):
+    def payout_to_external_account(cls, amount, acct, stripe_acct):
         from edudream.modules.utils import log_request
-        result = stripe.Payout.create(amount=int(amount * 100), currency="eur", destination=acct)
+        result = stripe.Payout.create(
+            amount=int(amount * 100), currency="eur", destination=acct, stripe_account=stripe_acct
+        )
         log_request(f'Payout to external account response: {result}')
         return result
 
@@ -297,6 +299,14 @@ class StripeAPI:
             balance = eur_amount[0]
         log_request(f'Check balance response: {result}')
         return balance
+
+    @classmethod
+    def get_connect_account_balance(cls, acct):
+        from edudream.modules.utils import log_request
+        result = stripe.Balance.retrieve(expand=["instant_available.net_available"], stripe_account=acct)
+        log_request(f'Check connect account balance response: {result}')
+        return result
+
 
 
 

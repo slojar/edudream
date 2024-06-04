@@ -119,9 +119,6 @@ class TutorCalendar(models.Model):
 class TutorBankAccount(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     bank_name = models.CharField(max_length=200)
-    account_number = models.CharField(max_length=100)
-    account_name = models.CharField(max_length=200)
-    account_type = models.CharField(max_length=50, blank=True, null=True)
     routing_number = models.CharField(max_length=300, blank=True, null=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, blank=True, null=True)
     stripe_external_account_id = models.TextField(blank=True, null=True)
@@ -129,7 +126,7 @@ class TutorBankAccount(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username}: {self.bank_name}"
+        return f"{self.user.username}"
 
 
 class PayoutRequest(models.Model):

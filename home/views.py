@@ -1,4 +1,5 @@
 import ast
+import json
 
 from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
@@ -25,7 +26,8 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
     SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
     FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn, \
     EmailVerificationSerializerIn, RequestVerificationLinkSerializerIn, UpdateEndedClassroomSerializerIn
-from tutor.models import Classroom
+from location.models import Country
+from tutor.models import Classroom, TutorBankAccount
 from tutor.serializers import ClassRoomSerializerOut
 
 
@@ -127,7 +129,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         if pk:
             queryset = get_object_or_404(Transaction, id=pk, user=request.user)
             serializer = TransactionSerializerOut(queryset).data
-            return Response({"detail": translate_to_language("Success", lang), "data": serializer})
+            return Response({"detail": translate_to_language("Success"), "data": serializer})
 
         if amount_to and amount_from:
             query &= Q(amount__range=[amount_from, amount_to])
@@ -144,7 +146,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Transaction.objects.filter(query).exclude(status="pending"), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Success", lang), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
 # @extend_schema_view(get=extend_schema(parameters=[
@@ -176,7 +178,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Chat retrieved", lang), "data": response})
+        return Response({"detail": translate_to_language("Chat retrieved"), "data": response})
 
 
 class PaymentPlanListAPIView(ListAPIView):
@@ -252,7 +254,7 @@ class TutorListAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Tutor retrieved", lang), "data": response})
+        return Response({"detail": translate_to_language("Tutor retrieved"), "data": response})
 
 
 class LanguageListAPIView(ListAPIView):
@@ -287,7 +289,7 @@ class NotificationAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]).order_by("-id"), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": translate_to_language("Success", lang), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
 class UploadProfilePictureAPIView(APIView):
@@ -518,28 +520,50 @@ class WebhookAPIView(APIView):
         from edudream.modules.utils import log_request
 
         stripe.api_key = settings.STRIPE_API_KEY
-        signature = request.headers.get("stripe-signature")
-        endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+        # signature = request.headers.get("stripe-signature")
+        # endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
 
         # Verify webhook signature and extract the event.
         # See https://stripe.com/docs/webhooks#verify-events for more information.
-        try:
-            event = stripe.Webhook.construct_event(
-                payload=request.data, sig_header=signature, secret=endpoint_secret
-            )
-        except ValueError as e:
-            # Invalid payload.
-            return Response(status=400)
-        except stripe.error.SignatureVerificationError as e:
-            # Invalid Signature.
-            return Response(status=400)
+        # try:
+        # event = stripe.Webhook.construct_event(
+        #     payload=request.data, sig_header=signature, secret=endpoint_secret
+        # )
+        #
+        # print(event)
+        # except ValueError as e:
+        #     # Invalid payload.
+        #     print(e)
+        #     return Response(status=400)
+        # except stripe.error.SignatureVerificationError as e:
+        #     print(e)
+        #     # Invalid Signature.
+        #     return Response(status=400)
+        event = request.data
+        log_request("STRIPE WEBHOOK RECEIVED: \n", event)
 
-        if event["type"] == "account.updated":
-            account = event["data"]["object"]
-            log_request("STRIPE WEBHOOK RECEIVED: \n", account)
+        #
+        if event["type"] == "account.external_account.created":
+            obj = event["data"]["object"]
+            acct = event["account"]
+            ba_id = obj["id"]
+            name = obj["bank_name"]
+            country_sc = obj["country"]
+            routing_no = obj["routing_number"]
+
+            country = Country.objects.get(alpha2code=country_sc)
+
+            # GET USER
+            tutor = Profile.objects.filter(account_type="tutor", stripe_connect_account_id=acct).last()
+            # CREATE BANK ACCOUNT
+            TutorBankAccount.objects.create(
+                user=tutor.user, bank_name=name, routing_number=routing_no, country=country,
+                stripe_external_account_id=ba_id
+            )
+
             # PROCEED TO UPDATE ACCOUNT HERE
 
-        return JsonResponse({"detail": "Webhook recieved"})
+        return Response({"detail": "Webhook recieved"})
 
     # def post(self, request):
         # data = {

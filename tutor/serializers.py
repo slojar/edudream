@@ -135,7 +135,7 @@ class CreateClassSerializerIn(serializers.Serializer):
     end_date = serializers.DateTimeField()
     subject_id = serializers.IntegerField()
     book_now = serializers.BooleanField()
-    occurrence = serializers.IntegerField(required=False)
+    # occurrence = serializers.IntegerField(required=False)
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
@@ -150,7 +150,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
         tutor_calender_id = validated_data.get("calender_id")
         book_now = validated_data.get("book_now", False)
-        reoccur = validated_data.get("occurrence", 1)
+        # reoccur = validated_data.get("occurrence", 1)
         parent_profile = None
 
         try:
@@ -191,7 +191,8 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
-        class_amount = reoccur * (duration * subject_amount / 60)
+        # class_amount = reoccur * (duration * subject_amount / 60)
+        class_amount = duration * subject_amount / 60
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
@@ -205,7 +206,8 @@ class CreateClassSerializerIn(serializers.Serializer):
                 "detail": "Classroom estimation complete",
                 "data": {"student_name": str(user.get_full_name()).upper(), "level": subject.grade,
                          "subject": subject.name, "start_at": start_date, "end_at": end_date,
-                         "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
+                         # "duration": f"{duration} minutes", "total_coin": class_amount, "occurrence": reoccur}
+                         "duration": f"{duration} minutes", "total_coin": class_amount}
             }
 
         # Check parent balance is available for class amount
@@ -215,7 +217,7 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Create class for student
         # Add grace period
-        single_class_amount = class_amount / reoccur
+        single_class_amount = class_amount
         new_end_time = end_date_convert + timezone.timedelta(minutes=int(d_site.class_grace_period))
         classroom = Classroom.objects.create(
             name=name, description=description, tutor=tutor_user, student=student, start_date=start_date,
@@ -234,19 +236,19 @@ class CreateClassSerializerIn(serializers.Serializer):
         Thread(target=create_notification,
                args=[tutor_user, translate_to_language(f"You have a new class request from {student.user.get_full_name()}", lang)]).start()
 
-        initial_start_date = classroom.start_date
-        while reoccur > 1:
-            loop_start_date = initial_start_date + timezone.timedelta(days=7)
-            class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
-            loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
-            # Create Classroom
-            loop_classroom = Classroom.objects.create(
-                name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
-                end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
-            )
-            avail.classroom.add(loop_classroom)
-            initial_start_date = loop_classroom.start_date
-            reoccur -= 1
+        # initial_start_date = classroom.start_date
+        # while reoccur > 1:
+        #     loop_start_date = initial_start_date + timezone.timedelta(days=7)
+        #     class_end_date = loop_start_date + timezone.timedelta(minutes=duration)
+        #     loop_end_date = class_end_date + timezone.timedelta(minutes=int(d_site.class_grace_period))
+        #     # Create Classroom
+        #     loop_classroom = Classroom.objects.create(
+        #         name=name, description=description, tutor=tutor_user, student=student, start_date=loop_end_date,
+        #         end_date=loop_end_date, amount=single_class_amount, subjects=subject, expected_duration=duration
+        #     )
+        #     avail.classroom.add(loop_classroom)
+        #     initial_start_date = loop_classroom.start_date
+        #     reoccur -= 1
 
         return {
             "detail": translate_to_language("Classroom request sent successfully", lang),
@@ -331,7 +333,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.balance += amount
             parent_wallet.save()
             # Set Tutor Availability
-            instance.tutorcalendar_set.all().update(status="available")
+            instance.tutorcalendar_set.all().update(status="available", classroom=None)
             # TutorCalendar.objects.filter(classroom=instance).update(status="available")
             # Create refund transaction
             Transaction.objects.create(
@@ -347,7 +349,7 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Update instance state
             instance.decline_reason = decline_reason
             instance.status = "declined"
-            instance.tutorcalendar_set.all().update(status="available")
+            instance.tutorcalendar_set.all().update(status="available", classroom=None)
             # Send notification to student
             Thread(target=student_class_declined_email, args=[instance, lang]).start()
             # Send notification to parent
@@ -488,7 +490,6 @@ class TutorCalendarSerializerIn(serializers.Serializer):
 
 
 class TutorBankAccountSerializerOut(serializers.ModelSerializer):
-    account_number = serializers.SerializerMethodField()
     routing_number = serializers.SerializerMethodField()
 
     def get_routing_number(self, obj):
@@ -496,32 +497,22 @@ class TutorBankAccountSerializerOut(serializers.ModelSerializer):
             return mask_number(obj.routing_number, 5)
         return None
 
-    def get_account_number(self, obj):
-        if obj.account_number:
-            return mask_number(obj.account_number, 5)
-        return None
-
     class Meta:
         model = TutorBankAccount
-        exclude = ["stripe_external_account_id"]
+        exclude = []
 
 
 class TutorBankAccountSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     bank_name = serializers.CharField()
-    account_name = serializers.CharField()
-    account_number = serializers.CharField()
-    account_type = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     # routing_number = serializers.CharField(required=False)
+    routing_number = serializers.CharField(required=False)
     country_id = serializers.IntegerField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         bank = validated_data.get("bank_name")
-        acct_name = validated_data.get("account_name")
-        acct_no = validated_data.get("account_number")
-        acct_type = validated_data.get("account_type")
         # routing_no = validated_data.get("routing_number")
         country_id = validated_data.get("country_id")
         lang = validated_data.get("lang", "en")
@@ -536,7 +527,8 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
 
         try:
 
-            stripe_connected_acct = decrypt_text(tutor.stripe_connect_account_id)
+            stripe_connected_acct = tutor.stripe_connect_account_id
+            acct_no = ""
 
             # Add Bank Details to Connected Stripe Account
             external_account = StripeAPI.create_external_account(
@@ -545,11 +537,9 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
             )
             external_account_id = external_account.get("id")
             if external_account_id:
-                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank, account_number=acct_no)
-                acct.account_name = acct_name
-                acct.account_type = acct_type
+                acct, _ = TutorBankAccount.objects.get_or_create(user=user, bank_name=bank)
                 acct.country = country
-                acct.stripe_external_account_id = encrypt_text(external_account_id)
+                acct.stripe_external_account_id = external_account_id
                 acct.save()
 
                 return {

@@ -137,7 +137,7 @@ class ApproveDeclinePayoutSerializerIn(serializers.Serializer):
             new_balance = float(balance / 100)
             if amount > new_balance:
                 raise InvalidRequestException({"detail": "Cannot process payout at the moment, please try again later"})
-            stripe_connect_account_id = decrypt_text(instance.user.profile.stripe_connect_account_id)
+            stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
             narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
 
             # Process Transfer
