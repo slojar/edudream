@@ -508,16 +508,16 @@ class TutorBankAccountSerializerIn(serializers.Serializer):
     lang = serializers.CharField(required=False)
     # routing_number = serializers.CharField(required=False)
     routing_number = serializers.CharField(required=False)
-    country_id = serializers.IntegerField()
+    # country_id = serializers.IntegerField()
 
     def create(self, validated_data):
         user = validated_data.get("auth_user")
         bank = validated_data.get("bank_name")
         # routing_no = validated_data.get("routing_number")
-        country_id = validated_data.get("country_id")
+        # country_id = validated_data.get("country_id")
         lang = validated_data.get("lang", "en")
 
-        country = get_object_or_404(Country, id=country_id)
+        country = get_object_or_404(Country, alpha2code__iexact="fr")
         tutor = get_object_or_404(Profile, user=user, account_type="tutor")
         if not tutor.stripe_verified and tutor.stripe_connect_account_id:
             raise InvalidRequestException(
