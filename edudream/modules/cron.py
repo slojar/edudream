@@ -34,7 +34,6 @@ def payout_cron_job():
             coin = instance.coin
             stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
             stripe_external_account_id = instance.bank_account.stripe_external_account_id
-            accounts_list = list()
             amount = float(instance.amount)
             # Check stripe balance
             balance = StripeAPI.get_account_balance()
