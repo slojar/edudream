@@ -227,7 +227,7 @@ class StripeAPI:
         log_request(f'Account creation token response: {account_token}')
 
         result = stripe.Account.create(
-            type="custom", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
+            type="custom", country="FR", email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
 
