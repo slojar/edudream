@@ -298,5 +298,13 @@ class StripeAPI:
         log_request(f'Check balance response: {result}')
         return balance
 
+    @classmethod
+    def get_connect_account_balance(cls, acct):
+        from edudream.modules.utils import log_request
+        result = stripe.Balance.retrieve(expand=["instant_available.net_available"], stripe_account=acct)
+        log_request(f'Check connect account balance response: {result}')
+        return result
+
+
 
 

@@ -32,14 +32,17 @@ def payout_cron_job():
         for instance in payouts:
             user_wallet = instance.user.wallet
             coin = instance.coin
+            stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
+            stripe_external_account_id = instance.bank_account.stripe_external_account_id
+            accounts_list = list()
             amount = float(instance.amount)
             # Check stripe balance
-            # balance = StripeAPI.get_account_balance()
-            # new_balance = float(balance / 100)
-            # if amount > new_balance:
-            #     log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
-            #     break
-            stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
+            balance = StripeAPI.get_account_balance()
+            new_balance = float(balance / 100)
+            if amount > new_balance:
+                log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
+                break
+
             narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
 
             # Process Transfer
@@ -50,7 +53,12 @@ def payout_cron_job():
             transaction = Transaction.objects.create(
                 user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
             )
-            stripe_external_account_id = instance.bank_account.stripe_external_account_id
+            ##########
+            customer_balance = StripeAPI.get_connect_account_balance(acct=stripe_connect_account_id)
+            # accounts = data["instant_available"]
+            # for accnt in accounts:
+            #     net_avail = accnt["net_available"]
+
             payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
             if payout_response.get("failure_message") is None and payout_response.get("id"):
                 instance.status = "processed"
