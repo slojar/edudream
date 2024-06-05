@@ -14,7 +14,8 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.filters import SearchFilter
 
 from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_reminder_job, \
-    class_fee_to_tutor_pending_balance_job, process_pending_balance_to_main_job, update_ended_classroom_jobs
+    class_fee_to_tutor_pending_balance_job, process_pending_balance_to_main_job, update_ended_classroom_jobs, \
+    unencrypt_customer_id
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
@@ -507,6 +508,14 @@ class UpdateEndedClassroomCronAPIView(APIView):
 
     def get(self, request):
         update_ended_classroom_jobs()
+        return JsonResponse({"detail": "Cron Ran Successfully"})
+
+
+class UpdateStripeAccount(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        unencrypt_customer_id()
         return JsonResponse({"detail": "Cron Ran Successfully"})
 
 
