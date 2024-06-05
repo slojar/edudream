@@ -511,14 +511,6 @@ class UpdateEndedClassroomCronAPIView(APIView):
         return JsonResponse({"detail": "Cron Ran Successfully"})
 
 
-class UpdateStripeAccount(APIView):
-    permission_classes = []
-
-    def get(self, request):
-        unencrypt_customer_id()
-        return JsonResponse({"detail": "Cron Ran Successfully"})
-
-
 class WebhookAPIView(APIView):
     permission_classes = []
 
@@ -529,26 +521,26 @@ class WebhookAPIView(APIView):
         from edudream.modules.utils import log_request
 
         stripe.api_key = settings.STRIPE_API_KEY
-        # signature = request.headers.get("stripe-signature")
-        # endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+        signature = request.headers.get("stripe-signature")
+        endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
 
         # Verify webhook signature and extract the event.
         # See https://stripe.com/docs/webhooks#verify-events for more information.
-        # try:
-        # event = stripe.Webhook.construct_event(
-        #     payload=request.data, sig_header=signature, secret=endpoint_secret
-        # )
-        #
-        # print(event)
-        # except ValueError as e:
-        #     # Invalid payload.
-        #     print(e)
-        #     return Response(status=400)
-        # except stripe.error.SignatureVerificationError as e:
-        #     print(e)
-        #     # Invalid Signature.
-        #     return Response(status=400)
-        event = request.data
+        try:
+            event = stripe.Webhook.construct_event(
+                payload=request.data, sig_header=signature, secret=endpoint_secret
+            )
+
+            log_request(event)
+        except ValueError as e:
+            # Invalid payload.
+            log_request(e)
+            return Response(status=400)
+        except stripe.error.SignatureVerificationError as e:
+            log_request(e)
+            # Invalid Signature.
+            return Response(status=400)
+        # event = request.data
         log_request("STRIPE WEBHOOK RECEIVED: \n", event)
 
         #
