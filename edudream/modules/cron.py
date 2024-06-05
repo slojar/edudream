@@ -214,14 +214,17 @@ def unencrypt_customer_id():
     bank_accounts = TutorBankAccount.objects.all()
     for user_profile in user_profiles:
         if user_profile.stripe_customer_id:
-            user_profile.stripe_customer_id = decrypt_text(user_profile.stripe_customer_id)
+            new_customer_id = decrypt_text(user_profile.stripe_customer_id)
+            user_profile.stripe_customer_id = new_customer_id
         if user_profile.stripe_connect_account_id:
-            user_profile.stripe_connect_account_id = decrypt_text(user_profile.stripe_connect_account_id)
+            new_connect_id = decrypt_text(user_profile.stripe_connect_account_id)
+            user_profile.stripe_connect_account_id = new_connect_id
         user_profile.save()
 
     for acct in bank_accounts:
         if acct.stripe_external_account_id:
-            acct.stripe_external_account_id = decrypt_text(acct.stripe_external_account_id)
+            new_acct_id = decrypt_text(acct.stripe_external_account_id)
+            acct.stripe_external_account_id = new_acct_id
 
         acct.save()
 
