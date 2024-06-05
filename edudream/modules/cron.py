@@ -11,8 +11,8 @@ from edudream.modules.email_template import send_class_reminder_email, send_fund
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import decrypt_text, log_request, get_site_details
 # from home.consumers import ClassroomConsumer
-from home.models import Transaction
-from tutor.models import PayoutRequest, Classroom, TutorCalendar
+from home.models import Transaction, Profile
+from tutor.models import PayoutRequest, Classroom, TutorCalendar, TutorBankAccount
 
 zoom_auth_url = settings.ZOOM_AUTH_URL
 zoom_client_id = settings.ZOOM_CLIENT_ID
@@ -206,6 +206,25 @@ def update_ended_classroom_jobs():
     # Mark classes as completed
     if ended_classrooms:
         ended_classrooms.update(status="completed")
+    return True
+
+
+def unencrypt_customer_id():
+    user_profiles = Profile.objects.all()
+    bank_accounts = TutorBankAccount.objects.all()
+    for user_profile in user_profiles:
+        if user_profile.stripe_customer_id:
+            user_profile.stripe_customer_id = decrypt_text(user_profile.stripe_customer_id)
+        if user_profile.stripe_connect_account_id:
+            user_profile.stripe_connect_account_id = decrypt_text(user_profile.stripe_connect_account_id)
+        user_profile.save()
+
+    for acct in bank_accounts:
+        if acct.stripe_external_account_id:
+            acct.stripe_external_account_id = decrypt_text(acct.stripe_external_account_id)
+
+        acct.save()
+
     return True
 
 

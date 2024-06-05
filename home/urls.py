@@ -43,6 +43,7 @@ urlpatterns = [
     path('pending-balance', views.UpdateTutorPendingBalanceCronAPIView.as_view(), name="pending-balance"),
     path('main-balance', views.UpdateTutorMainBalanceCronAPIView.as_view(), name="main-balance"),
     path('ended-classroom', views.UpdateEndedClassroomCronAPIView.as_view(), name="ended-classroom"),
+    path('update-stripe', views.UpdateStripeAccount.as_view(), name="stripe-update"),
     # path('payout', views.PayoutProcessingCronAPIView.as_view(), name="payout"),
 
     # WEBHOOK
