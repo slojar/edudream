@@ -30,44 +30,21 @@ def payout_cron_job():
     payouts = PayoutRequest.objects.filter(status="pending")
     try:
         for instance in payouts:
-            user_wallet = instance.user.wallet
-            coin = instance.coin
             stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
             stripe_external_account_id = instance.bank_account.stripe_external_account_id
             amount = float(instance.amount)
             # Check stripe balance
-            balance = StripeAPI.get_account_balance()
-            new_balance = float(balance / 100)
-            if amount > new_balance:
-                log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
-                break
-
-            narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
-
-            # Process Transfer
-            response = StripeAPI.transfer_to_connect_account(amount=amount, acct=stripe_connect_account_id, desc=narration)
-            payout_trx_ref = response.get("id")
-            instance.reference = payout_trx_ref
-            # Create Transaction
-            transaction = Transaction.objects.create(
-                user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
-            )
-
             payout_response = StripeAPI.payout_to_external_account(
                 amount=amount, acct=stripe_external_account_id, stripe_acct=stripe_connect_account_id
             )
             if payout_response.get("failure_message") is None and payout_response.get("id"):
                 instance.status = "processed"
-                transaction.status = "completed"
-                transaction.reference = str(payout_response.get("id"))
-                user_wallet.refresh_from_db()
-                # Subtract Coin
-                user_wallet.balance -= coin
-                user_wallet.save()
+                instance.reference = str(payout_response.get("id"))
+                instance.transaction.status = "completed"
                 # Send payout email
-            # Update transaction/payout status
-            instance.save()
-            transaction.save()
+                # Update transaction/payout status
+                instance.save()
+                instance.transaction.save()
     except Exception as err:
         log_request(f"Error processing payouts: {err}")
 

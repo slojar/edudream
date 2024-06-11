@@ -13,6 +13,10 @@ translate = [
     "fr": "Montant trop faible. Le montant minimum du paiement est d'un euro"
   },
   {
+    "msgid": "Cannot process the withdrawal, please try again later",
+    "fr": "Impossible de traiter le retrait, veuillez réessayer plus tard"
+  },
+  {
     "msgid": "You need to complete your Stripe Connect onboarding process to continue",
     "fr": "Vous devez terminer votre processus d'intégration de Stripe Connect pour continuer"
   },

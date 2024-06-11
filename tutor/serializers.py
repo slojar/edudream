@@ -596,6 +596,34 @@ class RequestPayoutSerializerIn(serializers.Serializer):
         if amount < 1:
             raise InvalidRequestException({"detail": translate_to_language("Amount too low. Minimum payout amount is One Euro", lang)})
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
+
+        # Subtract payout coin from balance
+        balance = StripeAPI.get_account_balance()
+        new_balance = float(balance / 100)
+        stripe_connect_account_id = user.profile.stripe_connect_account_id
+
+        if amount > new_balance:
+            log_request({"detail": f"Payout for {user.get_full_name()} failed due to low Stripe Balance"})
+            # Send low balance email to admin
+            raise InvalidRequestException({"detail": translate_to_language("Cannot process the withdrawal, please try again later", lang)})
+
+        narration = f"EduDream Payout of EUR{amount} to {user.get_full_name()}"
+
+        # Process Transfer
+        response = StripeAPI.transfer_to_connect_account(amount=amount, acct=stripe_connect_account_id, desc=narration)
+        transfer_trx_ref = response.get("id")
+        user_wallet.refresh_from_db()
+        # Subtract Coin
+        user_wallet.balance -= coin
+        user_wallet.save()
+
+        # Create Transaction
+        trans = Transaction.objects.create(
+            user=user, transaction_type="withdrawal", amount=amount, narration=narration, reference=transfer_trx_ref
+        )
+        payout.transaction = trans
+        payout.save()
+
         # Send Email to user
         Thread(target=payout_request_email, args=[user, lang]).start()
         return {"detail": translate_to_language("Success", lang),

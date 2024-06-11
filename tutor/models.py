@@ -132,6 +132,7 @@ class TutorBankAccount(models.Model):
 class PayoutRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     bank_account = models.ForeignKey(TutorBankAccount, on_delete=models.CASCADE)
+    transaction = models.ForeignKey("home.Transaction", on_delete=models.SET_NULL, blank=True, null=True)
     coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     reference = models.CharField(max_length=300, blank=True, null=True)
