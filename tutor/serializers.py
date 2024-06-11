@@ -593,6 +593,8 @@ class RequestPayoutSerializerIn(serializers.Serializer):
                          "coin_to_withdraw": coin, "amount_equivalent": f"EUR{amount}"}
             }
         # Create Payout Request
+        if amount < 1:
+            raise InvalidRequestException({"detail": translate_to_language("Amount too low. Minimum payout amount is One Euro", lang)})
         payout = PayoutRequest.objects.create(user=user, bank_account=bank_acct, coin=coin, amount=amount)
         # Send Email to user
         Thread(target=payout_request_email, args=[user, lang]).start()
