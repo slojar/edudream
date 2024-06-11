@@ -8,7 +8,10 @@ translate = [
     "msgid": "Error occurred on '{err_val_key}' field: {err_msg}",
     "fr": "Une erreur s'est produite le '{err_val_key}' field: {err_msg}"
   },
-
+  {
+    "msgid": "Amount too low. Minimum payout amount is One Euro",
+    "fr": "Montant trop faible. Le montant minimum du paiement est d'un euro"
+  },
   {
     "msgid": "You need to complete your Stripe Connect onboarding process to continue",
     "fr": "Vous devez terminer votre processus d'intégration de Stripe Connect pour continuer"
