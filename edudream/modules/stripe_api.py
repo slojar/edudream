@@ -230,7 +230,10 @@ class StripeAPI:
             type="custom", country="FR", email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
-
+            individual={
+                "address": {"city": "Paris", "country": "FR", "line1": "47 Avenue Georges Mandel",
+                            "postal_code": "75116", "state": "Île de France"}
+            }
         )
         log_request(f'Connect account creation response: {result}')
         return result
