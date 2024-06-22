@@ -211,13 +211,16 @@ class SignUpSerializerIn(serializers.Serializer):
     last_name = serializers.CharField()
     email_address = serializers.EmailField()
     password = serializers.CharField()
-    # address = serializers.CharField(max_length=300)
+    address = serializers.CharField(max_length=300, required=False)
     account_type = serializers.ChoiceField(choices=ACCOUNT_TYPE_CHOICES)
     mobile_number = serializers.CharField(max_length=20)
     # dob = serializers.DateTimeField(required=False)
-    # city = serializers.IntegerField()
-    # state = serializers.IntegerField()
+    city = serializers.IntegerField(required=False)
+    state = serializers.IntegerField(required=False)
     country = serializers.IntegerField()
+    postal_code = serializers.CharField(required=False)
+    address_front_file = serializers.FileField(required=False)
+    address_back_file = serializers.FileField(required=False)
     languages = serializers.CharField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
@@ -246,11 +249,14 @@ class SignUpSerializerIn(serializers.Serializer):
         email = validated_data.get("email_address")
         password = validated_data.get("password")
         acct_type = validated_data.get("account_type")
-        # address = validated_data.get("address")
+        address = validated_data.get("address")
         phone_number = validated_data.get("mobile_number")
         # d_o_b = validated_data.get("dob")
-        # city_id = validated_data.get("city")
-        # state_id = validated_data.get("state")
+        city_id = validated_data.get("city")
+        postal_code = validated_data.get("postal_code")
+        address_front = validated_data.get("address_front_file")
+        address_back = validated_data.get("address_back_file")
+        state_id = validated_data.get("state")
         country_id = validated_data.get("country")
         languages = validated_data.get("languages")
         bio = validated_data.get("bio")
@@ -275,14 +281,12 @@ class SignUpSerializerIn(serializers.Serializer):
 
         required_for_tutor = [
             bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
-            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended
+            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended, country_id,
+            state_id, address, city_id, postal_code, address_front, address_back
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": translate_to_language("Please submit all required details", lang)})
         country = get_object_or_404(Country, id=country_id)
-
-        # state = get_object_or_404(State, id=state_id, country_id=country_id)
-        # city = get_object_or_404(City, id=city_id, state_id=state_id)
 
         if User.objects.filter(username__iexact=email).exists():
             raise InvalidRequestException({"detail": translate_to_language("Email is taken", lang)})
@@ -353,7 +357,12 @@ class SignUpSerializerIn(serializers.Serializer):
 
         # Create TutorDetail if account type is "tutor"
         if acct_type == "tutor":
-            Profile.objects.filter(user=user).update(active=False)
+            state = get_object_or_404(State, id=state_id, country_id=country_id)
+            city = get_object_or_404(City, id=city_id, state_id=state_id)
+
+            Profile.objects.filter(user=user).update(
+                active=False, city=city, address=address, state=state, postal_code=postal_code
+            )
             tutor_detail, _ = TutorDetail.objects.get_or_create(user=user)
             tutor_detail.bio = bio
             tutor_detail.hobbies = hobbies
@@ -369,6 +378,8 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_grade = diploma_grade
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.address_front_file = address_front
+            tutor_detail.address_back_file = address_back
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
@@ -484,13 +495,18 @@ class ProfileSerializerIn(serializers.Serializer):
     mobile_number = serializers.CharField(max_length=20, required=False)
     diploma_file = serializers.FileField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
+
+    postal_code = serializers.CharField(required=False)
+    address_front_file = serializers.FileField(required=False)
+    address_back_file = serializers.FileField(required=False)
+
     first_name = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     last_name = serializers.CharField(required=False)
     dob = serializers.DateTimeField(required=False)
-    city_id = serializers.IntegerField(required=False)
-    state_id = serializers.IntegerField(required=False)
-    country_id = serializers.IntegerField(required=False)
+    city = serializers.IntegerField(required=False)
+    state = serializers.IntegerField(required=False)
+    country = serializers.IntegerField(required=False)
     bio = serializers.CharField(required=False)
     languages = serializers.CharField(required=False)
     max_student = serializers.IntegerField(required=False)
@@ -511,15 +527,18 @@ class ProfileSerializerIn(serializers.Serializer):
     def update(self, instance, validated_data):
         user = validated_data.get("user")
         lang = validated_data.get("lang", "en")
-        country_id = validated_data.get("country_id")
-        state_id = validated_data.get("state_id")
-        city_id = validated_data.get("city_id")
+        country_id = validated_data.get("country")
+        state_id = validated_data.get("state")
+        city_id = validated_data.get("city")
         subjects = validated_data.get("subject")
         languages = validated_data.get("languages")
         diploma_file = validated_data.get("diploma_file")
         proficiency_test_file = validated_data.get("proficiency_test_file")
+        address_front_file = validated_data.get("address_front_file")
+        address_back_file = validated_data.get("address_back_file")
 
         instance.address = validated_data.get('address', instance.address)
+        instance.postal_code = validated_data.get('postal_code', instance.postal_code)
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
         instance.dob = validated_data.get('dob', instance.dob)
         user.first_name = validated_data.get('first_name', user.first_name)
@@ -552,6 +571,10 @@ class ProfileSerializerIn(serializers.Serializer):
                 tutor_detail.diploma_file = diploma_file
             if proficiency_test_file:
                 tutor_detail.proficiency_test_file = proficiency_test_file
+            if address_front_file:
+                tutor_detail.address_front_file = address_front_file
+            if address_back_file:
+                tutor_detail.address_back_file = address_back_file
 
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:

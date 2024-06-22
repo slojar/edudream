@@ -217,8 +217,21 @@ class StripeAPI:
         return stripe.PaymentIntent.retrieve(payment_intent)
 
     @classmethod
-    def create_connect_account(cls, user):
+    def upload_file(cls, file_path, purpose):
         from edudream.modules.utils import log_request
+        with open(file_path, "rb") as fp:
+            upload = stripe.File.create(purpose=purpose, file=fp)
+            log_request(f'File upload response: {upload}')
+            return upload
+
+    @classmethod
+    def create_connect_account(cls, user, front_file, back_file):
+        from edudream.modules.utils import log_request
+        city_name = str(user.profile.city.name)
+        country_code = str(user.profile.country.alpha2code)
+        state_name = str(user.profile.state.name)
+        postal_code = str(user.profile.postal_code)
+        address = str(user.profile.address)
         account_token = stripe.Token.create(
             account={
                 "individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
@@ -227,12 +240,18 @@ class StripeAPI:
         log_request(f'Account creation token response: {account_token}')
 
         result = stripe.Account.create(
-            type="custom", country="FR", email=str(user.email),
+            type="custom", country=country_code, email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
             individual={
-                "address": {"city": "Paris", "country": "FR", "line1": "47 Avenue Georges Mandel",
-                            "postal_code": "75116", "state": "Île de France"}
+                "address": {"city": city_name, "country": country_code, "line1": address,
+                            "postal_code": postal_code, "state": state_name},
+                "verification": {
+                    "additional_document": {
+                        "front": str(front_file),
+                        "back": str(back_file)
+                    }
+                }
             }
         )
         log_request(f'Connect account creation response: {result}')
