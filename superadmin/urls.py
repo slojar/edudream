@@ -33,6 +33,8 @@ urlpatterns = [
     path('subject', views.AdminSubjectAPIView.as_view(), name="subjects"),
     path('subject/<int:id>', views.AdminSubjectDetailAPIView.as_view(), name="subject-detail"),
     path('update-wallet/<int:pk>', views.UpdateWalletBalance.as_view(), name="wallet-update"),
+    path('city', views.ListCreateCityAPIView.as_view(), name="city"),
+    path('city/<int:pk>', views.CityRetrieveAPIView.as_view(), name="city-detail"),
 
 
 ]

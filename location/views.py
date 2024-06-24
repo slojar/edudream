@@ -6,7 +6,7 @@ from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiPara
 from edudream.modules.paginations import CustomPagination
 from .models import *
 from rest_framework.views import APIView
-from .serializers import CountrySerializer, StateSerializer
+from .serializers import CountrySerializer, StateSerializer, CitySerializer
 from rest_framework import generics, filters
 
 from edudream.modules.utils import create_country_state_city
@@ -37,6 +37,17 @@ class StateListAPIView(generics.ListAPIView):
         country_id = self.request.GET.get("country_id")
         country = get_object_or_404(Country, id=country_id)
         return State.objects.filter(country=country)
+
+
+class CityListAPIView(generics.ListAPIView):
+    permission_classes = []
+    pagination_class = CustomPagination
+    serializer_class = CitySerializer
+
+    def get_queryset(self):
+        state_id = self.request.GET.get("state_id")
+        state = get_object_or_404(State, id=state_id)
+        return City.objects.filter(state=state)
 
 
 class PopulateLocationAPIView(APIView):
