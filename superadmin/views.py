@@ -16,7 +16,6 @@ from home.models import Profile, ClassReview, PaymentPlan, Language, Notificatio
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
     PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut, SubjectSerializerOut
 from location.models import City
-from location.serializers import CitySerializer
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \
@@ -397,17 +396,5 @@ class UpdateWalletBalance(APIView):
         response = serializer.save()
         return Response(response)
 
-
-class ListCreateCityAPIView(ListCreateAPIView):
-    permission_classes = [IsAdminUser]
-    queryset = City.objects.all()
-    serializer_class = CitySerializer
-
-
-class CityRetrieveAPIView(RetrieveAPIView):
-    permission_classes = [IsAdminUser]
-    queryset = City.objects.all()
-    serializer_class = CitySerializer
-    lookup_field = "id"
 
 

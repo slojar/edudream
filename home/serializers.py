@@ -215,12 +215,15 @@ class SignUpSerializerIn(serializers.Serializer):
     account_type = serializers.ChoiceField(choices=ACCOUNT_TYPE_CHOICES)
     mobile_number = serializers.CharField(max_length=20)
     # dob = serializers.DateTimeField(required=False)
-    city = serializers.IntegerField(required=False)
+    city = serializers.CharField(required=False)
     state = serializers.IntegerField(required=False)
     country = serializers.IntegerField()
     postal_code = serializers.CharField(required=False)
     address_front_file = serializers.FileField(required=False)
     address_back_file = serializers.FileField(required=False)
+    nationality_front_file = serializers.FileField(required=False)
+    nationality_back_file = serializers.FileField(required=False)
+
     languages = serializers.CharField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
@@ -252,10 +255,13 @@ class SignUpSerializerIn(serializers.Serializer):
         address = validated_data.get("address")
         phone_number = validated_data.get("mobile_number")
         # d_o_b = validated_data.get("dob")
-        city_id = validated_data.get("city")
+        city = validated_data.get("city")
         postal_code = validated_data.get("postal_code")
-        address_front = validated_data.get("address_front_file")
-        address_back = validated_data.get("address_back_file")
+        address_front = validated_data.get("address_front_file", None)
+        address_back = validated_data.get("address_back_file", None)
+        nationality_front = validated_data.get("nationality_front_file", None)
+        nationality_back = validated_data.get("nationality_back_file", None)
+
         state_id = validated_data.get("state")
         country_id = validated_data.get("country")
         languages = validated_data.get("languages")
@@ -282,7 +288,8 @@ class SignUpSerializerIn(serializers.Serializer):
         required_for_tutor = [
             bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
             languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended, country_id,
-            state_id, address, city_id, postal_code, address_front, address_back
+            # state_id, address, city_id, postal_code, address_front, address_back, nationality_front
+            # nationality_back
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
             raise InvalidRequestException({"detail": translate_to_language("Please submit all required details", lang)})
@@ -357,11 +364,12 @@ class SignUpSerializerIn(serializers.Serializer):
 
         # Create TutorDetail if account type is "tutor"
         if acct_type == "tutor":
-            state = get_object_or_404(State, id=state_id, country_id=country_id)
-            city = get_object_or_404(City, id=city_id, state_id=state_id)
+            # state = get_object_or_404(State, id=state_id, country_id=country_id)
+            # city = get_object_or_404(City, id=city_id, state_id=state_id)
 
             Profile.objects.filter(user=user).update(
-                active=False, city=city, address=address, state=state, postal_code=postal_code
+                active=False
+                # active=False, city=city, address=address, state=state, postal_code=postal_code
             )
             tutor_detail, _ = TutorDetail.objects.get_or_create(user=user)
             tutor_detail.bio = bio
@@ -380,6 +388,8 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.proficiency_test_file = proficiency_test_file
             tutor_detail.address_front_file = address_front
             tutor_detail.address_back_file = address_back
+            tutor_detail.nationality_front_file = nationality_front
+            tutor_detail.nationality_back_file = nationality_back
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
@@ -499,6 +509,8 @@ class ProfileSerializerIn(serializers.Serializer):
     postal_code = serializers.CharField(required=False)
     address_front_file = serializers.FileField(required=False)
     address_back_file = serializers.FileField(required=False)
+    nationality_front_file = serializers.FileField(required=False)
+    nationality_back_file = serializers.FileField(required=False)
 
     first_name = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
@@ -529,18 +541,21 @@ class ProfileSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
         country_id = validated_data.get("country")
         state_id = validated_data.get("state")
-        city_id = validated_data.get("city")
+        city = validated_data.get("city")
         subjects = validated_data.get("subject")
         languages = validated_data.get("languages")
         diploma_file = validated_data.get("diploma_file")
         proficiency_test_file = validated_data.get("proficiency_test_file")
         address_front_file = validated_data.get("address_front_file")
         address_back_file = validated_data.get("address_back_file")
+        nationality_front_file = validated_data.get("nationality_front_file")
+        nationality_back_file = validated_data.get("nationality_back_file")
 
         instance.address = validated_data.get('address', instance.address)
         instance.postal_code = validated_data.get('postal_code', instance.postal_code)
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
         instance.dob = validated_data.get('dob', instance.dob)
+        instance.city = validated_data.get('city', instance.city)
         user.first_name = validated_data.get('first_name', user.first_name)
         user.last_name = validated_data.get('last_name', user.last_name)
         if country_id:
@@ -549,9 +564,6 @@ class ProfileSerializerIn(serializers.Serializer):
         if state_id:
             state = get_object_or_404(State, id=state_id)
             instance.state = state
-        if city_id:
-            city = get_object_or_404(City, id=city_id)
-            instance.city = city
 
         if instance.account_type == "tutor":
             tutor_detail = TutorDetail.objects.filter(user=user).last()
@@ -575,6 +587,10 @@ class ProfileSerializerIn(serializers.Serializer):
                 tutor_detail.address_front_file = address_front_file
             if address_back_file:
                 tutor_detail.address_back_file = address_back_file
+            if nationality_front_file:
+                tutor_detail.nationality_front_file = nationality_front_file
+            if nationality_back_file:
+                tutor_detail.nationality_back_file = nationality_back_file
 
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:

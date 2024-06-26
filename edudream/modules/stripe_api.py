@@ -225,9 +225,9 @@ class StripeAPI:
             return upload
 
     @classmethod
-    def create_connect_account(cls, user, front_file, back_file):
+    def create_connect_account(cls, user, address_front_file, address_back_file, nat_front_file, nat_back_file):
         from edudream.modules.utils import log_request
-        city_name = str(user.profile.city.name)
+        city_name = str(user.profile.city)
         country_code = str(user.profile.country.alpha2code)
         state_name = str(user.profile.state.name)
         postal_code = str(user.profile.postal_code)
@@ -244,12 +244,17 @@ class StripeAPI:
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
             individual={
+                "first_name": str(user.first_name), "last_name": str(user.last_name), "email": str(user.email),
                 "address": {"city": city_name, "country": country_code, "line1": address,
                             "postal_code": postal_code, "state": state_name},
                 "verification": {
+                    "document": {
+                        "front": str(nat_front_file),
+                        "back": str(nat_back_file)
+                    },
                     "additional_document": {
-                        "front": str(front_file),
-                        "back": str(back_file)
+                        "front": str(address_front_file),
+                        "back": str(address_back_file)
                     }
                 }
             }
