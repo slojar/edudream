@@ -225,7 +225,7 @@ class StripeAPI:
             return upload
 
     @classmethod
-    def create_connect_account(cls, user, address_front_file, address_back_file, nat_front_file, nat_back_file):
+    def create_connect_account(cls, user):
         from edudream.modules.utils import log_request
         city_name = str(user.profile.city)
         country_code = str(user.profile.country.alpha2code)
@@ -233,9 +233,9 @@ class StripeAPI:
         postal_code = str(user.profile.postal_code)
         address = str(user.profile.address)
         account_token = stripe.Token.create(
-            account={
-                "individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
-                                    "email": str(user.email)}, "tos_shown_and_accepted": True, "business_type": "individual"}, api_key=pk_key
+            account={"individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True,
+                     "business_type": "individual"}, api_key=pk_key
         )
         log_request(f'Account creation token response: {account_token}')
 
@@ -247,19 +247,28 @@ class StripeAPI:
                 "first_name": str(user.first_name), "last_name": str(user.last_name), "email": str(user.email),
                 "address": {"city": city_name, "country": country_code, "line1": address,
                             "postal_code": postal_code, "state": state_name},
-                "verification": {
-                    "document": {
-                        "front": str(nat_front_file),
-                        "back": str(nat_back_file)
-                    },
-                    "additional_document": {
-                        "front": str(address_front_file),
-                        "back": str(address_back_file)
-                    }
-                }
             }
         )
         log_request(f'Connect account creation response: {result}')
+        return result
+
+    @classmethod
+    def update_connect_account(cls, user, address_front_file, address_back_file, nat_front_file, nat_back_file):
+        from edudream.modules.utils import log_request
+        account_token = stripe.Token.create(
+            account={"individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True,
+                     "business_type": "individual"}, api_key=pk_key
+        )
+        log_request(f'Account creation token response: {account_token}')
+
+        result = stripe.Account.modify(
+            str(user.profile.stripe_connect_account_id), account_token=account_token.get("id"), individual={
+                "verification": {"document": {"front": str(nat_front_file), "back": str(nat_back_file)},
+                                 "additional_document": {"front": str(address_front_file),
+                                                         "back": str(address_back_file)}}}
+        )
+        log_request(f'Connect account update response: {result}')
         return result
 
     @classmethod

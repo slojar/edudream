@@ -246,26 +246,33 @@ class GetOnboardingLinkView(APIView):
         lang = request.GET.get("lang", "en")
         tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
         try:
+            # Address and Nationality Documents
+            address_front = tutor.user.tutordetail.address_front_file
+            address_back = tutor.user.tutordetail.address_back_file
+            nat_front = tutor.user.tutordetail.nationality_front_file
+            nat_back = tutor.user.tutordetail.nationality_back_file
+
+            if not all([address_front, address_back, nat_front, nat_back]):
+                raise InvalidRequestException({
+                    "detail": translate_to_language(
+                        "Please upload address and proof of identity document in your profile setting", lang)
+                })
+
             if not tutor.stripe_connect_account_id:
-                # Upload Address Documents
-                address_front = tutor.user.tutordetail.address_front_file
-                address_back = tutor.user.tutordetail.address_back_file
-                nat_front = tutor.user.tutordetail.nationality_front_file
-                nat_back = tutor.user.tutordetail.nationality_back_file
+                # Create Connect Account for Tutor
+                connect_account = StripeAPI.create_connect_account(request.user)
+                connect_account_id = connect_account.get("id")
+                tutor.stripe_connect_account_id = connect_account_id
+                tutor.save()
 
-                if not all([address_front, address_back, nat_front, nat_back]):
-                    raise InvalidRequestException({
-                        "detail": translate_to_language(
-                            "Please upload address and proof of identity document in your profile setting", lang)
-                    })
-
+            # Update account with documents
+            if tutor.stripe_connect_account_id and not tutor.stripe_documents_uploaded:
                 # Upload AddressFrontDocument
                 addr_front_upload = StripeAPI.upload_file(address_front, "identity_document")
                 addr_front_file_id = addr_front_upload.get("id")
                 # Upload AddressBackDocument
                 addr_back_upload = StripeAPI.upload_file(address_back, "identity_document")
                 addr_back_file_id = addr_back_upload.get("id")
-
                 # Upload NationalityFrontDocument
                 nat_front_upload = StripeAPI.upload_file(nat_front, "identity_document")
                 nat_front_file_id = nat_front_upload.get("id")
@@ -273,12 +280,11 @@ class GetOnboardingLinkView(APIView):
                 nat_back_upload = StripeAPI.upload_file(nat_back, "identity_document")
                 nat_back_file_id = nat_back_upload.get("id")
 
-                # Create Connect Account for Tutor
-                connect_account = StripeAPI.create_connect_account(
+                StripeAPI.update_connect_account(
                     request.user, addr_front_file_id, addr_back_file_id, nat_front_file_id, nat_back_file_id
                 )
-                connect_account_id = connect_account.get("id")
-                tutor.stripe_connect_account_id = connect_account_id
+                # Mark documents as uploaded
+                tutor.stripe_documents_uploaded = True
                 tutor.save()
 
             stripe_connected_acct = tutor.stripe_connect_account_id
