@@ -247,10 +247,10 @@ class GetOnboardingLinkView(APIView):
         tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
         try:
             # Address and Nationality Documents
-            address_front = tutor.user.tutordetail.address_front_file
-            address_back = tutor.user.tutordetail.address_back_file
-            nat_front = tutor.user.tutordetail.nationality_front_file
-            nat_back = tutor.user.tutordetail.nationality_back_file
+            address_front = tutor.user.tutordetail.address_front_file.url
+            address_back = tutor.user.tutordetail.address_back_file.url
+            nat_front = tutor.user.tutordetail.nationality_front_file.url
+            nat_back = tutor.user.tutordetail.nationality_back_file.url
 
             if not all([address_front, address_back, nat_front, nat_back]):
                 raise InvalidRequestException({
