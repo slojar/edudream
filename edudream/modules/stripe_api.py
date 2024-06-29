@@ -24,81 +24,6 @@ class StripeAPI:
         customer = stripe.Customer.retrieve(customer_id)
         log_request(f'Stripe customer: {customer}')
         return customer
-    
-    # @classmethod
-    # def stripe_prebuilt_checkout(cls, payment_name, amount, **kwargs):
-    #     success_url = kwargs.get("success_url")
-    #     cancel_url = kwargs.get("cancel_url")
-    #     mode = kwargs.get("mode", "payment")
-    #     currency = kwargs.get("currency", "eur")
-    #     client_reference_id = kwargs.get("client_reference_id")
-    #     customer = kwargs.get("customer")
-    #     customer_email = kwargs.get("customer_email")
-    #     description = kwargs.get("description")
-    #     tax_code = kwargs.get("tax_code")
-    #
-    #     images = kwargs.get("images", [])
-    #     if type(images) is not list:
-    #         return False, create_error_message('images', "images type must be list of images")
-    #
-    #     metadata = kwargs.get("metadata", {})
-    #     if type(metadata) is not dict:
-    #         return False, create_error_message('metadata', "metadata must be a dictionary")
-    #
-    #     recurring = kwargs.get("recurring", {})
-    #     if recurring:
-    #         if type(recurring) is not dict:
-    #             return False, create_error_message('recurring', "recurring must be a dictionary")
-    #         if not recurring.get('interval'):
-    #             return False, create_error_message('recurring', "interval is required for a recurring payment")
-    #         recurring_interval = ['day', 'week', 'month', 'year']
-    #         if recurring.get('interval') not in recurring_interval:
-    #             return False, create_error_message('recurring', f"interval must be one of {recurring_interval}")
-    #         if recurring.get('interval_count'):
-    #             interval = recurring.get('interval')
-    #             interval_count = recurring.get('interval_count')
-    #             if type(interval_count) is not int:
-    #                 return False, create_error_message('recurring', f"interval_count must be an integer")
-    #             if interval == 'day' and interval_count > 365:
-    #                 return False, create_error_message('recurring', f"maximum of 365 days is allowed for interval count")
-    #             if interval == 'week' and interval_count > 52:
-    #                 return False, create_error_message('recurring', f"maximum of 52 weeks is allowed for interval count")
-    #             if interval == 'month' and interval_count > 12:
-    #                 return False, create_error_message('recurring', f"maximum of 12 months is allowed for interval count")
-    #             if interval == 'year' and interval_count > 1:
-    #                 return False, create_error_message('recurring', f"maximum of 1 year is allowed for interval count")
-    #
-    #     try:
-    #         session = stripe.checkout.Session.create(
-    #             line_items=[
-    #                 {
-    #                     'price_data': {
-    #                         'currency': currency,
-    #                         'product_data': {
-    #                             'name': payment_name,
-    #                             'description': description,
-    #                             'images': images,
-    #                             'metadata': metadata,
-    #                             'tax_code': tax_code,
-    #                         },
-    #                         'unit_amount_decimal': float(amount) * 100,
-    #                         'recurring': recurring,
-    #                     },
-    #                     'quantity': 1,
-    #                 },
-    #             ],
-    #             mode=mode,
-    #             success_url=success_url,
-    #             cancel_url=cancel_url,
-    #             client_reference_id=client_reference_id,
-    #             customer=customer,
-    #             customer_email=customer_email,
-    #             metadata=metadata,
-    #         )
-    #         log.info(session)
-    #         return True, session
-    #     except Exception as ex:
-    #         return False, create_error_message('source', f"{ex}")
 
     @classmethod
     def calculate_tax(cls, customer_id, amount, ip_address):
@@ -227,11 +152,11 @@ class StripeAPI:
     @classmethod
     def create_connect_account(cls, user):
         from edudream.modules.utils import log_request
-        city_name = str(user.profile.city)
-        country_code = str(user.profile.country.alpha2code)
-        state_name = str(user.profile.state.name)
-        postal_code = str(user.profile.postal_code)
-        address = str(user.profile.address)
+        # city_name = str(user.profile.city)
+        # country_code = str(user.profile.country.alpha2code)
+        # state_name = str(user.profile.state.name)
+        # postal_code = str(user.profile.postal_code)
+        # address = str(user.profile.address)
         account_token = stripe.Token.create(
             account={"individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
                                     "email": str(user.email)}, "tos_shown_and_accepted": True,
@@ -240,14 +165,14 @@ class StripeAPI:
         log_request(f'Account creation token response: {account_token}')
 
         result = stripe.Account.create(
-            type="custom", country=country_code, email=str(user.email),
+            type="custom", country="FR", email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
-            individual={
-                "first_name": str(user.first_name), "last_name": str(user.last_name), "email": str(user.email),
-                "address": {"city": city_name, "country": country_code, "line1": address,
-                            "postal_code": postal_code, "state": state_name},
-            }
+            # individual={
+            #     "first_name": str(user.first_name), "last_name": str(user.last_name), "email": str(user.email),
+            #     "address": {"city": city_name, "country": country_code, "line1": address,
+            #                 "postal_code": postal_code, "state": state_name},
+            # }
         )
         log_request(f'Connect account creation response: {result}')
         return result
