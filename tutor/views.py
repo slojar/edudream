@@ -11,7 +11,8 @@ from edudream.modules.exceptions import raise_serializer_error_msg, InvalidReque
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsStudent, IsParent
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import translate_to_language, encrypt_text, decrypt_text, log_request
+from edudream.modules.utils import translate_to_language, log_request
+from edudream.settings.base import BASE_DIR
 from home.models import Profile
 from student.models import Student
 from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
@@ -240,17 +241,17 @@ class DeleteBankAccountAPIView(DestroyAPIView):
 
 
 class GetOnboardingLinkView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     def get(self, request):
         lang = request.GET.get("lang", "en")
         tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
         try:
             # Address and Nationality Documents
-            address_front = tutor.user.tutordetail.address_front_file.url
-            address_back = tutor.user.tutordetail.address_back_file.url
-            nat_front = tutor.user.tutordetail.nationality_front_file.url
-            nat_back = tutor.user.tutordetail.nationality_back_file.url
+            address_front = str(BASE_DIR) + str(tutor.user.tutordetail.address_front_file.url)
+            address_back = str(BASE_DIR) + str(tutor.user.tutordetail.address_back_file.url)
+            nat_front = str(BASE_DIR) + str(tutor.user.tutordetail.nationality_front_file.url)
+            nat_back = str(BASE_DIR) + str(tutor.user.tutordetail.nationality_back_file.url)
 
             if not all([address_front, address_back, nat_front, nat_back]):
                 raise InvalidRequestException({
