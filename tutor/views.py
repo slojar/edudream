@@ -248,16 +248,21 @@ class GetOnboardingLinkView(APIView):
         tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
         try:
             # Address and Nationality Documents
-            address_front = str(BASE_DIR) + str(tutor.user.tutordetail.address_front_file.url)
-            address_back = str(BASE_DIR) + str(tutor.user.tutordetail.address_back_file.url)
-            nat_front = str(BASE_DIR) + str(tutor.user.tutordetail.nationality_front_file.url)
-            nat_back = str(BASE_DIR) + str(tutor.user.tutordetail.nationality_back_file.url)
+            address_front_file = tutor.user.tutordetail.address_front_file
+            address_back_file = tutor.user.tutordetail.address_back_file
+            nat_front_file = tutor.user.tutordetail.nationality_front_file
+            nat_back_file = tutor.user.tutordetail.nationality_back_file
 
-            if not all([address_front, address_back, nat_front, nat_back]):
+            if not all([address_front_file, address_back_file, nat_front_file, nat_back_file]):
                 raise InvalidRequestException({
                     "detail": translate_to_language(
                         "Please upload address and proof of identity document in your profile setting", lang)
                 })
+
+            address_front = str(BASE_DIR) + str(address_front_file)
+            address_back = str(BASE_DIR) + str(address_back_file)
+            nat_front = str(BASE_DIR) + str(nat_front_file)
+            nat_back = str(BASE_DIR) + str(nat_back_file)
 
             if not tutor.stripe_connect_account_id:
                 # Create Connect Account for Tutor
