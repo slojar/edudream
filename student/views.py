@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsStudent, IsParent
-from django.utils.translation import gettext
+from edudream.modules.utils import translate_to_language
 from tutor.models import Classroom
 from tutor.serializers import CreateClassSerializerIn, ClassRoomSerializerOut, IntroCallSerializerIn
 
@@ -37,9 +37,11 @@ class StudentClassRoomAPIView(APIView, CustomPagination):
                 # query &= Q(start_date__range=[date_from, date_to])
                 query &= Q(start_date__gte=date_from, start_date__lte=date_to)
             queryset = self.paginate_queryset(Classroom.objects.filter(query).order_by("-id"), request)
+            if class_status == "accepted":
+                queryset = self.paginate_queryset(Classroom.objects.filter(query).exclude(student_complete_check=True).order_by("-id"), request)
             serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
             response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Success"), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
 class CreateClassRoomAPIView(APIView):
