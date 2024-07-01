@@ -259,10 +259,10 @@ class GetOnboardingLinkView(APIView):
                         "Please upload address and proof of identity document in your profile setting", lang)
                 })
 
-            address_front = str(BASE_DIR) + str(address_front_file)
-            address_back = str(BASE_DIR) + str(address_back_file)
-            nat_front = str(BASE_DIR) + str(nat_front_file)
-            nat_back = str(BASE_DIR) + str(nat_back_file)
+            address_front = str(BASE_DIR) + str(address_front_file.url)
+            address_back = str(BASE_DIR) + str(address_back_file.url)
+            nat_front = str(BASE_DIR) + str(nat_front_file.url)
+            nat_back = str(BASE_DIR) + str(nat_back_file.url)
 
             if not tutor.stripe_connect_account_id:
                 # Create Connect Account for Tutor
