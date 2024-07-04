@@ -3,7 +3,7 @@ from .models import *
 
 
 class StateSerializer(serializers.ModelSerializer):
-    cities = serializers.SerializerMethodField()
+    # cities = serializers.SerializerMethodField()
 
     class Meta:
         model = State
