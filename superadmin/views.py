@@ -15,6 +15,7 @@ from edudream.modules.paginations import AdminPagination
 from home.models import Profile, ClassReview, PaymentPlan, Language, Notification, SiteSetting, Subject, Wallet
 from home.serializers import ProfileSerializerOut, TutorListSerializerOut, ClassReviewSerializerOut, \
     PaymentPlanSerializerOut, LanguageSerializerOut, NotificationSerializerOut, SubjectSerializerOut
+from location.models import City
 from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from superadmin.serializers import TutorStatusSerializerIn, AdminLoginSerializerIn, NotificationSerializerIn, \

@@ -11,7 +11,8 @@ from edudream.modules.exceptions import raise_serializer_error_msg, InvalidReque
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsStudent, IsParent
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import translate_to_language, encrypt_text, decrypt_text, log_request
+from edudream.modules.utils import translate_to_language, log_request
+from edudream.settings.base import BASE_DIR
 from home.models import Profile
 from student.models import Student
 from tutor.models import Classroom, Dispute, TutorCalendar, PayoutRequest, TutorSubject, TutorSubjectDocument, \
@@ -240,17 +241,56 @@ class DeleteBankAccountAPIView(DestroyAPIView):
 
 
 class GetOnboardingLinkView(APIView):
-    permission_classes = [IsTutor]
+    permission_classes = [IsAuthenticated & IsTutor]
 
     def get(self, request):
         lang = request.GET.get("lang", "en")
         tutor = get_object_or_404(Profile, user=request.user, account_type="tutor")
         try:
+            # Address and Nationality Documents
+            address_front_file = tutor.user.tutordetail.address_front_file
+            address_back_file = tutor.user.tutordetail.address_back_file
+            nat_front_file = tutor.user.tutordetail.nationality_front_file
+            nat_back_file = tutor.user.tutordetail.nationality_back_file
+
+            if not all([address_front_file, address_back_file, nat_front_file, nat_back_file]):
+                raise InvalidRequestException({
+                    "detail": translate_to_language(
+                        "Please upload address and proof of identity document in your profile setting", lang)
+                })
+
+            address_front = str(BASE_DIR) + str(address_front_file.url)
+            address_back = str(BASE_DIR) + str(address_back_file.url)
+            nat_front = str(BASE_DIR) + str(nat_front_file.url)
+            nat_back = str(BASE_DIR) + str(nat_back_file.url)
+
             if not tutor.stripe_connect_account_id:
                 # Create Connect Account for Tutor
                 connect_account = StripeAPI.create_connect_account(request.user)
                 connect_account_id = connect_account.get("id")
                 tutor.stripe_connect_account_id = connect_account_id
+                tutor.save()
+
+            # Update account with documents
+            if tutor.stripe_connect_account_id and not tutor.stripe_documents_uploaded:
+                # Upload AddressFrontDocument
+                addr_front_upload = StripeAPI.upload_file(address_front, "identity_document")
+                addr_front_file_id = addr_front_upload.get("id")
+                # Upload AddressBackDocument
+                addr_back_upload = StripeAPI.upload_file(address_back, "identity_document")
+                addr_back_file_id = addr_back_upload.get("id")
+                # Upload NationalityFrontDocument
+                nat_front_upload = StripeAPI.upload_file(nat_front, "identity_document")
+                nat_front_file_id = nat_front_upload.get("id")
+                # Upload NationalityBackDocument
+                nat_back_upload = StripeAPI.upload_file(nat_back, "identity_document")
+                nat_back_file_id = nat_back_upload.get("id")
+
+                StripeAPI.update_connect_account(
+                    request.user, addr_front_file_id, addr_back_file_id, nat_front_file_id, nat_back_file_id
+                )
+                # Mark documents as uploaded
+                tutor.stripe_documents_uploaded = True
                 tutor.save()
 
             stripe_connected_acct = tutor.stripe_connect_account_id

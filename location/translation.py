@@ -17,6 +17,10 @@ translate = [
     "fr": "Impossible de traiter le retrait, veuillez réessayer plus tard"
   },
   {
+    "msgid": "Please upload address and proof of identity document in your profile setting",
+    "fr": "Veuillez télécharger l'adresse et une pièce d'identité dans les paramètres de votre profil."
+  },
+  {
     "msgid": "You need to complete your Stripe Connect onboarding process to continue",
     "fr": "Vous devez terminer votre processus d'intégration de Stripe Connect pour continuer"
   },
