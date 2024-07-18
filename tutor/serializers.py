@@ -183,16 +183,16 @@ class CreateClassSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Duration cannot be greater than tutor teaching period"})
 
         # Check Tutor Calendar
+        week_day = (start_date_convert.weekday() + 1) % 7
         if not TutorCalendar.objects.filter(
-                user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
-                time_from__hour=start_date_convert.hour, status="available"
+                user=tutor_user, day_of_the_week=week_day, time_from__hour=start_date_convert.hour, status="available"
         ):
             raise InvalidRequestException({"detail": translate_to_language("Tutor is not available at the selected period", lang)})
 
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         # class_amount = reoccur * (duration * subject_amount / 60)
-        class_amount = duration * subject_amount / 60
+        class_amount = round(duration * subject_amount / 60, 2)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
