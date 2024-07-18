@@ -183,6 +183,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         #     raise InvalidRequestException({"detail": "Duration cannot be greater than tutor teaching period"})
 
         # Check Tutor Calendar
+        log_request(f"StartDate IsoWeekDay No: ========= {start_date_convert.isoweekday()}")
         if not TutorCalendar.objects.filter(
                 user=tutor_user, day_of_the_week=start_date_convert.isoweekday(),
                 time_from__hour=start_date_convert.hour, status="available"
