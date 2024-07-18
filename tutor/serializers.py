@@ -184,7 +184,6 @@ class CreateClassSerializerIn(serializers.Serializer):
 
         # Check Tutor Calendar
         week_day = (start_date_convert.weekday() + 1) % 7
-        log_request(f"StartDate IsoWeekDay No: ========= {week_day}")
         if not TutorCalendar.objects.filter(
                 user=tutor_user, day_of_the_week=week_day, time_from__hour=start_date_convert.hour, status="available"
         ):
@@ -193,7 +192,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         # class_amount = reoccur * (duration * subject_amount / 60)
-        class_amount = duration * subject_amount / 60
+        class_amount = round(duration * subject_amount / 60, 2).__ceil__()
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
