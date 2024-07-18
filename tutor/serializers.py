@@ -192,7 +192,7 @@ class CreateClassSerializerIn(serializers.Serializer):
         # Calculate Class Amount
         subject_amount = subject.amount  # coin value per subject per hour
         # class_amount = reoccur * (duration * subject_amount / 60)
-        class_amount = round(duration * subject_amount / 60, 2).__ceil__()
+        class_amount = round(duration * subject_amount / 60, 2)
 
         # Check Tutor availability
         if Classroom.objects.filter(start_date__gte=start_date, end_date__lte=end_date, tutor=tutor_user,
