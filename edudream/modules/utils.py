@@ -392,11 +392,22 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
         return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
 
 
-# def gettext(content, language="en"):
-#     response = content
-#     if language != "en":
-#         response = Translate.perform_translate_deepl(to_lang=language, content=content)
-#     return response
+def translate_to_language(content, language="en"):
+    from location.translation import translate
+    response = content
+    if language == "fr":
+        # Get value for content
+        for item in translate:
+            if item["msgid"] == content:
+                response = item["fr"]
+    return response
+
+
+def translate_email(content, language="en"):
+    response = content
+    if language == "fr":
+        response = Translate.perform_translate_deepl("fr", content)
+    return response
 
 
 def create_notification(user, text):

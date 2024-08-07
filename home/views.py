@@ -1,4 +1,5 @@
 import ast
+import json
 
 from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
@@ -17,7 +18,7 @@ from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_rem
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details
+from edudream.modules.utils import complete_payment, get_site_details, translate_to_language
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -25,9 +26,9 @@ from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializ
     SubjectSerializerOut, NotificationSerializerOut, UploadProfilePictureSerializerIn, \
     FeedbackAndConsultationSerializerIn, TestimonialSerializerOut, RequestOTPSerializerIn, ForgotPasswordSerializerIn, \
     EmailVerificationSerializerIn, RequestVerificationLinkSerializerIn, UpdateEndedClassroomSerializerIn
-from tutor.models import Classroom
+from location.models import Country
+from tutor.models import Classroom, TutorBankAccount
 from tutor.serializers import ClassRoomSerializerOut
-from django.utils.translation import gettext
 
 
 class SignUpAPIView(APIView):
@@ -50,7 +51,7 @@ class LoginAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response({
-            "detail": gettext("Login Successful", request.data.get("lang", "en")),
+            "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
             "data": UserSerializerOut(user, context={"request": request}).data,
             "access_token": f"{AccessToken.for_user(user)}"
         })
@@ -92,7 +93,7 @@ class ProfileAPIView(APIView):
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
         return Response(
-            {"detail": gettext("Profile updated", request.data.get("lang", "en")),
+            {"detail": translate_to_language("Profile updated", request.data.get("lang", "en")),
              "data": UserSerializerOut(user, context={"request": request}).data})
 
 
@@ -128,7 +129,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         if pk:
             queryset = get_object_or_404(Transaction, id=pk, user=request.user)
             serializer = TransactionSerializerOut(queryset).data
-            return Response({"detail": gettext("Success"), "data": serializer})
+            return Response({"detail": translate_to_language("Success"), "data": serializer})
 
         if amount_to and amount_from:
             query &= Q(amount__range=[amount_from, amount_to])
@@ -145,7 +146,7 @@ class PaymentHistoryAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Transaction.objects.filter(query).exclude(status="pending"), request)
         serializer = TransactionSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Success"), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
 # @extend_schema_view(get=extend_schema(parameters=[
@@ -177,7 +178,7 @@ class ChatMessageAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(messages, request)
         serializer = ChatMessageSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Chat retrieved"), "data": response})
+        return Response({"detail": translate_to_language("Chat retrieved"), "data": response})
 
 
 class PaymentPlanListAPIView(ListAPIView):
@@ -223,7 +224,7 @@ class TutorListAPIView(APIView, CustomPagination):
                     OpenApiParameter(name="grade", type=str), OpenApiParameter(name="diploma_type", type=str),
                     OpenApiParameter(name="university_name", type=str)]
     )
-    def get(self, request):
+    def get(self, request, pk=None):
         search = request.GET.get("search")  # Tutor name Subject name
         country = request.GET.get("country", list())  # Arrays of ID
         grade = request.GET.get("grade")  # Subject grades
@@ -233,16 +234,25 @@ class TutorListAPIView(APIView, CustomPagination):
 
         query = Q(account_type="tutor", active=True)
 
+        if pk:
+            try:
+                user_p = Profile.objects.get(account_type="tutor", active=True, user_id=pk)
+            except Profile.DoesNotExist:
+                return Response({"detail": translate_to_language("Tutor not found")})
+            return Response(TutorListSerializerOut(user_p, context={"request": request}).data)
+
         if search:
             school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
             query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
-                user__tutordetail__subjects__in=school_subject_name)
+                # user__tutordetail__subjects__in=school_subject_name)
+                user__tutorsubject__subject__in=school_subject_name)
         if country:
             country_ids = ast.literal_eval(str(country))
             query &= Q(country_id__in=country_ids)
         if grade:
             school_grade_subject = [item for item in Subject.objects.filter(grade__exact=grade)]
-            query &= Q(user__tutordetail__subjects__in=school_grade_subject)
+            # query &= Q(user__tutordetail__subjects__in=school_grade_subject)
+            query &= Q(user__tutorsubject__subject__in=school_grade_subject)
         if diploma_type:
             query &= Q(user__tutordetail__diploma_type__iexact=diploma_type)
         if university_name:
@@ -251,7 +261,7 @@ class TutorListAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?"), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Tutor retrieved"), "data": response})
+        return Response({"detail": translate_to_language("Tutor retrieved"), "data": response})
 
 
 class LanguageListAPIView(ListAPIView):
@@ -286,7 +296,7 @@ class NotificationAPIView(APIView, CustomPagination):
         queryset = self.paginate_queryset(Notification.objects.filter(user__in=[request.user]).order_by("-id"), request)
         serializer = NotificationSerializerOut(queryset, many=True).data
         response = self.get_paginated_response(serializer).data
-        return Response({"detail": gettext("Success"), "data": response})
+        return Response({"detail": translate_to_language("Success"), "data": response})
 
 
 class UploadProfilePictureAPIView(APIView):
@@ -511,46 +521,75 @@ class WebhookAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
-        data = {
-          "event": "meeting.participant_joined",
-          "event_ts": 1626230691572,
-          "payload": {
-            "account_id": "AAAAAABBBB",
-            "object": {
-              "id": "1234567890",
-              "uuid": "4444AAAiAAAAAiAiAiiAii==",
-              "host_id": "x1yCzABCDEfg23HiJKl4mN",
-              "topic": "My Meeting",
-              "type": 8,
-              "start_time": "2021-07-13T21:44:51Z",
-              "timezone": "America/Los_Angeles",
-              "duration": 60,
-              "participant": {
-                "user_id": "1234567890",
-                "user_name": "Jill Chill",
-                "id": "iFxeBPYun6SAiWUzBcEkX",
-                "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
-                "date_time": "2021-07-13T21:44:51Z",
-                "email": "jchill@example.com",
-                "registrant_id": "abcdefghij0-klmnopq23456",
-                "participant_user_id": "rstuvwxyza789-cde",
-                "customer_key": "349589LkJyeW",
-                "phone_number": "8615250064084"
-              }
-            }
-          }
-        }
-        event_type = request.data.get("event")
-        payload = request.data.get("payload")
-        meeting_id = payload["object"]["id"]
-        email = payload["object"]["participant"]["email"]
-        if Classroom.objects.filter(meeting_id=meeting_id).exists():
-            classroom = Classroom.objects.get(meeting_id=meeting_id)
-            if event_type == "meeting.participant_joined":
-                ...
-        # reply = request.GET.get("input")
-        # if reply == "1":
-        #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
-        # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
 
-        return JsonResponse({"detail": "Webhook successful"})
+        from edudream.modules.utils import log_request
+        event = request.data
+        log_request("STRIPE WEBHOOK RECEIVED: \n", event)
+
+        #
+        if event["type"] == "account.external_account.created":
+            obj = event["data"]["object"]
+            acct = event["account"]
+            ba_id = obj["id"]
+            name = obj["bank_name"]
+            country_sc = obj["country"]
+            routing_no = obj["routing_number"]
+
+            country = Country.objects.get(alpha2code=country_sc)
+
+            # GET USER
+            tutor = Profile.objects.filter(account_type="tutor", stripe_connect_account_id=acct).last()
+            # CREATE BANK ACCOUNT
+            TutorBankAccount.objects.create(
+                user=tutor.user, bank_name=name, routing_number=routing_no, country=country,
+                stripe_external_account_id=ba_id
+            )
+
+            # PROCEED TO UPDATE ACCOUNT HERE
+
+        return Response({"detail": "Webhook recieved"})
+
+    # def post(self, request):
+        # data = {
+        #   "event": "meeting.participant_joined",
+        #   "event_ts": 1626230691572,
+        #   "payload": {
+        #     "account_id": "AAAAAABBBB",
+        #     "object": {
+        #       "id": "1234567890",
+        #       "uuid": "4444AAAiAAAAAiAiAiiAii==",
+        #       "host_id": "x1yCzABCDEfg23HiJKl4mN",
+        #       "topic": "My Meeting",
+        #       "type": 8,
+        #       "start_time": "2021-07-13T21:44:51Z",
+        #       "timezone": "America/Los_Angeles",
+        #       "duration": 60,
+        #       "participant": {
+        #         "user_id": "1234567890",
+        #         "user_name": "Jill Chill",
+        #         "id": "iFxeBPYun6SAiWUzBcEkX",
+        #         "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
+        #         "date_time": "2021-07-13T21:44:51Z",
+        #         "email": "jchill@example.com",
+        #         "registrant_id": "abcdefghij0-klmnopq23456",
+        #         "participant_user_id": "rstuvwxyza789-cde",
+        #         "customer_key": "349589LkJyeW",
+        #         "phone_number": "8615250064084"
+        #       }
+        #     }
+        #   }
+        # }
+        # event_type = request.data.get("event")
+        # payload = request.data.get("payload")
+        # meeting_id = payload["object"]["id"]
+        # email = payload["object"]["participant"]["email"]
+        # if Classroom.objects.filter(meeting_id=meeting_id).exists():
+        #     classroom = Classroom.objects.get(meeting_id=meeting_id)
+        #     if event_type == "meeting.participant_joined":
+        #         ...
+        # # reply = request.GET.get("input")
+        # # if reply == "1":
+        # #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
+        # # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
+
+        # return JsonResponse({"detail": "Webhook recieved"})

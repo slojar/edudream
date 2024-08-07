@@ -25,6 +25,10 @@ class TutorDetail(models.Model):
     proficiency_test_grade = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_type = models.CharField(max_length=100, default="", blank=True, null=True)
     proficiency_test_file = models.FileField(upload_to="proficiency-test-files", blank=True, null=True)
+    address_front_file = models.FileField(upload_to="address-files", blank=True, null=True)
+    address_back_file = models.FileField(upload_to="address-files", blank=True, null=True)
+    nationality_front_file = models.FileField(upload_to="nationality-files", blank=True, null=True)
+    nationality_back_file = models.FileField(upload_to="nationality-files", blank=True, null=True)
     resume = models.FileField(upload_to="curriculum-vitaes", blank=True, null=True)
     status = models.CharField(max_length=50, choices=TUTOR_STATUS_CHOICES, default="pending")
     rest_period = models.IntegerField(default=10)
@@ -119,9 +123,6 @@ class TutorCalendar(models.Model):
 class TutorBankAccount(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     bank_name = models.CharField(max_length=200)
-    account_number = models.CharField(max_length=100)
-    account_name = models.CharField(max_length=200)
-    account_type = models.CharField(max_length=50, blank=True, null=True)
     routing_number = models.CharField(max_length=300, blank=True, null=True)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, blank=True, null=True)
     stripe_external_account_id = models.TextField(blank=True, null=True)
@@ -129,12 +130,13 @@ class TutorBankAccount(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username}: {self.bank_name}"
+        return f"{self.user.username}"
 
 
 class PayoutRequest(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     bank_account = models.ForeignKey(TutorBankAccount, on_delete=models.CASCADE)
+    transaction = models.ForeignKey("home.Transaction", on_delete=models.SET_NULL, blank=True, null=True)
     coin = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=20)
     reference = models.CharField(max_length=300, blank=True, null=True)
