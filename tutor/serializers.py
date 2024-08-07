@@ -454,8 +454,8 @@ class TutorCalendarSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
 
         # Delete all user's availability
-        # if TutorCalendar.objects.filter(status="not_available").exists():
-        #     raise InvalidRequestException({"detail": "There are existing/open classes. Please close or complete them"})
+        if TutorCalendar.objects.filter(status="not_available").exists():
+            raise InvalidRequestException({"detail": "There are existing/open classes. Please close or complete them"})
         TutorCalendar.objects.filter(user=user).delete()
 
         # Create availability

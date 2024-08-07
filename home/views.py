@@ -236,7 +236,7 @@ class TutorListAPIView(APIView, CustomPagination):
 
         if pk:
             try:
-                user_p = Profile.objects.filter(query, user_id=pk)
+                user_p = Profile.objects.get(account_type="tutor", active=True, user_id=pk)
             except Profile.DoesNotExist:
                 return Response({"detail": translate_to_language("Tutor not found")})
             return Response(TutorListSerializerOut(user_p, context={"request": request}).data)
