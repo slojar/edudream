@@ -333,7 +333,9 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             parent_wallet.balance += amount
             parent_wallet.save()
             # Set Tutor Availability
-            instance.tutorcalendar_set.all().update(status="available", classroom=None)
+            instance.tutorcalendar_set.all().update(status="available")
+            for tutor_calendar in instance.tutorcalendar_set.all():
+                tutor_calendar.classroom.clear()
             # TutorCalendar.objects.filter(classroom=instance).update(status="available")
             # Create refund transaction
             Transaction.objects.create(
@@ -349,7 +351,10 @@ class ApproveDeclineClassroomSerializerIn(serializers.Serializer):
             # Update instance state
             instance.decline_reason = decline_reason
             instance.status = "declined"
-            instance.tutorcalendar_set.all().update(status="available", classroom=None)
+            instance.tutorcalendar_set.all().update(status="available")
+            for tutor_calendar in instance.tutorcalendar_set.all():
+                tutor_calendar.classroom.clear()
+
             # Send notification to student
             Thread(target=student_class_declined_email, args=[instance, lang]).start()
             # Send notification to parent

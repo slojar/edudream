@@ -224,7 +224,7 @@ class TutorListAPIView(APIView, CustomPagination):
                     OpenApiParameter(name="grade", type=str), OpenApiParameter(name="diploma_type", type=str),
                     OpenApiParameter(name="university_name", type=str)]
     )
-    def get(self, request):
+    def get(self, request, pk=None):
         search = request.GET.get("search")  # Tutor name Subject name
         country = request.GET.get("country", list())  # Arrays of ID
         grade = request.GET.get("grade")  # Subject grades
@@ -233,6 +233,9 @@ class TutorListAPIView(APIView, CustomPagination):
         lang = request.GET.get("lang", "en")
 
         query = Q(account_type="tutor", active=True)
+
+        if pk:
+            ...
 
         if search:
             school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
