@@ -597,6 +597,7 @@ class ProfileSerializerIn(serializers.Serializer):
                 log_request(f"SUBJECTS: {subjects}")
                 tutor_detail.subjects.clear()
                 for subject in subjects:
+                    log_request(f"subject: {Subject.objects.get(id=subject)}")
                     tutor_detail.subjects.add(Subject.objects.get(id=subject))
             tutor_detail.save()
 
