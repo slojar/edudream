@@ -224,6 +224,15 @@ class TutorSubjectListAPIView(ListAPIView):
         return TutorSubject.objects.filter(user=self.request.user)
 
 
+class TutorSubjectDeleteAPIView(DestroyAPIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+    serializer_class = TutorSubjectSerializerOut
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return TutorSubject.objects.filter(user=self.request.user)
+
+
 class UploadSubjectDocumentCreateAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated & IsTutor]
     serializer_class = TutorSubjectDocumentSerializerIn

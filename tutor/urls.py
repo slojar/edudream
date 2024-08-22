@@ -20,6 +20,7 @@ urlpatterns = [
     path('payout/<int:pk>', views.TutorPayoutAPIView.as_view(), name="payout-detail"),
     path('add-subject', views.CreateTutorSubjectAPIView.as_view(), name="create-subject"),
     path('subject', views.TutorSubjectListAPIView.as_view(), name="subject"),
+    path('subject/<int:pk>', views.TutorSubjectListAPIView.as_view(), name="subject-delete"),
     path('upload-subject-file', views.UploadSubjectDocumentCreateAPIView.as_view(), name="subject-file-upload"),
     path('onboarding', views.GetOnboardingLinkView.as_view(), name="onboarding"),
 
