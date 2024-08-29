@@ -313,7 +313,7 @@ class GetOnboardingLinkView(APIView):
 
 
 class TutorActiveClassroomAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     @extend_schema(
         parameters=[OpenApiParameter(name="tutor_id", type=str), OpenApiParameter(name="date_from", type=str),
@@ -324,6 +324,9 @@ class TutorActiveClassroomAPIView(APIView):
         date_from = request.GET.get("date_from")
         date_to = request.GET.get("date_to")
         allowed_status = ["accepted", "new"]
+        if not tutor_id:
+            raise InvalidRequestException({"detail": translate_to_language("TutorID required")})
+
         query = Q(tutor_id=tutor_id) & Q(status__in=allowed_status)
         if date_from and date_to:
             query &= Q(start_date__gte=date_from, start_date__lte=date_to)
