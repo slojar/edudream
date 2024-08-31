@@ -224,6 +224,15 @@ class TutorSubjectListAPIView(ListAPIView):
         return TutorSubject.objects.filter(user=self.request.user)
 
 
+class TutorSubjectDeleteAPIView(DestroyAPIView):
+    permission_classes = [IsAuthenticated & IsTutor]
+    serializer_class = TutorSubjectSerializerOut
+    lookup_field = "id"
+
+    def get_queryset(self):
+        return TutorSubject.objects.filter(user=self.request.user)
+
+
 class UploadSubjectDocumentCreateAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated & IsTutor]
     serializer_class = TutorSubjectDocumentSerializerIn
@@ -303,4 +312,25 @@ class GetOnboardingLinkView(APIView):
             raise InvalidRequestException({"detail": translate_to_language("An error has occurred, please try again later", lang)})
 
 
+class TutorActiveClassroomAPIView(APIView):
+    permission_classes = []
+
+    @extend_schema(
+        parameters=[OpenApiParameter(name="tutor_id", type=str), OpenApiParameter(name="date_from", type=str),
+                    OpenApiParameter(name="date_to", type=str)]
+    )
+    def get(self, request):
+        tutor_id = request.GET.get("tutor_id")
+        date_from = request.GET.get("date_from")
+        date_to = request.GET.get("date_to")
+        allowed_status = ["accepted", "new"]
+        if not tutor_id:
+            raise InvalidRequestException({"detail": translate_to_language("TutorID required")})
+
+        query = Q(tutor_id=tutor_id) & Q(status__in=allowed_status)
+        if date_from and date_to:
+            query &= Q(start_date__gte=date_from, start_date__lte=date_to)
+        queryset = Classroom.objects.filter(query).order_by("-id")
+        serializer = ClassRoomSerializerOut(queryset, many=True, context={"request": request}).data
+        return Response(serializer)
 

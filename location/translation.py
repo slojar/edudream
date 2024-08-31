@@ -9,6 +9,10 @@ translate = [
     "fr": "Une erreur s'est produite le '{err_val_key}' field: {err_msg}"
   },
   {
+    "msgid": "Tutor not found",
+    "fr": "Tuteur introuvable"
+  },
+  {
     "msgid": "Amount too low. Minimum payout amount is One Euro",
     "fr": "Montant trop faible. Le montant minimum du paiement est d'un euro"
   },

@@ -89,7 +89,10 @@ def class_reminder_job():
         # Send ended class reminder
         for class_room in ended_classes:
             # Remove classroom from all schedules
-            class_room.tutorcalendar_set.all().update(status="available", classroom=None)
+            class_room.tutorcalendar_set.all().update(status="available")
+            for tutor_calendar in class_room.tutorcalendar_set.all():
+                tutor_calendar.classroom.clear()
+
             student_email = class_room.student.user.email
             parent_email = class_room.student.parent.user.email
             tutor_email = class_room.tutor.email

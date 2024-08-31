@@ -596,7 +596,7 @@ class ProfileSerializerIn(serializers.Serializer):
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
-                    tutor_detail.subjects.add(subject)
+                    tutor_detail.subjects.add(Subject.objects.get(id=subject))
             tutor_detail.save()
 
             if languages:
