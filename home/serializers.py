@@ -535,6 +535,9 @@ class ProfileSerializerIn(serializers.Serializer):
     discipline = serializers.CharField(required=False)
     diploma_grade = serializers.CharField(required=False)
     proficiency_test_grade = serializers.CharField(required=False)
+    hobbies = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    funfact = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
@@ -579,6 +582,9 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail.discipline = validated_data.get("discipline", tutor_detail.discipline)
             tutor_detail.diploma_grade = validated_data.get("diploma_grade", tutor_detail.diploma_grade)
             tutor_detail.proficiency_test_grade = validated_data.get("proficiency_test_grade", tutor_detail.proficiency_test_grade)
+            tutor_detail.hobbies = validated_data.get("hobbies", tutor_detail.hobbies)
+            tutor_detail.funfact = validated_data.get("funfact", tutor_detail.funfact)
+            tutor_detail.linkedin = validated_data.get("linkedin", tutor_detail.linkedin)
             if diploma_file:
                 tutor_detail.diploma_file = diploma_file
             if proficiency_test_file:
