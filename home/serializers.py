@@ -15,7 +15,7 @@ from edudream.modules.email_template import tutor_register_email, parent_registe
     consultation_email, send_otp_token_to_email, send_verification_email, send_welcome_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, \
-    decrypt_text, create_notification, translate_to_language, get_site_details
+    decrypt_text, create_notification, translate_to_language, get_site_details, get_current_datetime_from_lat_lon
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
 from location.models import Country, State, City
@@ -104,6 +104,14 @@ class UserSerializerOut(serializers.ModelSerializer):
     is_student = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
     stat = serializers.SerializerMethodField()
+    timezone_data = serializers.SerializerMethodField()
+
+    def get_timezone_data(self, obj):
+        if Profile.objects.filter(user=obj).exists():
+            user_profile = Profile.objects.get(user=obj)
+            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(user_profile.lat, user_profile.lon)
+            return {"timezone": tzone, "current_time": ctime, "utc_offset": utc_offset}
+        return None
 
     def get_stat(self, obj):
         if Student.objects.filter(user=obj).exists():
@@ -539,6 +547,9 @@ class ProfileSerializerIn(serializers.Serializer):
     funfact = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
+    longitude = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    latitude = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     def update(self, instance, validated_data):
         user = validated_data.get("user")
         lang = validated_data.get("lang", "en")
@@ -559,6 +570,8 @@ class ProfileSerializerIn(serializers.Serializer):
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
         instance.dob = validated_data.get('dob', instance.dob)
         instance.city = validated_data.get('city', instance.city)
+        instance.lon = validated_data.get('longitude', instance.lon)
+        instance.lat = validated_data.get('latitude', instance.lat)
         user.first_name = validated_data.get('first_name', user.first_name)
         user.last_name = validated_data.get('last_name', user.last_name)
         if country_id:

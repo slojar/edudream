@@ -7,12 +7,11 @@ from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
 from edudream.modules.email_template import send_class_reminder_email, send_fund_pending_balance_email, \
-    send_fund_main_balance_email, send_class_ended_reminder_email, student_class_declined_email
+    send_fund_main_balance_email, send_class_ended_reminder_email, student_class_declined_email, \
+    auto_classroom_complete_email
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import decrypt_text, log_request, get_site_details
-# from home.consumers import ClassroomConsumer
-from home.models import Transaction, Profile
-from tutor.models import PayoutRequest, Classroom, TutorCalendar, TutorBankAccount
+from edudream.modules.utils import log_request, get_site_details
+from tutor.models import PayoutRequest, Classroom, TutorCalendar
 
 zoom_auth_url = settings.ZOOM_AUTH_URL
 zoom_client_id = settings.ZOOM_CLIENT_ID
@@ -186,6 +185,19 @@ def update_ended_classroom_jobs():
     # Mark classes as completed
     if ended_classrooms:
         ended_classrooms.update(status="completed")
+        # Send email and notification
+        for classroom in ended_classrooms:
+            Thread(target=auto_classroom_complete_email, args=[classroom.tutor, classroom, "fr"]).start()
+
+    # Check for all past classes
+    last_24hrs = now - timezone.timedelta(hours=24)
+    past_classes = Classroom.objects.filter(status="accepted", end_date__lte=last_24hrs)
+    if past_classes:
+        past_classes.update(status="completed")
+        # Send email and notification
+        for classroom in ended_classrooms:
+            Thread(target=auto_classroom_complete_email, args=[classroom.tutor, classroom, "fr"]).start()
+
     return True
 
 

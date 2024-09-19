@@ -413,3 +413,22 @@ def send_fund_main_balance_email(user, classroom, lang):
     send_email(contents, email, translated_subject)
     return True
 
+
+def auto_classroom_complete_email(user, classroom, lang="en"):
+    first_name = user.first_name
+    if not user.first_name:
+        first_name = "EduDream Tutor"
+    email = user.email
+
+    message = f"Dear {first_name}, <br><br>A recent class you taught is now marked as <strong>COMPLETED</strong>. " \
+              f"Your payment will reflect in your wallet balance shortly." \
+              f"<br>Class Name: <strong>{classroom.name}</strong>" \
+
+    subject = f"Class Completed"
+    translated_content = translate_email(message, lang)
+    translated_subject = translate_email(subject, lang)
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+

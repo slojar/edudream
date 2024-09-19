@@ -18,7 +18,8 @@ from edudream.modules.cron import zoom_login_refresh, payout_cron_job, class_rem
 from edudream.modules.exceptions import raise_serializer_error_msg
 from edudream.modules.paginations import CustomPagination
 from edudream.modules.permissions import IsTutor, IsParent, IsStudent
-from edudream.modules.utils import complete_payment, get_site_details, translate_to_language
+from edudream.modules.utils import complete_payment, get_site_details, translate_to_language, \
+    get_current_datetime_from_lat_lon
 from home.models import Profile, Transaction, ChatMessage, PaymentPlan, Language, Subject, Notification, Testimonial
 from home.serializers import SignUpSerializerIn, LoginSerializerIn, UserSerializerOut, ProfileSerializerIn, \
     ChangePasswordSerializerIn, TransactionSerializerOut, ChatMessageSerializerIn, ChatMessageSerializerOut, \
@@ -50,10 +51,16 @@ class LoginAPIView(APIView):
         serializer = LoginSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
+        longitude = request.data.get("lon", 0)
+        latitude = request.data.get("lat", 0)
+        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(latitude, longitude)
         return Response({
             "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
             "data": UserSerializerOut(user, context={"request": request}).data,
-            "access_token": f"{AccessToken.for_user(user)}"
+            "access_token": f"{AccessToken.for_user(user)}",
+            "timezone_data": {
+                "timezone": tzone, "current_time": ctime, "utc_offset": utc_offset
+            }
         })
 
 
