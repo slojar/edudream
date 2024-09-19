@@ -7,6 +7,7 @@ import re
 import secrets
 from threading import Thread
 
+import pytz
 from django.contrib.sites.models import Site
 from django.utils import timezone
 import requests
@@ -14,6 +15,8 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
+from timezonefinder import TimezoneFinder
+
 from home.models import SiteSetting, Transaction, Notification
 from location.models import City, State, Country
 from edudream.modules.translator import Translate
@@ -416,5 +419,13 @@ def create_notification(user, text):
     return True
 
 
+def get_current_datetime_from_lat_lon(latitude, longitude):
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
+    dtimezone = pytz.timezone(timezone_str)
+    ctime = datetime.datetime.now(dtimezone)
+    utc_offset = ctime.strftime('%z')
+    utc_offset_formatted = f'{utc_offset[:3]}:{utc_offset[3:]}'
+    return timezone_str, ctime, utc_offset_formatted
 
 
