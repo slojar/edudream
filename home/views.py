@@ -53,7 +53,11 @@ class LoginAPIView(APIView):
         user = serializer.save()
         longitude = request.data.get("longitude", 0)
         latitude = request.data.get("latitude", 0)
-        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(latitude, longitude)
+        tzone = ctime = utc_offset = ""
+        try:
+            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(latitude, longitude)
+        except Exception:
+            pass
         return Response({
             "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
             "data": UserSerializerOut(user, context={"request": request}).data,

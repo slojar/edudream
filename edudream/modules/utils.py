@@ -2,7 +2,6 @@ import base64
 import calendar
 import datetime
 import json
-import logging
 import re
 import secrets
 from threading import Thread
@@ -15,6 +14,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
+from sentry_sdk import capture_message
 from timezonefinder import TimezoneFinder
 
 from home.models import SiteSetting, Transaction, Notification
@@ -29,7 +29,7 @@ email_api_key = settings.EMAIL_API_KEY
 
 def log_request(*args):
     for arg in args:
-        logging.info(arg)
+        capture_message(str(arg), level="info")
 
 
 def format_phone_number(phone_number):
@@ -202,13 +202,13 @@ def api_response(message, status: bool, data=None, **kwargs) -> dict:
             # Encrypting tokens to be
             response['data']['accessToken'] = encrypt_text(text=data['accessToken'])
             # response['data']['refreshToken'] = encrypt_text(text=data['refreshToken'])
-            logging.info(msg=response)
+            capture_message(str(response), level="info")
 
             response['data']['accessToken'] = decrypt_text(text=data['accessToken'])
             # response['data']['refreshToken'] = encrypt_text(text=data['refreshToken'])
 
         else:
-            logging.info(msg=response)
+            capture_message(str(response), level="info")
 
         return response
     except (Exception,) as err:
@@ -325,7 +325,7 @@ def get_site_details():
     try:
         site, created = SiteSetting.objects.get_or_create(site=Site.objects.get_current())
     except Exception as ex:
-        logging.exception(str(ex))
+        capture_message(str(ex), level="info")
         site = SiteSetting.objects.filter(site=Site.objects.get_current()).first()
     return site
 
@@ -343,7 +343,7 @@ def complete_payment(ref_number):
             result = StripeAPI.retrieve_checkout_session(session_id=reference)
             reference = result.get('payment_intent')
         except Exception as ex:
-            logging.error(ex)
+            capture_message(str(ex), level="info")
             pass
 
     result = dict()
