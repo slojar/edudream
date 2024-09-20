@@ -422,7 +422,7 @@ def create_notification(user, text):
 def get_current_datetime_from_lat_lon(latitude, longitude):
     ctime = utc_offset_formatted = ""
     tf = TimezoneFinder()
-    timezone_str = tf.timezone_at(lat=float(latitude), lng=float(longitude))
+    timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
     if not timezone_str:
         return "", ctime, utc_offset_formatted
     dtimezone = pytz.timezone(timezone_str)
