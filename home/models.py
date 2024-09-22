@@ -46,8 +46,8 @@ class Profile(models.Model):
     stripe_verified = models.BooleanField(default=False)
     referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name="referred_by")
     referral_code = models.CharField(default="", unique=True, max_length=50, blank=True, null=True)
-    lon = models.CharField(max_length=100, blank=True, null=True)
-    lat = models.CharField(max_length=100, blank=True, null=True)
+    lon = models.CharField(max_length=100, default="0")
+    lat = models.CharField(max_length=100, default="0")
     updated_on = models.DateTimeField(auto_now=True)
     approved_on = models.DateTimeField(blank=True, null=True)
 
