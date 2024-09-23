@@ -595,7 +595,7 @@ class RequestPayoutSerializerIn(serializers.Serializer):
             return {
                 "detail": translate_to_language("Payout estimation complete", lang),
                 "data": {"name": str(user.get_full_name()).upper(), "wallet_balance": user_wallet.balance,
-                         "coin_to_withdraw": coin, "amount_equivalent": f"EUR{amount}"}
+                         "coin_to_withdraw": coin, "amount_equivalent": amount}
             }
         # Create Payout Request
         if amount < 1:
