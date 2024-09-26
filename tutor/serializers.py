@@ -93,7 +93,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
             student = {
                 "user_id": obj.student.user_id,
                 "full_name": obj.student.get_full_name(),
-                "image": request.build_absolute_uri(image)
+                "image": request.build_absolute_uri(image),
+                "lat": obj.student.parent.lat,
+                "lon": obj.student.parent.lon
             }
         return student
 
@@ -114,7 +116,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
             tutor = {
                 "user_id": obj.tutor_id,
                 "full_name": obj.tutor.get_full_name(),
-                "image": request.build_absolute_uri(image)
+                "image": request.build_absolute_uri(image),
+                "lat": obj.tutor.profile.lat,
+                "lon": obj.tutor.profile.lon
             }
         return tutor
 

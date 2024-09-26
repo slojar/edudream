@@ -946,7 +946,7 @@ class ForgotPasswordSerializerIn(serializers.Serializer):
 class UpdateEndedClassroomSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     completed = serializers.BooleanField(default=False)
-    reason = serializers.CharField(required=False)
+    reason = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     lang = serializers.CharField(required=False)
 
     def update(self, instance, validated_data):
