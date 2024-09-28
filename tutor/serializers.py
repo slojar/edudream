@@ -16,7 +16,7 @@ from edudream.modules.email_template import tutor_class_creation_email, parent_c
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.stripe_api import StripeAPI
 from edudream.modules.utils import get_site_details, encrypt_text, decrypt_text, mask_number, log_request, \
-    create_notification, translate_to_language
+    create_notification, translate_to_language, get_current_datetime_from_lat_lon
 from home.models import Subject, Transaction, Profile, ChatMessage
 from location.models import Country
 from student.models import Student
@@ -84,6 +84,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
 
     def get_student(self, obj):
+        lat = obj.student.parent.lat
+        lon = obj.student.parent.lon
+        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         student = None
         image = None
         if obj.student.profile_picture:
@@ -94,8 +97,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
                 "user_id": obj.student.user_id,
                 "full_name": obj.student.get_full_name(),
                 "image": request.build_absolute_uri(image),
-                "lat": obj.student.parent.lat,
-                "lon": obj.student.parent.lon
+                "timezone_data": {
+                    "timezone": tzone, "current_time": ctime, "utc_offset": utc_offset
+                },
             }
         return student
 
@@ -107,6 +111,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
         return subject
 
     def get_tutor(self, obj):
+        lat = obj.tutor.profile.lat
+        lon = obj.tutor.profile.lon
+        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         tutor = None
         image = None
         if obj.tutor.profile.profile_picture:
@@ -117,8 +124,9 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
                 "user_id": obj.tutor_id,
                 "full_name": obj.tutor.get_full_name(),
                 "image": request.build_absolute_uri(image),
-                "lat": obj.tutor.profile.lat,
-                "lon": obj.tutor.profile.lon
+                "timezone_data": {
+                    "timezone": tzone, "current_time": ctime, "utc_offset": utc_offset
+                },
             }
         return tutor
 
