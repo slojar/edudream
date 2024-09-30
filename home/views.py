@@ -51,11 +51,15 @@ class LoginAPIView(APIView):
         serializer = LoginSerializerIn(data=request.data, context={"request": request})
         serializer.is_valid() or raise_serializer_error_msg(errors=serializer.errors, language=request.data.get("lang", "en"))
         user = serializer.save()
-        longitude = float(request.data.get("longitude", 0))
-        latitude = float(request.data.get("latitude", 0))
+        longitude = request.data.get("longitude")
+        latitude = request.data.get("latitude")
+        if not longitude:
+            longitude = 0
+        if not latitude:
+            latitude = 0
         tzone = ctime = utc_offset = ""
         try:
-            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(latitude, longitude)
+            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(latitude), float(longitude))
         except Exception:
             pass
         return Response({
