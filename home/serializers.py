@@ -109,7 +109,8 @@ class UserSerializerOut(serializers.ModelSerializer):
     def get_timezone_data(self, obj):
         if Profile.objects.filter(user=obj).exists():
             user_profile = Profile.objects.get(user=obj)
-            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(user_profile.lat), float(user_profile.lon))
+            tzone = ctime = utc_offset = ""
+            # tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(user_profile.lat), float(user_profile.lon))
             return {"timezone": tzone, "current_time": ctime, "utc_offset": utc_offset}
         return None
 

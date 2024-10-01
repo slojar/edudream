@@ -58,10 +58,10 @@ class LoginAPIView(APIView):
         if not latitude:
             latitude = 0
         tzone = ctime = utc_offset = ""
-        try:
-            tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(latitude), float(longitude))
-        except Exception:
-            pass
+        # try:
+        #     tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(latitude), float(longitude))
+        # except Exception:
+        #     pass
         return Response({
             "detail": translate_to_language("Login Successful", request.data.get("lang", "en")),
             "data": UserSerializerOut(user, context={"request": request}).data,
