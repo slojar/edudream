@@ -84,8 +84,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
 
     def get_student(self, obj):
-        lat = obj.student.parent.lat
-        lon = obj.student.parent.lon
+        lat = float(obj.student.parent.lat)
+        lon = float(obj.student.parent.lon)
         tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         student = None
         image = None
@@ -111,8 +111,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
         return subject
 
     def get_tutor(self, obj):
-        lat = obj.tutor.profile.lat
-        lon = obj.tutor.profile.lon
+        lat = float(obj.tutor.profile.lat)
+        lon = float(obj.tutor.profile.lon)
         tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         tutor = None
         image = None
