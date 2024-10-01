@@ -86,7 +86,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
     def get_student(self, obj):
         lat = float(obj.student.parent.lat)
         lon = float(obj.student.parent.lon)
-        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
+        tzone = ctime = utc_offset = ""
+        # tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         student = None
         image = None
         if obj.student.profile_picture:
@@ -113,7 +114,8 @@ class ClassRoomSerializerOut(serializers.ModelSerializer):
     def get_tutor(self, obj):
         lat = float(obj.tutor.profile.lat)
         lon = float(obj.tutor.profile.lon)
-        tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
+        tzone = ctime = utc_offset = ""
+        # tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(lat, lon)
         tutor = None
         image = None
         if obj.tutor.profile.profile_picture:
