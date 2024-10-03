@@ -241,7 +241,7 @@ class TutorListAPIView(APIView, CustomPagination):
     )
     def get(self, request, pk=None):
         search = request.GET.get("search")  # Tutor name Subject name
-        country = request.GET.get("country", list())  # Arrays of ID
+        country = request.GET.get("country")  # CountryID
         grade = request.GET.get("grade")  # Subject grades
         diploma_type = request.GET.get("diploma_type")  # diploma_type
         university_name = request.GET.get("university_name")  # university_name
@@ -258,11 +258,10 @@ class TutorListAPIView(APIView, CustomPagination):
 
         if search:
             school_subject_name = [item for item in Subject.objects.filter(name__iexact=search)]
-            # query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
-            query &= Q(user__tutorsubject__subject__in=school_subject_name)
+            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | \
+                     Q(user__tutorsubject__subject__in=school_subject_name)
         if country:
-            country_ids = ast.literal_eval(str(country))
-            query &= Q(country_id__in=country_ids)
+            query &= Q(country_id=country)
         if grade:
             school_grade_subject = [item for item in Subject.objects.filter(grade__iexact=grade)]
             # query &= Q(user__tutordetail__subjects__in=school_grade_subject)
@@ -272,7 +271,7 @@ class TutorListAPIView(APIView, CustomPagination):
         if university_name:
             query &= Q(user__tutordetail__university_name__icontains=university_name)
 
-        queryset = self.paginate_queryset(Profile.objects.filter(query).distinct().order_by("?"), request)
+        queryset = self.paginate_queryset(Profile.objects.filter(query).values_list('id', flat=True).order_by("?").distinct(), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": translate_to_language("Tutor retrieved"), "data": response})
@@ -535,7 +534,6 @@ class WebhookAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
-
         from edudream.modules.utils import log_request
         event = request.data
         log_request("STRIPE WEBHOOK RECEIVED: \n", event)
@@ -564,46 +562,46 @@ class WebhookAPIView(APIView):
         return Response({"detail": "Webhook recieved"})
 
     # def post(self, request):
-        # data = {
-        #   "event": "meeting.participant_joined",
-        #   "event_ts": 1626230691572,
-        #   "payload": {
-        #     "account_id": "AAAAAABBBB",
-        #     "object": {
-        #       "id": "1234567890",
-        #       "uuid": "4444AAAiAAAAAiAiAiiAii==",
-        #       "host_id": "x1yCzABCDEfg23HiJKl4mN",
-        #       "topic": "My Meeting",
-        #       "type": 8,
-        #       "start_time": "2021-07-13T21:44:51Z",
-        #       "timezone": "America/Los_Angeles",
-        #       "duration": 60,
-        #       "participant": {
-        #         "user_id": "1234567890",
-        #         "user_name": "Jill Chill",
-        #         "id": "iFxeBPYun6SAiWUzBcEkX",
-        #         "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
-        #         "date_time": "2021-07-13T21:44:51Z",
-        #         "email": "jchill@example.com",
-        #         "registrant_id": "abcdefghij0-klmnopq23456",
-        #         "participant_user_id": "rstuvwxyza789-cde",
-        #         "customer_key": "349589LkJyeW",
-        #         "phone_number": "8615250064084"
-        #       }
-        #     }
-        #   }
-        # }
-        # event_type = request.data.get("event")
-        # payload = request.data.get("payload")
-        # meeting_id = payload["object"]["id"]
-        # email = payload["object"]["participant"]["email"]
-        # if Classroom.objects.filter(meeting_id=meeting_id).exists():
-        #     classroom = Classroom.objects.get(meeting_id=meeting_id)
-        #     if event_type == "meeting.participant_joined":
-        #         ...
-        # # reply = request.GET.get("input")
-        # # if reply == "1":
-        # #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
-        # # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
+    # data = {
+    #   "event": "meeting.participant_joined",
+    #   "event_ts": 1626230691572,
+    #   "payload": {
+    #     "account_id": "AAAAAABBBB",
+    #     "object": {
+    #       "id": "1234567890",
+    #       "uuid": "4444AAAiAAAAAiAiAiiAii==",
+    #       "host_id": "x1yCzABCDEfg23HiJKl4mN",
+    #       "topic": "My Meeting",
+    #       "type": 8,
+    #       "start_time": "2021-07-13T21:44:51Z",
+    #       "timezone": "America/Los_Angeles",
+    #       "duration": 60,
+    #       "participant": {
+    #         "user_id": "1234567890",
+    #         "user_name": "Jill Chill",
+    #         "id": "iFxeBPYun6SAiWUzBcEkX",
+    #         "participant_uuid": "55555AAAiAAAAAiAiAiiAii",
+    #         "date_time": "2021-07-13T21:44:51Z",
+    #         "email": "jchill@example.com",
+    #         "registrant_id": "abcdefghij0-klmnopq23456",
+    #         "participant_user_id": "rstuvwxyza789-cde",
+    #         "customer_key": "349589LkJyeW",
+    #         "phone_number": "8615250064084"
+    #       }
+    #     }
+    #   }
+    # }
+    # event_type = request.data.get("event")
+    # payload = request.data.get("payload")
+    # meeting_id = payload["object"]["id"]
+    # email = payload["object"]["participant"]["email"]
+    # if Classroom.objects.filter(meeting_id=meeting_id).exists():
+    #     classroom = Classroom.objects.get(meeting_id=meeting_id)
+    #     if event_type == "meeting.participant_joined":
+    #         ...
+    # # reply = request.GET.get("input")
+    # # if reply == "1":
+    # #     return HttpResponse("Transfer Menu\n1. Self \n2. Others")
+    # # return HttpResponse("Welcome to Payattitude\nMenu\n1. Transfer \n2. Balance")
 
-        # return JsonResponse({"detail": "Webhook recieved"})
+    # return JsonResponse({"detail": "Webhook recieved"})
