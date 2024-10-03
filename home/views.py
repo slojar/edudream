@@ -1,5 +1,6 @@
 import ast
 import json
+import random
 
 from django.db.models import Q
 from django.http import HttpResponseRedirect, JsonResponse
@@ -271,7 +272,7 @@ class TutorListAPIView(APIView, CustomPagination):
         if university_name:
             query &= Q(user__tutordetail__university_name__icontains=university_name)
 
-        queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("?").distinct(), request)
+        queryset = self.paginate_queryset(Profile.objects.filter(query).order_by("-id").distinct(), request)
         serializer = TutorListSerializerOut(queryset, many=True, context={"request": request}).data
         response = self.get_paginated_response(serializer).data
         return Response({"detail": translate_to_language("Tutor retrieved"), "data": response})
