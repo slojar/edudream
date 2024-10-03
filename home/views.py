@@ -257,14 +257,12 @@ class TutorListAPIView(APIView, CustomPagination):
             return Response(TutorListSerializerOut(user_p, context={"request": request}).data)
 
         if search:
-            school_subject_name = [item for item in Subject.objects.filter(name__icontains=search)]
-            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
-                # user__tutordetail__subjects__in=school_subject_name)
-                user__tutorsubject__subject__in=school_subject_name)
+            school_subject_name = [item for item in Subject.objects.filter(name__iexact=search)]
+            # query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | Q(
+            query &= Q(user__tutorsubject__subject__in=school_subject_name)
         if country:
             country_ids = ast.literal_eval(str(country))
-            for place_id in country_ids:
-                query &= Q(country_id__in=place_id)
+            query &= Q(country_id__in=country_ids)
         if grade:
             school_grade_subject = [item for item in Subject.objects.filter(grade__exact=grade)]
             # query &= Q(user__tutordetail__subjects__in=school_grade_subject)
