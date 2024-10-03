@@ -264,7 +264,7 @@ class TutorListAPIView(APIView, CustomPagination):
             country_ids = ast.literal_eval(str(country))
             query &= Q(country_id__in=country_ids)
         if grade:
-            school_grade_subject = [item for item in Subject.objects.filter(grade__exact=grade)]
+            school_grade_subject = [item for item in Subject.objects.filter(grade__iexact=grade)]
             # query &= Q(user__tutordetail__subjects__in=school_grade_subject)
             query &= Q(user__tutorsubject__subject__in=school_grade_subject)
         if diploma_type:
