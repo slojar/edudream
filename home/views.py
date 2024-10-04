@@ -243,6 +243,7 @@ class TutorListAPIView(APIView, CustomPagination):
     def get(self, request, pk=None):
         search = request.GET.get("search")  # Tutor name Subject name
         country = request.GET.get("country")  # CountryID
+        subject = request.GET.get("subject")  # SubjectID
         grade = request.GET.get("grade")  # Subject grades
         diploma_type = request.GET.get("diploma_type")  # diploma_type
         university_name = request.GET.get("university_name")  # university_name
@@ -258,9 +259,12 @@ class TutorListAPIView(APIView, CustomPagination):
             return Response(TutorListSerializerOut(user_p, context={"request": request}).data)
 
         if search:
-            school_subject_name = [item for item in Subject.objects.filter(name__iexact=search)]
-            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search) | \
-                     Q(user__tutorsubject__subject__in=school_subject_name)
+            # school_subject_name = [item for item in Subject.objects.filter(name__iexact=search)]
+            query &= Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
+                     # Q(user__tutorsubject__subject__in=school_subject_name)
+        if subject:
+            query &= Q(user__tutorsubject__subject_id=subject)
+
         if country:
             query &= Q(country_id=country)
         if grade:
