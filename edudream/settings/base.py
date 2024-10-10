@@ -2,6 +2,9 @@ import os
 import logging
 from pathlib import Path
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 from corsheaders.defaults import default_headers
 
 env = environ.Env()
@@ -9,9 +12,6 @@ environ.Env.read_env(os.path.join('.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-LOG_DIR = os.path.join('logs')
-os.makedirs(LOG_DIR, exist_ok=True)
 
 # Application definition
 INSTALLED_APPS = [
@@ -134,16 +134,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-logging.basicConfig(
-    filename=os.path.join(LOG_DIR, 'edudream.log'),
-    filemode='a',
-    level=logging.DEBUG,
-    format='[{asctime}] {levelname} {module} {thread:d} - {message}',
-    datefmt='%d-%m-%Y %H:%M:%S',
-    style='{',
-)
-
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
@@ -151,4 +141,5 @@ REST_FRAMEWORK = {
 }
 
 SITE_ID = 1
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

@@ -5,10 +5,9 @@ from django.contrib.auth.models import User
 from edudream.modules.exceptions import InvalidRequestException
 from django.contrib.auth.hashers import make_password
 
-from edudream.modules.utils import decrypt_text, encrypt_text, log_request
+from edudream.modules.utils import decrypt_text, encrypt_text, log_request, translate_to_language
 from home.models import PaymentPlan, Transaction, UserLanguage
 from student.models import Student
-from django.utils.translation import gettext
 
 from edudream.modules.stripe_api import StripeAPI
 
@@ -17,6 +16,7 @@ class ParentStudentSerializerOut(serializers.ModelSerializer):
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
     email = serializers.CharField(source="user.email")
+    username = serializers.CharField(source="user.username")
     parent_name = serializers.CharField(source="parent.get_full_name")
     help_subject_names = serializers.SerializerMethodField()
 
@@ -30,10 +30,10 @@ class ParentStudentSerializerOut(serializers.ModelSerializer):
 
 class StudentSerializerIn(serializers.Serializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    username = serializers.CharField()
-    password = serializers.CharField()
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
     note = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     languages = serializers.ListSerializer(child=serializers.DictField(), required=False)
@@ -58,8 +58,12 @@ class StudentSerializerIn(serializers.Serializer):
 
         # Check if user with email exists
         # if User.objects.filter(username__iexact=email).exists() or User.objects.filter(email__iexact=email).exists():
+
+        if not all([password, f_name, l_name, username]):
+            raise InvalidRequestException({"detail": translate_to_language("Required fields: First Name, Last Name, Username, Password", lang)})
+
         if User.objects.filter(username__iexact=username).exists():
-            raise InvalidRequestException({"detail": gettext("Username is taken")})
+            raise InvalidRequestException({"detail": translate_to_language("Username is taken", lang)})
 
         # Create student user
         student_user = User.objects.create(
@@ -124,10 +128,10 @@ class FundWalletSerializerIn(serializers.Serializer):
                 phone=user.profile.mobile_number
             )
             new_stripe_customer_id = customer.get('id')
-            user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
+            user.profile.stripe_customer_id = new_stripe_customer_id
             user.profile.save()
-        stripe_customer_id = decrypt_text(user.profile.stripe_customer_id)
-        description = gettext(f'Wallet funding: {user.get_full_name()}', language)
+        stripe_customer_id = user.profile.stripe_customer_id
+        description = translate_to_language(f'Wallet funding: {user.get_full_name()}', language)
         payment_reference = payment_link = None
 
         # Calculate tax
@@ -147,7 +151,7 @@ class FundWalletSerializerIn(serializers.Serializer):
                     phone=user.profile.mobile_number
                 )
                 new_stripe_customer_id = customer.get('id')
-                user.profile.stripe_customer_id = encrypt_text(new_stripe_customer_id)
+                user.profile.stripe_customer_id = new_stripe_customer_id
                 user.profile.save()
                 continue
 
@@ -155,12 +159,12 @@ class FundWalletSerializerIn(serializers.Serializer):
                 text = str(response).lower()
                 start_index = text.index("converts to approximately")
                 approx = text[start_index:]
-                response = gettext(f"Amount must convert to at least 50 cents. {amount}EUR  {approx}", language)
+                response = translate_to_language(f"Amount must convert to at least 50 cents. {amount}EUR  {approx}", language)
 
             if not success:
                 raise InvalidRequestException({'detail': response})
             if not response.get('url'):
-                raise InvalidRequestException({'detail': gettext('Payment could not be completed at the moment', language)})
+                raise InvalidRequestException({'detail': translate_to_language('Payment could not be completed at the moment', language)})
 
             payment_reference = response.get('payment_intent')
             if not payment_reference:

@@ -133,7 +133,6 @@ dmypy.json
 static/
 locale/
 media/
-locale/
 .DS_Store
 *.DS_Store
 
