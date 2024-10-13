@@ -443,7 +443,8 @@ class LoginSerializerIn(serializers.Serializer):
             return user
 
         user_profile = Profile.objects.get(user=user)
-        if user_profile.account_type == "tutor" and user_profile.active is False:
+        # if user_profile.account_type == "tutor" and user_profile.active is False:
+        if user_profile.account_type == "tutor" and user_profile.user.tutordetail.status in ["pending", "declined"]:
             raise InvalidRequestException(
                 {"detail": translate_to_language("Your tutor account is yet to be approved by the admin, please check back later", lang)}
             )
