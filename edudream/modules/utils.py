@@ -2,11 +2,11 @@ import base64
 import calendar
 import datetime
 import json
-import logging
 import re
 import secrets
 from threading import Thread
 
+import pytz
 from django.contrib.sites.models import Site
 from django.utils import timezone
 import requests
@@ -14,6 +14,9 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from dateutil.relativedelta import relativedelta
+from sentry_sdk import capture_message
+from timezonefinder import TimezoneFinder
+
 from home.models import SiteSetting, Transaction, Notification
 from location.models import City, State, Country
 from edudream.modules.translator import Translate
@@ -26,7 +29,7 @@ email_api_key = settings.EMAIL_API_KEY
 
 def log_request(*args):
     for arg in args:
-        logging.info(arg)
+        capture_message(str(arg), level="info")
 
 
 def format_phone_number(phone_number):
@@ -199,13 +202,13 @@ def api_response(message, status: bool, data=None, **kwargs) -> dict:
             # Encrypting tokens to be
             response['data']['accessToken'] = encrypt_text(text=data['accessToken'])
             # response['data']['refreshToken'] = encrypt_text(text=data['refreshToken'])
-            logging.info(msg=response)
+            capture_message(str(response), level="info")
 
             response['data']['accessToken'] = decrypt_text(text=data['accessToken'])
             # response['data']['refreshToken'] = encrypt_text(text=data['refreshToken'])
 
         else:
-            logging.info(msg=response)
+            capture_message(str(response), level="info")
 
         return response
     except (Exception,) as err:
@@ -322,7 +325,7 @@ def get_site_details():
     try:
         site, created = SiteSetting.objects.get_or_create(site=Site.objects.get_current())
     except Exception as ex:
-        logging.exception(str(ex))
+        capture_message(str(ex), level="info")
         site = SiteSetting.objects.filter(site=Site.objects.get_current()).first()
     return site
 
@@ -340,7 +343,7 @@ def complete_payment(ref_number):
             result = StripeAPI.retrieve_checkout_session(session_id=reference)
             reference = result.get('payment_intent')
         except Exception as ex:
-            logging.error(ex)
+            capture_message(str(ex), level="info")
             pass
 
     result = dict()
@@ -392,11 +395,22 @@ def mask_number(number_to_mask, num_chars_to_mask, mask_char='*'):
         return mask_char * num_chars_to_mask + number_to_mask[num_chars_to_mask:]
 
 
-# def gettext(content, language="en"):
-#     response = content
-#     if language != "en":
-#         response = Translate.perform_translate_deepl(to_lang=language, content=content)
-#     return response
+def translate_to_language(content, language="en"):
+    from location.translation import translate
+    response = content
+    if language == "fr":
+        # Get value for content
+        for item in translate:
+            if item["msgid"] == content:
+                response = item["fr"]
+    return response
+
+
+def translate_email(content, language="en"):
+    response = content
+    if language == "fr":
+        response = Translate.perform_translate_deepl("fr", content)
+    return response
 
 
 def create_notification(user, text):
@@ -405,5 +419,16 @@ def create_notification(user, text):
     return True
 
 
+def get_current_datetime_from_lat_lon(latitude, longitude):
+    ctime = utc_offset_formatted = ""
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
+    if not timezone_str:
+        return "", ctime, utc_offset_formatted
+    dtimezone = pytz.timezone(timezone_str)
+    ctime = datetime.datetime.now(dtimezone)
+    utc_offset = ctime.strftime('%z')
+    utc_offset_formatted = f'{utc_offset[:3]}:{utc_offset[3:]}'
+    return timezone_str, ctime, utc_offset_formatted
 
 

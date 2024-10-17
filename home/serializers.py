@@ -1,3 +1,4 @@
+import decimal
 import uuid
 from threading import Thread
 
@@ -14,7 +15,7 @@ from edudream.modules.email_template import tutor_register_email, parent_registe
     consultation_email, send_otp_token_to_email, send_verification_email, send_welcome_email
 from edudream.modules.exceptions import InvalidRequestException
 from edudream.modules.utils import generate_random_otp, log_request, encrypt_text, get_next_minute, \
-    decrypt_text, create_notification
+    decrypt_text, create_notification, translate_to_language, get_site_details, get_current_datetime_from_lat_lon
 from home.models import Profile, Wallet, Transaction, ChatMessage, PaymentPlan, ClassReview, Language, UserLanguage, \
     Subject, Notification, Testimonial
 from location.models import Country, State, City
@@ -22,7 +23,6 @@ from parent.serializers import ParentStudentSerializerOut
 from student.models import Student
 from tutor.models import TutorDetail, Classroom, Dispute
 from tutor.serializers import TutorDetailSerializerOut, ClassRoomSerializerOut
-from django.utils.translation import gettext
 
 
 class UserLanguageSerializerOut(serializers.ModelSerializer):
@@ -39,6 +39,18 @@ class TutorListSerializerOut(serializers.ModelSerializer):
     tutor_languages = serializers.SerializerMethodField()
     detail = serializers.SerializerMethodField()
     wallet = serializers.SerializerMethodField()
+    can_start_conversation = serializers.SerializerMethodField()
+
+    def get_can_start_conversation(self, obj):
+        can_start_conversation = False
+        request = self.context.get("request")
+        auth_user = request.user
+        if auth_user is not None:
+            users = [auth_user.id, obj.user.id]
+            query = Q(tutor_id__in=users) | Q(student__user_id__in=users) | Q(student__parent__user_id__in=users)
+            if Classroom.objects.filter(query).exists():
+                can_start_conversation = True
+        return can_start_conversation
 
     def get_tutor_languages(self, obj):
         if UserLanguage.objects.filter(user__profile=obj).exists():
@@ -61,6 +73,7 @@ class ProfileSerializerOut(serializers.ModelSerializer):
     wallet = serializers.SerializerMethodField()
     children = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    full_name = serializers.CharField(source="user.get_full_name")
 
     def get_profile_picture(self, obj):
         request = self.context.get("request")
@@ -75,7 +88,10 @@ class ProfileSerializerOut(serializers.ModelSerializer):
 
     def get_wallet(self, obj):
         wallet = Wallet.objects.filter(user=obj.user).last()
-        return {"id": wallet.id, "balance": wallet.balance, "expected_balance": wallet.pending, "approximate_hours": round(float(wallet.balance) / 7.5)}
+        payout_ratio = get_site_details().payout_coin_to_amount
+        wallet_amount = decimal.Decimal(wallet.balance) * payout_ratio
+
+        return {"id": wallet.id, "balance": wallet.balance, "wallet_amount": wallet_amount, "expected_balance": wallet.pending, "approximate_hours": round(float(wallet.balance) / 7.5)}
 
     class Meta:
         model = Profile
@@ -88,6 +104,15 @@ class UserSerializerOut(serializers.ModelSerializer):
     is_student = serializers.SerializerMethodField()
     languages = serializers.SerializerMethodField()
     stat = serializers.SerializerMethodField()
+    timezone_data = serializers.SerializerMethodField()
+
+    def get_timezone_data(self, obj):
+        if Profile.objects.filter(user=obj).exists():
+            user_profile = Profile.objects.get(user=obj)
+            tzone = ctime = utc_offset = ""
+            # tzone, ctime, utc_offset = get_current_datetime_from_lat_lon(float(user_profile.lat), float(user_profile.lon))
+            return {"timezone": tzone, "current_time": ctime, "utc_offset": utc_offset}
+        return None
 
     def get_stat(self, obj):
         if Student.objects.filter(user=obj).exists():
@@ -97,12 +122,14 @@ class UserSerializerOut(serializers.ModelSerializer):
             tutor_list = list(dict.fromkeys(tutors))
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student=student).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="parent").exists():
             classroom = Classroom.objects.filter(student__parent__user=obj)
@@ -111,6 +138,7 @@ class UserSerializerOut(serializers.ModelSerializer):
             students = Student.objects.filter(parent__user=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
             return {
                 "total_tutor": len(tutor_list),
                 "total_subject": Subject.objects.filter(classroom__student__in=students).distinct().count(),
@@ -118,17 +146,20 @@ class UserSerializerOut(serializers.ModelSerializer):
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
         elif Profile.objects.filter(user=obj, account_type="tutor").exists():
             classroom = Classroom.objects.filter(tutor=obj)
             now = timezone.now()
             ended_class = classroom.filter(end_date__lte=now, tutor_complete_check=False, status="accepted")
+            ap = classroom.filter(end_date__lte=now, student_complete_check=False, status="accepted")
             return {
                 "total_subject": Subject.objects.filter(classroom__tutor__in=[obj]).distinct().count(),
                 "active_classes": classroom.filter(status="accepted").count(),
                 "completed_classes": classroom.filter(status="completed").count(),
                 "cancelled_classes": classroom.filter(status="cancelled").count(),
                 "ended_classes": ClassRoomSerializerOut(ended_class, many=True, context={"request": self.context.get("request")}).data,
+                "awaiting_approval": ClassRoomSerializerOut(ap, many=True, context={"request": self.context.get("request")}).data,
             }
 
         else:
@@ -189,13 +220,19 @@ class SignUpSerializerIn(serializers.Serializer):
     last_name = serializers.CharField()
     email_address = serializers.EmailField()
     password = serializers.CharField()
-    # address = serializers.CharField(max_length=300)
+    address = serializers.CharField(max_length=300, required=False)
     account_type = serializers.ChoiceField(choices=ACCOUNT_TYPE_CHOICES)
     mobile_number = serializers.CharField(max_length=20)
     # dob = serializers.DateTimeField(required=False)
-    # city = serializers.IntegerField()
-    # state = serializers.IntegerField()
+    city = serializers.CharField(required=False)
+    state = serializers.IntegerField(required=False)
     country = serializers.IntegerField()
+    postal_code = serializers.CharField(required=False)
+    address_front_file = serializers.FileField(required=False)
+    address_back_file = serializers.FileField(required=False)
+    nationality_front_file = serializers.FileField(required=False)
+    nationality_back_file = serializers.FileField(required=False)
+
     languages = serializers.CharField(required=False)
     bio = serializers.CharField(required=False)
     hobbies = serializers.CharField(required=False)
@@ -224,11 +261,17 @@ class SignUpSerializerIn(serializers.Serializer):
         email = validated_data.get("email_address")
         password = validated_data.get("password")
         acct_type = validated_data.get("account_type")
-        # address = validated_data.get("address")
+        address = validated_data.get("address")
         phone_number = validated_data.get("mobile_number")
         # d_o_b = validated_data.get("dob")
-        # city_id = validated_data.get("city")
-        # state_id = validated_data.get("state")
+        city = validated_data.get("city")
+        postal_code = validated_data.get("postal_code")
+        address_front = validated_data.get("address_front_file", None)
+        address_back = validated_data.get("address_back_file", None)
+        nationality_front = validated_data.get("nationality_front_file", None)
+        nationality_back = validated_data.get("nationality_back_file", None)
+
+        state_id = validated_data.get("state")
         country_id = validated_data.get("country")
         languages = validated_data.get("languages")
         bio = validated_data.get("bio")
@@ -253,25 +296,24 @@ class SignUpSerializerIn(serializers.Serializer):
 
         required_for_tutor = [
             bio, hobbies, funfact, education_status, diploma_type, diploma_file, proficiency_test_file, diploma_grade,
-            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended
+            languages, proficiency_test_grade, resume_file, high_school_subject, high_school_attended, country_id,
+            # state_id, address, city_id, postal_code, address_front, address_back, nationality_front
+            # nationality_back
         ]
         if acct_type == "tutor" and not all(required_for_tutor):
-            raise InvalidRequestException({"detail": gettext("Please submit all required details")})
+            raise InvalidRequestException({"detail": translate_to_language("Please submit all required details", lang)})
         country = get_object_or_404(Country, id=country_id)
 
-        # state = get_object_or_404(State, id=state_id, country_id=country_id)
-        # city = get_object_or_404(City, id=city_id, state_id=state_id)
-
         if User.objects.filter(username__iexact=email).exists():
-            raise InvalidRequestException({"detail": gettext("Email is taken")})
+            raise InvalidRequestException({"detail": translate_to_language("Email is taken", lang)})
 
         if User.objects.filter(email__iexact=email).exists():
-            raise InvalidRequestException({"detail": gettext("Email is taken")})
+            raise InvalidRequestException({"detail": translate_to_language("Email is taken", lang)})
 
         try:
             validate_password(password=password)
         except Exception as err:
-            raise InvalidRequestException({'detail': gettext(', '.join(list(err)))})
+            raise InvalidRequestException({'detail': translate_to_language(', '.join(list(err)), lang)})
 
         # if password != password_confirm:
         #     raise InvalidRequestException({'detail': 'Passwords mismatch'})
@@ -331,7 +373,13 @@ class SignUpSerializerIn(serializers.Serializer):
 
         # Create TutorDetail if account type is "tutor"
         if acct_type == "tutor":
-            Profile.objects.filter(user=user).update(active=False)
+            # state = get_object_or_404(State, id=state_id, country_id=country_id)
+            # city = get_object_or_404(City, id=city_id, state_id=state_id)
+
+            Profile.objects.filter(user=user).update(
+                active=False
+                # active=False, city=city, address=address, state=state, postal_code=postal_code
+            )
             tutor_detail, _ = TutorDetail.objects.get_or_create(user=user)
             tutor_detail.bio = bio
             tutor_detail.hobbies = hobbies
@@ -347,6 +395,10 @@ class SignUpSerializerIn(serializers.Serializer):
             tutor_detail.diploma_grade = diploma_grade
             tutor_detail.proficiency_test_grade = proficiency_test_grade
             tutor_detail.proficiency_test_file = proficiency_test_file
+            tutor_detail.address_front_file = address_front
+            tutor_detail.address_back_file = address_back
+            tutor_detail.nationality_front_file = nationality_front
+            tutor_detail.nationality_back_file = nationality_back
             tutor_detail.proficiency_test_type = proficiency_test_type
             tutor_detail.resume = resume_file
             tutor_detail.rest_period = rest_period
@@ -363,7 +415,7 @@ class SignUpSerializerIn(serializers.Serializer):
             Thread(target=parent_register_email, args=[user, lang]).start()
         # Send Verification token to email
 
-        Thread(target=create_notification, args=[user, gettext("Welcome to EduDream")]).start()
+        Thread(target=create_notification, args=[user, translate_to_language("Welcome to EduDream", lang)]).start()
         return UserSerializerOut(user, context={"request": self.context.get("request")}).data
 
 
@@ -380,21 +432,21 @@ class LoginSerializerIn(serializers.Serializer):
         user = authenticate(username=username, password=password)
         if not user:
             # raise InvalidRequestException({"detail": "Invalid email/username or password"})
-            # raise InvalidRequestException({"detail": gettext("Invalid email/username or password")})
-            raise InvalidRequestException({"detail": gettext("Invalid email/username or password")})
+            raise InvalidRequestException({"detail": translate_to_language("Invalid email/username or password", lang)})
 
         if Student.objects.filter(user=user).exists():
             student = Student.objects.get(user=user)
             if student.parent.email_verified is False:
                 raise InvalidRequestException(
-                    {"detail": gettext("Parent email is not verified. Please ask parent/guadian to verify their account")}
+                    {"detail": translate_to_language("Parent email is not verified. Please ask parent/guadian to verify their account", lang)}
                 )
             return user
 
         user_profile = Profile.objects.get(user=user)
-        if user_profile.account_type == "tutor" and user_profile.active is False:
+        # if user_profile.account_type == "tutor" and user_profile.active is False:
+        if user_profile.account_type == "tutor" and user_profile.user.tutordetail.status in ["pending", "declined"]:
             raise InvalidRequestException(
-                {"detail": gettext("Your tutor account is yet to be approved by the admin, please check back later")}
+                {"detail": translate_to_language("Your tutor account is yet to be approved by the admin, please check back later", lang)}
             )
 
         if not user_profile.email_verified:
@@ -405,7 +457,7 @@ class LoginSerializerIn(serializers.Serializer):
             # Send OTP to user
             Thread(target=send_verification_email, args=[user_profile, lang]).start()
             raise InvalidRequestException({
-                "detail": gettext("Kindly verify account to continue. Check email for verification link")
+                "detail": translate_to_language("Kindly verify account to continue. Check email for verification link", lang)
             })
         return user
 
@@ -418,11 +470,11 @@ class EmailVerificationSerializerIn(serializers.Serializer):
         token = validated_data.get("token")
         lang = validated_data.get("lang", "en")
         if not Profile.objects.filter(email_verified_code=token).exists():
-            raise InvalidRequestException({"detail": gettext("Invalid Verification code")})
+            raise InvalidRequestException({"detail": translate_to_language("Invalid Verification code", lang)})
 
         user_profile = Profile.objects.get(email_verified_code=token)
         if timezone.now() > user_profile.code_expiry:
-            raise InvalidRequestException({"detail": gettext("Verification code has expired")})
+            raise InvalidRequestException({"detail": translate_to_language("Verification code has expired", lang)})
 
         user_profile.email_verified = True
         user_profile.email_verified_code = ""
@@ -430,7 +482,7 @@ class EmailVerificationSerializerIn(serializers.Serializer):
 
         # Send Email to user
         Thread(target=send_welcome_email, args=[user_profile, lang]).start()
-        return gettext("Your email is successfully verified, please proceed to login")
+        return translate_to_language("Your email is successfully verified, please proceed to login", lang)
 
 
 class RequestVerificationLinkSerializerIn(serializers.Serializer):
@@ -443,10 +495,10 @@ class RequestVerificationLinkSerializerIn(serializers.Serializer):
         try:
             user_profile = Profile.objects.get(user__email=email)
         except Profile.DoesNotExist:
-            raise InvalidRequestException({"detail": gettext("User with this email is not found")})
+            raise InvalidRequestException({"detail": translate_to_language("User with this email is not found", lang)})
 
         if user_profile.email_verified:
-            raise InvalidRequestException({"detail": gettext("Account is already verified, please proceed to login")})
+            raise InvalidRequestException({"detail": translate_to_language("Account is already verified, please proceed to login", lang)})
 
         user_profile.email_verified_code = uuid.uuid1()
         user_profile.code_expiry = get_next_minute(timezone.now(), 15)
@@ -454,7 +506,7 @@ class RequestVerificationLinkSerializerIn(serializers.Serializer):
 
         # Send email verification link to user
         Thread(target=send_verification_email, args=[user_profile, lang]).start()
-        return gettext("Verfication link sent to your email")
+        return translate_to_language("Verfication link sent to your email", lang)
 
 
 class ProfileSerializerIn(serializers.Serializer):
@@ -463,13 +515,20 @@ class ProfileSerializerIn(serializers.Serializer):
     mobile_number = serializers.CharField(max_length=20, required=False)
     diploma_file = serializers.FileField(required=False)
     proficiency_test_file = serializers.FileField(required=False)
+
+    postal_code = serializers.CharField(required=False)
+    address_front_file = serializers.FileField(required=False)
+    address_back_file = serializers.FileField(required=False)
+    nationality_front_file = serializers.FileField(required=False)
+    nationality_back_file = serializers.FileField(required=False)
+
     first_name = serializers.CharField(required=False)
     lang = serializers.CharField(required=False)
     last_name = serializers.CharField(required=False)
     dob = serializers.DateTimeField(required=False)
-    city_id = serializers.IntegerField(required=False)
-    state_id = serializers.IntegerField(required=False)
-    country_id = serializers.IntegerField(required=False)
+    city = serializers.IntegerField(required=False)
+    state = serializers.IntegerField(required=False)
+    country = serializers.IntegerField(required=False)
     bio = serializers.CharField(required=False)
     languages = serializers.CharField(required=False)
     max_student = serializers.IntegerField(required=False)
@@ -486,21 +545,35 @@ class ProfileSerializerIn(serializers.Serializer):
     discipline = serializers.CharField(required=False)
     diploma_grade = serializers.CharField(required=False)
     proficiency_test_grade = serializers.CharField(required=False)
+    hobbies = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    funfact = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    linkedin = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    longitude = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    latitude = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     def update(self, instance, validated_data):
         user = validated_data.get("user")
         lang = validated_data.get("lang", "en")
-        country_id = validated_data.get("country_id")
-        state_id = validated_data.get("state_id")
-        city_id = validated_data.get("city_id")
+        country_id = validated_data.get("country")
+        state_id = validated_data.get("state")
+        city = validated_data.get("city")
         subjects = validated_data.get("subject")
         languages = validated_data.get("languages")
         diploma_file = validated_data.get("diploma_file")
         proficiency_test_file = validated_data.get("proficiency_test_file")
+        address_front_file = validated_data.get("address_front_file")
+        address_back_file = validated_data.get("address_back_file")
+        nationality_front_file = validated_data.get("nationality_front_file")
+        nationality_back_file = validated_data.get("nationality_back_file")
 
         instance.address = validated_data.get('address', instance.address)
+        instance.postal_code = validated_data.get('postal_code', instance.postal_code)
         instance.mobile_number = validated_data.get('mobile_number', instance.mobile_number)
         instance.dob = validated_data.get('dob', instance.dob)
+        instance.city = validated_data.get('city', instance.city)
+        instance.lon = validated_data.get('longitude', instance.lon)
+        instance.lat = validated_data.get('latitude', instance.lat)
         user.first_name = validated_data.get('first_name', user.first_name)
         user.last_name = validated_data.get('last_name', user.last_name)
         if country_id:
@@ -509,9 +582,6 @@ class ProfileSerializerIn(serializers.Serializer):
         if state_id:
             state = get_object_or_404(State, id=state_id)
             instance.state = state
-        if city_id:
-            city = get_object_or_404(City, id=city_id)
-            instance.city = city
 
         if instance.account_type == "tutor":
             tutor_detail = TutorDetail.objects.filter(user=user).last()
@@ -527,16 +597,27 @@ class ProfileSerializerIn(serializers.Serializer):
             tutor_detail.discipline = validated_data.get("discipline", tutor_detail.discipline)
             tutor_detail.diploma_grade = validated_data.get("diploma_grade", tutor_detail.diploma_grade)
             tutor_detail.proficiency_test_grade = validated_data.get("proficiency_test_grade", tutor_detail.proficiency_test_grade)
+            tutor_detail.hobbies = validated_data.get("hobbies", tutor_detail.hobbies)
+            tutor_detail.funfact = validated_data.get("funfact", tutor_detail.funfact)
+            tutor_detail.linkedin = validated_data.get("linkedin", tutor_detail.linkedin)
             if diploma_file:
                 tutor_detail.diploma_file = diploma_file
             if proficiency_test_file:
                 tutor_detail.proficiency_test_file = proficiency_test_file
+            if address_front_file:
+                tutor_detail.address_front_file = address_front_file
+            if address_back_file:
+                tutor_detail.address_back_file = address_back_file
+            if nationality_front_file:
+                tutor_detail.nationality_front_file = nationality_front_file
+            if nationality_back_file:
+                tutor_detail.nationality_back_file = nationality_back_file
 
             # tutor_detail.max_hour_class_hour = validated_data.get("max_hour_class_hour", tutor_detail.max_hour_class_hour)
             if subjects:
                 tutor_detail.subjects.clear()
                 for subject in subjects:
-                    tutor_detail.subjects.add(subject)
+                    tutor_detail.subjects.add(Subject.objects.get(id=subject))
             tutor_detail.save()
 
             if languages:
@@ -577,32 +658,32 @@ class ChangePasswordSerializerIn(serializers.Serializer):
             student = get_object_or_404(Student, user_id=student_id, parent__user=user)
             student.user.password = make_password(password=new_password)
             student.user.save()
-            return gettext("Password Reset Successful")
+            return translate_to_language("Password Reset Successful", lang)
 
         if not all([old_password, new_password, confirm_password]):
-            raise InvalidRequestException({"detail": gettext("All password fields are required")})
+            raise InvalidRequestException({"detail": translate_to_language("All password fields are required", lang)})
 
         if not check_password(password=old_password, encoded=user.password):
-            raise InvalidRequestException({"detail": gettext("Incorrect old password")})
+            raise InvalidRequestException({"detail": translate_to_language("Incorrect old password", lang)})
 
         try:
             validate_password(password=new_password)
         except Exception as err:
-            raise InvalidRequestException({'detail': gettext(', '.join(list(err)))})
+            raise InvalidRequestException({'detail': translate_to_language(', '.join(list(err)), lang)})
 
         if new_password != confirm_password:
-            raise InvalidRequestException({"detail": gettext("Passwords mismatch")})
+            raise InvalidRequestException({"detail": translate_to_language("Passwords mismatch", lang)})
 
         # Check if new and old passwords are the same
         if old_password == new_password:
-            raise InvalidRequestException({"detail": gettext("Same passwords cannot be used")})
+            raise InvalidRequestException({"detail": translate_to_language("Same passwords cannot be used", lang)})
 
         user.password = make_password(password=new_password)
         user.save()
 
-        Thread(target=create_notification, args=[user, gettext("Password changed successfully")]).start()
+        Thread(target=create_notification, args=[user, translate_to_language("Password changed successfully", lang)]).start()
 
-        return gettext("Password Reset Successful")
+        return translate_to_language("Password Reset Successful", lang)
 
 
 class TransactionSerializerOut(serializers.ModelSerializer):
@@ -641,13 +722,13 @@ class ChatMessageSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang", "en")
 
         if not any([message, upload]):
-            raise InvalidRequestException({"detail": gettext("Text or attachment is required")})
+            raise InvalidRequestException({"detail": translate_to_language("Text or attachment is required", lang)})
 
         # Check if student and tutor had previously scheduled classes
         query = Q(tutor_id__in=[sender.id, receiver], student__user_id__in=[sender.id, receiver]) | Q(
             tutor_id__in=[sender.id, receiver], student__parent__user_id__in=[sender.id, receiver])
         if not Classroom.objects.filter(query).exists():
-            raise InvalidRequestException({"detail": gettext("Classroom not found for both users")})
+            raise InvalidRequestException({"detail": translate_to_language("Classroom not found for both users", lang)})
 
         # Send message
         chat = ChatMessage.objects.create(sender=sender, receiver_id=receiver, message=message, attachment=upload)
@@ -693,7 +774,7 @@ class ClassReviewSerializerIn(serializers.Serializer):
         classroom = get_object_or_404(Classroom, id=class_id)
         if not Classroom.objects.filter(tutor_id__in=[user.id], student__user_id__in=[user.id], id=class_id,
                                         student__parent__user_id__in=[user.id]):
-            raise InvalidRequestException({"detail": gettext("Classroom not found/valid")})
+            raise InvalidRequestException({"detail": translate_to_language("Classroom not found/valid", lang)})
 
         # Create ClassReview
         review, _ = ClassReview.objects.get_or_create(classroom=classroom, submitted_by=user)
@@ -761,17 +842,17 @@ class FeedbackAndConsultationSerializerIn(serializers.Serializer):
         email_to = str(get_site_details().enquiry_email)
 
         if request_type == "feedback" and not msg:
-            raise InvalidRequestException({"detail": gettext("message is required")})
+            raise InvalidRequestException({"detail": translate_to_language("message is required", lang)})
 
         if request_type == "consult" and not user_type:
-            raise InvalidRequestException({"detail": gettext("User type is required")})
+            raise InvalidRequestException({"detail": translate_to_language("User type is required", lang)})
 
         if request_type == "feedback":
             Thread(target=feedback_email, args=[email_to, name, email, msg, lang]).start()
         if request_type == "consult":
             request_type = "consultation"
             Thread(target=consultation_email, args=[email_to, name, email, user_type, lang]).start()
-        return gettext(f"{str(request_type).upper()} submitted successfully")
+        return translate_to_language(f"{str(request_type).upper()} submitted successfully", lang)
 
 
 class TestimonialSerializerOut(serializers.ModelSerializer):
@@ -782,17 +863,17 @@ class TestimonialSerializerOut(serializers.ModelSerializer):
     def get_content(self, obj):
         request = self.context.get("request")
         lang = request.GET.get("lang", "en")
-        return gettext(obj.content)
+        return translate_to_language(obj.content, lang)
 
     def get_title(self, obj):
         request = self.context.get("request")
         lang = request.GET.get("lang", "en")
-        return gettext(obj.title)
+        return translate_to_language(obj.title, lang)
 
     def get_name(self, obj):
         request = self.context.get("request")
         lang = request.GET.get("lang", "en")
-        return gettext(obj.name)
+        return translate_to_language(obj.name, lang)
 
     class Meta:
         model = Testimonial
@@ -810,7 +891,7 @@ class RequestOTPSerializerIn(serializers.Serializer):
         try:
             user_detail = Profile.objects.get(user__email=email)
         except Profile.DoesNotExist:
-            raise InvalidRequestException({"detail": gettext("User not found")})
+            raise InvalidRequestException({"detail": translate_to_language("User not found", lang)})
 
         expiry = get_next_minute(timezone.now(), 15)
         random_otp = generate_random_otp()
@@ -821,8 +902,8 @@ class RequestOTPSerializerIn(serializers.Serializer):
 
         # Send OTP to user
         Thread(target=send_otp_token_to_email, args=[user_detail, random_otp, lang]).start()
-        return {"detail": gettext("OTP has been sent to your email address"), "otp": f"Use this OTP :- {random_otp}. This keyword 'OTP' will be remove before going live"}
-        # return gettext("OTP has been sent to your email address")
+        return {"detail": translate_to_language("OTP has been sent to your email address", lang), "otp": f"Use this OTP :- {random_otp}. This keyword 'OTP' will be remove before going live"}
+        # return translate_to_language("OTP has been sent to your email address", lang)
 
 
 class ForgotPasswordSerializerIn(serializers.Serializer):
@@ -842,32 +923,32 @@ class ForgotPasswordSerializerIn(serializers.Serializer):
         try:
             user_detail = Profile.objects.get(user__email=email)
         except Profile.DoesNotExist:
-            raise InvalidRequestException({"detail": gettext("User not found")})
+            raise InvalidRequestException({"detail": translate_to_language("User not found", lang)})
 
         if timezone.now() > user_detail.code_expiry:
-            raise InvalidRequestException({"detail": gettext("OTP has expired, Please request for another one")})
+            raise InvalidRequestException({"detail": translate_to_language("OTP has expired, Please request for another one", lang)})
 
         if otp != decrypt_text(user_detail.otp):
-            raise InvalidRequestException({"detail": gettext("Invalid OTP")})
+            raise InvalidRequestException({"detail": translate_to_language("Invalid OTP", lang)})
 
         try:
             validate_password(password=password)
         except Exception as err:
-            raise InvalidRequestException({'detail': gettext(', '.join(list(err)))})
+            raise InvalidRequestException({'detail': translate_to_language(', '.join(list(err)), lang)})
 
         if password != confirm_password:
-            raise InvalidRequestException({"detail": gettext("Passwords does not match")})
+            raise InvalidRequestException({"detail": translate_to_language("Passwords does not match", lang)})
 
         user_detail.user.password = make_password(password)
         user_detail.user.save()
 
-        return gettext("Password reset successful")
+        return translate_to_language("Password reset successful", lang)
 
 
 class UpdateEndedClassroomSerializerIn(serializers.Serializer):
     auth_user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     completed = serializers.BooleanField(default=False)
-    reason = serializers.CharField(required=False)
+    reason = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     lang = serializers.CharField(required=False)
 
     def update(self, instance, validated_data):
@@ -877,7 +958,7 @@ class UpdateEndedClassroomSerializerIn(serializers.Serializer):
         lang = validated_data.get("lang")
 
         if (instance.student_complete_check and instance.tutor_complete_check) or instance.status == "completed":
-            raise InvalidRequestException({"detail": gettext("Ended Class already marked as completed")})
+            raise InvalidRequestException({"detail": translate_to_language("Ended Class already marked as completed", lang)})
 
         if completed:
             if instance.student.user == user or instance.student.parent.user == user:
@@ -885,13 +966,13 @@ class UpdateEndedClassroomSerializerIn(serializers.Serializer):
             elif instance.tutor == user:
                 instance.tutor_complete_check = True
             else:
-                raise InvalidRequestException({"detail": gettext("Permission denied")})
+                raise InvalidRequestException({"detail": translate_to_language("Permission denied", lang)})
 
             instance.save()
         else:
             # Create Dispute
             if not reason:
-                raise InvalidRequestException({"detail": gettext("Reason is required")})
+                raise InvalidRequestException({"detail": translate_to_language("Reason is required", lang)})
 
             dispute, _ = Dispute.objects.get_or_create(submitted_by=user, title=f"Classroom: {instance.name}, marked as uncompleted")
             dispute.dispute_type = "others"
@@ -902,7 +983,7 @@ class UpdateEndedClassroomSerializerIn(serializers.Serializer):
             instance.status = "completed"
             instance.save()
 
-        return gettext("Thank you for your feedback")
+        return translate_to_language("Thank you for your feedback", lang)
 
 
 

@@ -1,9 +1,9 @@
 import json
-import logging
-import datetime
 
 import requests
 from django.conf import settings
+from sentry_sdk import capture_message
+
 from edudream.modules.utils import generate_random_password
 
 # base_url = https://api.zoom.us/v2/users/me/meetings
@@ -21,7 +21,7 @@ class ZoomAPI:
     @classmethod
     def log_request(cls, *args):
         for arg in args:
-            logging.info(arg)
+            capture_message(str(arg), level="info")
 
     @classmethod
     def create_meeting(cls, start_date, duration, attending, **kwargs):

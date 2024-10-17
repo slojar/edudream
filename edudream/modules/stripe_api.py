@@ -24,81 +24,6 @@ class StripeAPI:
         customer = stripe.Customer.retrieve(customer_id)
         log_request(f'Stripe customer: {customer}')
         return customer
-    
-    # @classmethod
-    # def stripe_prebuilt_checkout(cls, payment_name, amount, **kwargs):
-    #     success_url = kwargs.get("success_url")
-    #     cancel_url = kwargs.get("cancel_url")
-    #     mode = kwargs.get("mode", "payment")
-    #     currency = kwargs.get("currency", "eur")
-    #     client_reference_id = kwargs.get("client_reference_id")
-    #     customer = kwargs.get("customer")
-    #     customer_email = kwargs.get("customer_email")
-    #     description = kwargs.get("description")
-    #     tax_code = kwargs.get("tax_code")
-    #
-    #     images = kwargs.get("images", [])
-    #     if type(images) is not list:
-    #         return False, create_error_message('images', "images type must be list of images")
-    #
-    #     metadata = kwargs.get("metadata", {})
-    #     if type(metadata) is not dict:
-    #         return False, create_error_message('metadata', "metadata must be a dictionary")
-    #
-    #     recurring = kwargs.get("recurring", {})
-    #     if recurring:
-    #         if type(recurring) is not dict:
-    #             return False, create_error_message('recurring', "recurring must be a dictionary")
-    #         if not recurring.get('interval'):
-    #             return False, create_error_message('recurring', "interval is required for a recurring payment")
-    #         recurring_interval = ['day', 'week', 'month', 'year']
-    #         if recurring.get('interval') not in recurring_interval:
-    #             return False, create_error_message('recurring', f"interval must be one of {recurring_interval}")
-    #         if recurring.get('interval_count'):
-    #             interval = recurring.get('interval')
-    #             interval_count = recurring.get('interval_count')
-    #             if type(interval_count) is not int:
-    #                 return False, create_error_message('recurring', f"interval_count must be an integer")
-    #             if interval == 'day' and interval_count > 365:
-    #                 return False, create_error_message('recurring', f"maximum of 365 days is allowed for interval count")
-    #             if interval == 'week' and interval_count > 52:
-    #                 return False, create_error_message('recurring', f"maximum of 52 weeks is allowed for interval count")
-    #             if interval == 'month' and interval_count > 12:
-    #                 return False, create_error_message('recurring', f"maximum of 12 months is allowed for interval count")
-    #             if interval == 'year' and interval_count > 1:
-    #                 return False, create_error_message('recurring', f"maximum of 1 year is allowed for interval count")
-    #
-    #     try:
-    #         session = stripe.checkout.Session.create(
-    #             line_items=[
-    #                 {
-    #                     'price_data': {
-    #                         'currency': currency,
-    #                         'product_data': {
-    #                             'name': payment_name,
-    #                             'description': description,
-    #                             'images': images,
-    #                             'metadata': metadata,
-    #                             'tax_code': tax_code,
-    #                         },
-    #                         'unit_amount_decimal': float(amount) * 100,
-    #                         'recurring': recurring,
-    #                     },
-    #                     'quantity': 1,
-    #                 },
-    #             ],
-    #             mode=mode,
-    #             success_url=success_url,
-    #             cancel_url=cancel_url,
-    #             client_reference_id=client_reference_id,
-    #             customer=customer,
-    #             customer_email=customer_email,
-    #             metadata=metadata,
-    #         )
-    #         log.info(session)
-    #         return True, session
-    #     except Exception as ex:
-    #         return False, create_error_message('source', f"{ex}")
 
     @classmethod
     def calculate_tax(cls, customer_id, amount, ip_address):
@@ -217,22 +142,72 @@ class StripeAPI:
         return stripe.PaymentIntent.retrieve(payment_intent)
 
     @classmethod
+    def upload_file(cls, file_path, purpose):
+        from edudream.modules.utils import log_request
+        with open(file_path, "rb") as fp:
+            upload = stripe.File.create(purpose=purpose, file=fp)
+            log_request(f'File upload response: {upload}')
+            return upload
+
+    @classmethod
     def create_connect_account(cls, user):
         from edudream.modules.utils import log_request
+        # city_name = str(user.profile.city)
+        # country_code = str(user.profile.country.alpha2code)
+        # state_name = str(user.profile.state.name)
+        # postal_code = str(user.profile.postal_code)
+        # address = str(user.profile.address)
         account_token = stripe.Token.create(
-            account={
-                "individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
-                                    "email": str(user.email)}, "tos_shown_and_accepted": True, "business_type": "individual"}, api_key=pk_key
+            account={"individual": {"first_name": str(user.first_name), "last_name": str(user.last_name),
+                                    "email": str(user.email)}, "tos_shown_and_accepted": True,
+                     "business_type": "individual"}, api_key=pk_key
         )
         log_request(f'Account creation token response: {account_token}')
 
         result = stripe.Account.create(
-            type="express", country=str(user.profile.country.alpha2code).upper(), email=str(user.email),
+            type="custom", country="FR", email=str(user.email),
             capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}, },
             account_token=account_token.get("id"),
-
+            # individual={
+            #     "first_name": str(user.first_name), "last_name": str(user.last_name), "email": str(user.email),
+            #     "address": {"city": city_name, "country": country_code, "line1": address,
+            #                 "postal_code": postal_code, "state": state_name},
+            # }
         )
         log_request(f'Connect account creation response: {result}')
+        return result
+
+    @classmethod
+    def update_connect_account(cls, user, address_front_file, address_back_file, nat_front_file, nat_back_file):
+        from edudream.modules.utils import log_request
+        account_token = stripe.Token.create(
+            account={"individual": {
+                "verification": {"document": {"front": str(nat_front_file), "back": str(nat_back_file)},
+                                 "additional_document": {"front": str(address_front_file),
+                                                         "back": str(address_back_file)}}},
+                     "tos_shown_and_accepted": True, "business_type": "individual"}, api_key=pk_key
+        )
+        log_request(f'Account creation token response: {account_token}')
+
+        result = stripe.Account.modify(
+            str(user.profile.stripe_connect_account_id), account_token=account_token.get("id")
+        )
+        log_request(f'Connect account update response: {result}')
+        return result
+
+    @classmethod
+    def create_account_link(cls, acct):
+        from edudream.modules.utils import log_request, get_site_details
+        site_setting = get_site_details()
+        frontend_base_url = site_setting.frontend_url
+
+        result = stripe.AccountLink.create(
+            account=acct,
+            refresh_url=f"{frontend_base_url}/complete-onboarding?status={str(False).lower()}",
+            return_url=f"{frontend_base_url}/complete-onboarding?status={str(True).lower()}",
+            type="account_onboarding",
+        )
+        log_request(f'Account link response: {result}')
         return result
 
     @classmethod
@@ -265,9 +240,11 @@ class StripeAPI:
         return result
 
     @classmethod
-    def payout_to_external_account(cls, amount, acct):
+    def payout_to_external_account(cls, amount, acct, stripe_acct):
         from edudream.modules.utils import log_request
-        result = stripe.Payout.create(amount=int(amount * 100), currency="eur", destination=acct)
+        result = stripe.Payout.create(
+            amount=int(amount * 100), currency="eur", destination=acct, stripe_account=stripe_acct
+        )
         log_request(f'Payout to external account response: {result}')
         return result
 
@@ -282,6 +259,14 @@ class StripeAPI:
             balance = eur_amount[0]
         log_request(f'Check balance response: {result}')
         return balance
+
+    @classmethod
+    def get_connect_account_balance(cls, acct):
+        from edudream.modules.utils import log_request
+        result = stripe.Balance.retrieve(expand=["instant_available.net_available"], stripe_account=acct)
+        log_request(f'Check connect account balance response: {result}')
+        return result
+
 
 
 

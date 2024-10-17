@@ -52,6 +52,7 @@ DEEP_API_KEY = env('DEEP_API_KEY', None)
 
 # STRIPE KEY
 STRIPE_API_KEY = env('STRIPE_API_KEY', None)
+STRIPE_ENDPOINT_SECRET = env('STRIPE_ENDPOINT_SECRET', None)
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', None)
 
 # ZOOM
@@ -69,7 +70,57 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer', 'Token',),
 }
 
+# SENTRY_CONFIG
+sentry_sdk.init(
+    dsn=env('SENTRY_ENDPOINT'),
+    integrations=[DjangoIntegration()],
+    environment="staging",
+    traces_sample_rate=1.0,
+    send_default_pii=True
+)
+
 # Logging
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'verbose': {
+#             'format': '[{asctime}] {levelname} {module} {thread:d} - {message}',
+#             'style': '{',
+#             'datefmt': '%d-%m-%Y %H:%M:%S'
+#         },
+#     },
+#     'handlers': {
+#         'file': {
+#             'level': 'INFO',
+#             'class': 'logging.FileHandler',
+#             'filename': os.path.join(LOG_DIR, 'edudream.log'),
+#             'formatter': 'verbose',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['file'],
+#         'level': 'INFO',
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['file'],
+#             'level': 'INFO',
+#             'propagate': True,
+#         },
+#         'django.server': {
+#             'handlers': ['file'],
+#             'level': 'INFO',
+#             'propagate': True,
+#         },
+#         'django.request': {
+#             'handlers': ['file'],
+#             'level': 'INFO',
+#             'propagate': True,
+#         },
+#     },
+# }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -81,35 +132,32 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_DIR, 'edudream.log'),
-            'formatter': 'verbose',
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
         },
-    },
-    'root': {
-        'handlers': ['file'],
-        'level': 'INFO',
+        'sentry': {
+            'level': 'INFO',  # Capture only ERROR level logs or higher
+            'class': 'sentry_sdk.integrations.logging.EventHandler',
+        },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'django.server': {
-            'handlers': ['file'],
-            'level': 'INFO',
+            'handlers': ['console', 'sentry'],
+            'level': 'DEBUG',  # Change this based on your preference
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
+            'handlers': ['sentry'],
+            'level': 'ERROR',  # Only capture errors for request logs
+            'propagate': False,
+        },
+        'sentry_sdk': {
+            'level': 'ERROR',
+            'handlers': ['sentry'],
+            'propagate': False,
         },
     },
 }
-
 
 

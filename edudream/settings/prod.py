@@ -1,6 +1,19 @@
 from datetime import timedelta
 from .base import *
 
+
+LOG_DIR = os.path.join('logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+logging.basicConfig(
+    filename=os.path.join(LOG_DIR, 'edudream.log'),
+    filemode='a',
+    level=logging.DEBUG,
+    format='[{asctime}] {levelname} {module} {thread:d} - {message}',
+    datefmt='%d-%m-%Y %H:%M:%S',
+    style='{',
+)
+
 SECRET_KEY = env('SECRET_KEY')
 
 DEBUG = False
@@ -42,6 +55,7 @@ DEEP_API_KEY = env('DEEP_API_KEY', None)
 
 # STRIPE KEY
 STRIPE_API_KEY = env('STRIPE_API_KEY', None)
+STRIPE_ENDPOINT_SECRET = env('STRIPE_ENDPOINT_SECRET', None)
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', None)
 
 # ZOOM

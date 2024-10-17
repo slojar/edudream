@@ -7,12 +7,11 @@ from django.utils import timezone
 from requests.auth import HTTPBasicAuth
 
 from edudream.modules.email_template import send_class_reminder_email, send_fund_pending_balance_email, \
-    send_fund_main_balance_email
+    send_fund_main_balance_email, send_class_ended_reminder_email, student_class_declined_email, \
+    auto_classroom_complete_email
 from edudream.modules.stripe_api import StripeAPI
-from edudream.modules.utils import decrypt_text, log_request, get_site_details
-# from home.consumers import ClassroomConsumer
-from home.models import Transaction
-from tutor.models import PayoutRequest, Classroom
+from edudream.modules.utils import log_request, get_site_details
+from tutor.models import PayoutRequest, Classroom, TutorCalendar
 
 zoom_auth_url = settings.ZOOM_AUTH_URL
 zoom_client_id = settings.ZOOM_CLIENT_ID
@@ -30,40 +29,22 @@ def payout_cron_job():
     payouts = PayoutRequest.objects.filter(status="pending")
     try:
         for instance in payouts:
-            user_wallet = instance.user.wallet
-            coin = instance.coin
+            stripe_connect_account_id = instance.user.profile.stripe_connect_account_id
+            stripe_external_account_id = instance.bank_account.stripe_external_account_id
             amount = float(instance.amount)
             # Check stripe balance
-            balance = StripeAPI.get_account_balance()
-            new_balance = float(balance / 100)
-            if amount > new_balance:
-                log_request({"detail": f"Payout for {instance.user.get_full_name()} failed due to low Stripe Balance"})
-                break
-            stripe_connect_account_id = decrypt_text(instance.user.profile.stripe_connect_account_id)
-            narration = f"EduDream Payout of EUR{amount} to {instance.user.get_full_name()}"
-
-            # Process Transfer
-            response = StripeAPI.transfer_to_connect_account(amount=amount, acct=stripe_connect_account_id, desc=narration)
-            payout_trx_ref = response.get("id")
-            instance.reference = payout_trx_ref
-            # Create Transaction
-            transaction = Transaction.objects.create(
-                user=instance.user, transaction_type="withdrawal", amount=amount, narration=narration
+            payout_response = StripeAPI.payout_to_external_account(
+                amount=amount, acct=stripe_external_account_id, stripe_acct=stripe_connect_account_id
             )
-            stripe_external_account_id = decrypt_text(instance.bank_account.stripe_external_account_id)
-            payout_response = StripeAPI.payout_to_external_account(amount=amount, acct=stripe_external_account_id)
             if payout_response.get("failure_message") is None and payout_response.get("id"):
                 instance.status = "processed"
-                transaction.status = "completed"
-                transaction.reference = str(payout_response.get("id"))
-                user_wallet.refresh_from_db()
-                # Subtract Coin
-                user_wallet.balance -= coin
-                user_wallet.save()
+                instance.reference = str(payout_response.get("id"))
+                instance.transaction.status = "completed"
                 # Send payout email
-            # Update transaction/payout status
-            instance.save()
-            transaction.save()
+                # Update transaction/payout status
+                instance.save()
+                instance.transaction.save()
+                Thread(target=send_class_reminder_email, args=[instance.user, amount, "fr"]).start()
     except Exception as err:
         log_request(f"Error processing payouts: {err}")
 
@@ -81,6 +62,13 @@ def class_reminder_job():
     classrooms_15min = Classroom.objects.filter(status="accepted", start_date=notification_15min_time)
     classrooms_0min = Classroom.objects.filter(status="accepted", start_date=notification_0min_time)
 
+    # Just ended classes
+    ended_classes = Classroom.objects.filter(status="accepted", end_date__minute=now.minute, end_date__hour=now.hour)
+    # Unattended classes
+    unattended_classes = Classroom.objects.filter(status="new", start_date__minute=now.minute, start_date__hour=now.hour)
+    # All Ended Classes
+    all_ended_classes = Classroom.objects.filter(end_date__lte=now)
+
     if classrooms_60min:
         # Send 60 minute reminder
         for class_room in classrooms_60min:
@@ -97,6 +85,42 @@ def class_reminder_job():
             student_user = class_room.student.user
             Thread(target=send_class_reminder_email, args=[student_user, class_room, 0, "fr"]).start()
 
+    if ended_classes:
+        # Send ended class reminder
+        for class_room in ended_classes:
+            # Remove classroom from all schedules
+            class_room.tutorcalendar_set.all().update(status="available")
+            for tutor_calendar in class_room.tutorcalendar_set.all():
+                tutor_calendar.classroom.clear()
+
+            student_email = class_room.student.user.email
+            parent_email = class_room.student.parent.user.email
+            tutor_email = class_room.tutor.email
+            Thread(target=send_class_ended_reminder_email, args=[student_email, class_room, "fr"]).start()
+            Thread(target=send_class_ended_reminder_email, args=[tutor_email, class_room, "fr"]).start()
+            Thread(target=send_class_ended_reminder_email, args=[parent_email, class_room, "fr"]).start()
+
+    if unattended_classes:
+        for class_room in unattended_classes:
+            # Set classroom status as declined
+            class_room.status = "declined"
+            class_room.save()
+            if TutorCalendar.objects.filter(classroom=class_room).exists():
+                t_calendar = TutorCalendar.objects.filter(classroom=class_room).last()
+                t_calendar.classroom.clear()
+                t_calendar.status = "available"
+                t_calendar.save()
+            Thread(target=student_class_declined_email, args=[class_room, "fr"]).start()
+
+    if all_ended_classes:
+        # Remove ended classroom from calendar
+        for class_room in all_ended_classes:
+            if TutorCalendar.objects.filter(classroom=class_room).exists():
+                t_calendar = TutorCalendar.objects.filter(classroom=class_room).last()
+                t_calendar.classroom.clear()
+                t_calendar.status = "available"
+                t_calendar.save()
+
     return True
 
 
@@ -106,7 +130,7 @@ def class_fee_to_tutor_pending_balance_job():
     # Update tutor wallet with class coin/amount
     try:
         now = timezone.now()
-        next_7_days = now + timezone.timedelta(days=7)
+        next_5_days = now + timezone.timedelta(days=5)
         d_site = get_site_details()
         for classroom in classrooms:
             amount = classroom.amount
@@ -119,7 +143,7 @@ def class_fee_to_tutor_pending_balance_job():
             user_wallet.pending += amount
             user_wallet.save()
             classroom.pending_balance_paid = True
-            classroom.tutor_payment_expected = next_7_days
+            classroom.tutor_payment_expected = next_5_days
             classroom.save()
             # Send fund on the way email to tutor
             Thread(target=send_fund_pending_balance_email, args=[classroom.tutor, classroom, "fr"]).start()
@@ -162,6 +186,21 @@ def update_ended_classroom_jobs():
     # Mark classes as completed
     if ended_classrooms:
         ended_classrooms.update(status="completed")
+        # Send email and notification
+        for classroom in ended_classrooms:
+            Thread(target=auto_classroom_complete_email, args=[classroom.tutor, classroom, "fr"]).start()
+
+    # Check for all past classes
+    last_24hrs = now - timezone.timedelta(hours=24)
+    past_classes = Classroom.objects.filter(status="accepted", end_date__lte=last_24hrs)
+    if past_classes:
+        past_classes.update(status="completed")
+        # Send email and notification
+        for classroom in ended_classrooms:
+            Thread(target=auto_classroom_complete_email, args=[classroom.tutor, classroom, "fr"]).start()
+
     return True
+
+
 
 
