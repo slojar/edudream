@@ -44,6 +44,7 @@ def payout_cron_job():
                 # Update transaction/payout status
                 instance.save()
                 instance.transaction.save()
+                Thread(target=send_class_reminder_email, args=[instance.user, amount, "fr"]).start()
     except Exception as err:
         log_request(f"Error processing payouts: {err}")
 
@@ -129,7 +130,7 @@ def class_fee_to_tutor_pending_balance_job():
     # Update tutor wallet with class coin/amount
     try:
         now = timezone.now()
-        next_7_days = now + timezone.timedelta(days=7)
+        next_5_days = now + timezone.timedelta(days=5)
         d_site = get_site_details()
         for classroom in classrooms:
             amount = classroom.amount
@@ -142,7 +143,7 @@ def class_fee_to_tutor_pending_balance_job():
             user_wallet.pending += amount
             user_wallet.save()
             classroom.pending_balance_paid = True
-            classroom.tutor_payment_expected = next_7_days
+            classroom.tutor_payment_expected = next_5_days
             classroom.save()
             # Send fund on the way email to tutor
             Thread(target=send_fund_pending_balance_email, args=[classroom.tutor, classroom, "fr"]).start()

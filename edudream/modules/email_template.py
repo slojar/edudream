@@ -432,3 +432,21 @@ def auto_classroom_complete_email(user, classroom, lang="en"):
     return True
 
 
+def send_payout_processed_email(user, amount, lang):
+    first_name = user.first_name
+    if not user.first_name:
+        first_name = "EduDream Tutor"
+    email = user.email
+
+    message = f"Dear {first_name}, <br><br>Your payout request is processed, and fund will be credited to your " \
+              f"shortly. " \
+              f"<br>Payout Amount: <strong>{amount}</strong>" \
+
+    subject = f"Payout Processed"
+    translated_content = translate_email(message, lang)
+    translated_subject = translate_email(subject, lang)
+    contents = render(None, 'default_template.html', context={'message': translated_content}).content.decode('utf-8')
+    send_email(contents, email, translated_subject)
+    return True
+
+
