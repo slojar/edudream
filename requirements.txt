@@ -116,3 +116,4 @@ wsproto==1.2.0
 yarl==1.9.4
 zipp==3.18.1
 zope.interface==6.3
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
